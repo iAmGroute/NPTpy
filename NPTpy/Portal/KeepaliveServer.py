@@ -4,7 +4,7 @@ import logging
 import socket
 import time
 
-from .Common.Connector import Connector
+from Common.Connector import Connector
 
 log  = logging.getLogger(__name__)
 
