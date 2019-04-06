@@ -16,6 +16,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
+
 def client(ip, port, message):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((ip, port))
@@ -25,6 +26,7 @@ def client(ip, port, message):
         print('Received: {}'.format(response))
     finally:
         sock.close()
+
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(created).3f [%(name)s|%(levelname)s] %(message)s', level=logging.INFO)
@@ -49,4 +51,3 @@ if __name__ == '__main__':
 
     server.shutdown()
     server.server_close()
-

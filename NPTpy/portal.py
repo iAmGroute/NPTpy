@@ -1,52 +1,50 @@
 
 import logging
 import socket
-import threading
-import socketserver
+import time
 
-log = logging.getLogger(__name__)
+from Common.Connector import Connector
 
-class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
+log  = logging.getLogger(__name__)
 
-    def handle(self):
-        data = self.request.recv(64)
-        log.info('[{0}] Request from: {1}'.format(threading.currentThread().name, self.request.getpeername()))
-        self.request.sendall(data)
+SERVER      = 'groute1.westeurope.cloudapp.azure.com'
+SERVER_PORT = 7817
 
-class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    pass
+class Portal:
 
-def client(ip, port, message):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((ip, port))
-    try:
-        sock.sendall(bytes(message, 'utf-8'))
-        response = str(sock.recv(64), 'utf-8')
-        print('Received: {}'.format(response))
-    finally:
-        sock.close()
+    def __init__(self, portalID, port, address='0.0.0.0'):
+        self.con = Connector(log, socket.SOCK_DGRAM, None, port, address)
+        self.portalID = portalID
 
-if __name__ == '__main__':
-    logging.basicConfig(format='%(created).3f [%(name)s|%(levelname)s] %(message)s', level=logging.INFO)
+    def keepaliveTask(self, serverEP, primary=True):
+        data = b'0000' + portalID.to_bytes(4, 'little') + b'0000'
+        code = 0x5A if primary else 0x5B # backup
+        i = 0
+        while True:
+            # Register message every 4 messages
+            # the other 3 are ignored by the server,
+            # but keep the NAT happy.
+            data[0] = code if (i % 4) == 0 else 0x00
+            # TODO: grenerate OTP
+            #data[8:12] = --- new OTP ---
+            # TODO: add primary server's GUID/url if primary == False
+            self.con.sendto(data, serverEP)
+            time.sleep(4)
 
-    HOST, PORT = '0.0.0.0', 0
-    server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
-    ip, port = server.server_address
-    print(ip, port)
-    ip = '127.0.0.1'
+    def listen(self):
+        data, addr = self.con.recvfrom(256)
+        header = data[0:4]
+        otp    = data[4:8]
 
-    # Start a thread with the server -- that thread will then start one
-    # more thread for each request
-    server_thread = threading.Thread(target=server.serve_forever)
-    # Exit the server thread when the main thread terminates
-    server_thread.daemon = True
-    server_thread.start()
-    print('Server loop running in thread:', server_thread.name)
+        # TODO: verify otp
 
-    client(ip, port, 'Hello World 1')
-    client(ip, port, 'Hello World 2')
-    client(ip, port, 'Hello World 3')
+        if header == b'CONN':
+            self.connect()
+        elif header == b'CONT':
+            serverURL = str(data[8:], 'utf-8')
+            self.connect(serverURL)
 
-    server.shutdown()
-    server.server_close()
+        # TODO: add dead timer countdown for server
+        # reset the countdown
 
+    def connect(self, serverURL=None):
