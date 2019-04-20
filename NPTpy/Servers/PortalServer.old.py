@@ -7,6 +7,22 @@ import socketserver
 
 log = logging.getLogger(__name__)
 
+class Methods:
+    @staticmethod
+    def InvalidMethod(message):
+        return b'\x00'
+    @staticmethod
+    def Connect(message):
+        return b'\x00'
+
+methodTable = [
+    Methods.InvalidMethod,
+    Methods.Connect
+]
+
+portalAddressTable = []
+portalIndexer      = {} # Dictionary (hash table)
+
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
@@ -19,8 +35,29 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         log.info('[{0}]     with portalID: x{1}'.format(myName, portalID.hex()))
 
         # TODO: authenticate
+        self.request.sendall(b'\x00')
 
-        self.request.sendall(data)
+        tstamp = time.time()
+        record = (tstamp, addr)
+        try:
+            portalIndex = portalIndexer[portalID]
+            portalAddressTable[portalIndex] = record
+        except KeyError:
+            log.info('[{0}]     portalID is new'.format(myName))
+            portalIndex = len(portalAddressTable)
+            portalAddressTable.append(record)
+            portalIndex[portalID] = portalIndex
+
+        while True:
+            data = self.request.recv(64)
+            methodID = int.from_bytes(data[0:4], 'little')
+            if methodID >= len(methodTable):
+                methodID = 0
+            reply = methodTable[methodID](data)
+            if reply:
+                self.request.sendall(reply)
+            else:
+                break
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
