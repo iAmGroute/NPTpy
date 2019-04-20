@@ -50,6 +50,7 @@ class KeepaliveServer:
             data[8:12] = addr[1].to_bytes(4, 'little')
             self.con.sendto(data, addr)
 
+    # Management connection request
     def tellPortalToConnect(self, portalID):
         # Throws KeyError if portalID is not found.
         portalIndex = self.portalIndexer[portalID]
@@ -63,6 +64,7 @@ class KeepaliveServer:
         data = header + otp
         self.con.sendto(data, addr)
 
+    # Relay connection request
     def tellPortalToConnectTo(self, portalID, serverURL):
         # Throws KeyError if portalID is not found.
         portalIndex = self.portalIndexer[portalID]

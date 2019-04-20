@@ -1,3 +1,4 @@
+# Unified server for managing portals (KA) & connections to relay server.
 
 import logging
 import socket
@@ -9,8 +10,16 @@ log = logging.getLogger(__name__)
 class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
+        myName = threading.currentThread().name
+
         data = self.request.recv(64)
-        log.info('[{0}] Request from: {1}'.format(threading.currentThread().name, self.request.getpeername()))
+        portalID = data[0:4]
+
+        log.info('[{0}] Request from: [{1}]:{2}'.format(myName, *self.request.getpeername()))
+        log.info('[{0}]     with portalID: x{1}'.format(myName, portalID.hex()))
+
+        # TODO: authenticate
+
         self.request.sendall(data)
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
