@@ -46,7 +46,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             log.info('[{0}]     portalID is new'.format(myName))
             portalIndex = len(portalAddressTable)
             portalAddressTable.append(record)
-            portalIndex[portalID] = portalIndex
+            portalIndexer[portalID] = portalIndex
 
         while True:
             data = self.request.recv(64)
