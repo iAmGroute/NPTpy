@@ -1,53 +1,76 @@
+# Unified server for managing portals (KA) & connections to relay server.
 
 import logging
 import socket
-import threading
-import socketserver
+
+from Common.Connector import Connector
 
 log = logging.getLogger(__name__)
 
-class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
+class Methods:
+    @staticmethod
+    def InvalidMethod(message):
+        return b'\x00'
+    @staticmethod
+    def Connect(message):
+        return b'\x00'
 
-    def handle(self):
-        data = self.request.recv(64)
-        log.info('[{0}] Request from: {1}'.format(threading.currentThread().name, self.request.getpeername()))
-        self.request.sendall(data)
+methodTable = [
+    Methods.InvalidMethod,
+    Methods.Connect
+]
 
-class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    pass
+PortalRecord = namedtuple('PortalRecord', ['portalID', 'addr', 'conn'])
 
+class Server:
 
-def client(ip, port, message):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((ip, port))
-    try:
-        sock.sendall(bytes(message, 'utf-8'))
-        response = str(sock.recv(64), 'utf-8')
-        print('Received: {}'.format(response))
-    finally:
-        sock.close()
+    def __init__(self, port, address='0.0.0.0'):
+        self.con = Connector(log, socket.SOCK_STREAM, None, port, address)
+        self.con.listen()
+        self.portalTable   = []
+        self.portalIndexer = {} # Dictionary (hash table)
 
+    def task(self):
+        conn, addr = self.con.accept()
+        conn.settimeout(0.2)
+        try:
+            data = conn.recv(64)
+        except socket.error:
+            pass
+        else:
+            portalID = data[0:4]
 
-if __name__ == '__main__':
-    logging.basicConfig(format='%(created).3f [%(name)s|%(levelname)s] %(message)s', level=logging.INFO)
+            log.info('    with portalID: x{0}'.format(portalID.hex()))
 
-    HOST, PORT = '0.0.0.0', 0
-    server = ThreadedTCPServer((HOST, PORT), ThreadedTCPRequestHandler)
-    ip, port = server.server_address
-    print(ip, port)
-    ip = '127.0.0.1'
+            # TODO: authenticate
+            conn.sendall(b'\x00')
 
-    # Start a thread with the server -- that thread will then start one
-    # more thread for each request
-    server_thread = threading.Thread(target=server.serve_forever)
-    # Exit the server thread when the main thread terminates
-    server_thread.daemon = True
-    server_thread.start()
-    print('Server loop running in thread:', server_thread.name)
+            record = PortalRecord(portalID, addr, conn)
+            try:
+                portalIndex = self.portalIndexer[portalID]
+            except KeyError:
+                portalIndex = len(self.portalTable)
+                self.portalTable.append(record)
+                self.portalIndexer[portalID] = portalIndex
+            else:
+                log.info('    renew existing')
+                oldRecord = self.portalTable[portalIndex]
+                oldRecord.conn.close()
+                del oldRecord.conn
+                self.portalTable[portalIndex] = record
 
-    client(ip, port, 'Hello World 1')
-    client(ip, port, 'Hello World 2')
-    client(ip, port, 'Hello World 3')
+    def removeConn(self, conn):
+        pass
 
-    server.shutdown()
-    server.server_close()
+    def proccess(self, conn):
+        ##if conn available >= 64:
+            data = conn.recv(64)
+            methodID = int.from_bytes(data[0:4], 'little')
+            if methodID >= len(methodTable):
+                methodID = 0
+            reply = methodTable[methodID](data)
+            if reply:
+                conn.sendall(reply)
+            else:
+                conn.close()
+                self.removeConn(conn)
