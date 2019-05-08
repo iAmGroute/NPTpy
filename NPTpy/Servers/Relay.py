@@ -59,7 +59,8 @@ class Relay:
                     otherID  = data[8:12]
                     token    = data[12:20]
                     log.info('    new command:')
-                    log.info('    verb:{0} callerID:{1} otherID:{2} token{3}'.format(verb, callerID.hex(), otherID.hex(), token.hex()))
+                    log.info('    verb: {0} callerID: {1} otherID: {2}'.format(verb, callerID.hex(), otherID.hex()))
+                    log.info('    token: x{0}'.format(token.hex()))
 
                     # We don't store the IDs, although we should, for validation/security check
                     if verb == b'ADD.':

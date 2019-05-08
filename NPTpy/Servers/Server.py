@@ -19,7 +19,14 @@ class ServerConnSocket:
         return self.baseSocket.recv(size)
 
     def sendall(self, data):
-        return self.baseSocket.sendall(reply)
+        return self.baseSocket.sendall(data)
+
+    def tryClose(self):
+        try:
+            self.baseSocket.close()
+        except socket.error:
+            return False
+        return True
 
 PortalRecord = recordclass('PortalRecord', ['portalID', 'addr', 'conn'])
 
@@ -29,8 +36,8 @@ RelayManagePort = 40401
 class Server:
 
     def __init__(self, port, address='0.0.0.0'):
-        self.con   = Connector(log, socket.SOCK_STREAM, None, port, address)
-        self.conRT = Connector(log, socket.SOCK_STREAM, None, 40402, '0.0.0.0')
+        self.con   = Connector(log,   socket.SOCK_STREAM, None, port, address)
+        self.conRT = Connector(logRT, socket.SOCK_STREAM, None, 40402, '0.0.0.0')
         self.con.listen()
         self.conRT.connect((RelayManageAddr, RelayManagePort))
         self.portalTable   = [] # TODO: convert to pool allocator
@@ -107,21 +114,18 @@ class Server:
             else:
                 log.info('    renew existing')
                 oldRecord = self.portalTable[portalIndex]
-                oldRecord.conn.close()
+                oldRecord.conn.tryClose()
                 self.portalTable[portalIndex] = record
 
             record.conn.portalIndex = portalIndex
 
     def removeConn(self, conn):
-        try:
-            conn.close()
-        except socket.error:
-            pass
+        conn.tryClose()
         portalID = self.portalTable[conn.portalIndex].portalID
         self.portalTable[conn.portalIndex] = None
         del self.portalIndexer[portalID]
 
-    def proccess(self, conn):
+    def process(self, conn):
         try:
             record = self.portalTable[conn.portalIndex]
         except KeyError:
