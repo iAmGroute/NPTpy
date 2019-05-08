@@ -61,8 +61,8 @@ class Relay:
             elif s is self.connST: self.taskManage()
             else:                  self.process(s) # s is in self.connSockets
         for s in exceptional:
-            if   s is self.con:    pass # TODO: Handle to preven inf loop
-            elif s is self.conST:  self.removeManage()
+            if   s is self.con:    pass # TODO: Handle to prevent inf loop
+            elif s is self.conST:  pass # same
             elif s is self.connST: self.removeManage()
             else:                  self.removeConn(s) # s is in self.connSockets
 
@@ -140,15 +140,19 @@ class Relay:
 
                 elif rec.indexB == -1:
                     # Second one to connect
+                    other = self.connSockets[rec.indexA]
 
                     newSocket       = RelayConn(conn)
                     newSocket.token = token
-                    newSocket.other = self.connSockets[rec.indexA]
+                    newSocket.other = other
                     rec.indexB = len(self.connSockets)
                     self.connSockets.append(newSocket)
 
                     # we can now forward between the 2
-                    self.connSockets[rec.indexA].other = newSocket
+                    other.other = newSocket
+
+                    newSocket.sendall(b'Ready !\n')
+                    other.sendall(b'Ready !\n')
 
                     log.info('    indexA: {0:3d}, indexB: {1:3d}'.format(rec.indexA, rec.indexB))
 
@@ -197,6 +201,8 @@ class Relay:
             del self.tokenMap[token]
 
     def process(self, conn):
+        # TODO: avoid reading data if other is not connected,
+        # but check to see if this one has disconnected
         data = conn.recv(2048)
         if len(data) < 1:
             # Connection closed (?), remove both

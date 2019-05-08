@@ -34,14 +34,18 @@ class PortalConn:
     def fileno(self):
         return self.baseSocket.fileno()
 
+RelayAddr = '127.0.0.1'
+RelayPort = 4021
 RelayManageAddr = '127.0.0.1'
 RelayManagePort = 40401
+
+RelayInfoMessage = RelayPort.to_bytes(2, 'little') + bytes(RelayAddr, 'utf-8')
 
 class Server:
 
     def __init__(self, port, address='0.0.0.0'):
         self.con   = Connector(log,   socket.SOCK_STREAM, None, port, address)
-        self.conRT = Connector(logRT, socket.SOCK_STREAM, None, 40402, '0.0.0.0')
+        self.conRT = Connector(logRT, socket.SOCK_STREAM, None, 0, '0.0.0.0')
         self.con.listen()
         self.conRT.connect((RelayManageAddr, RelayManagePort))
         self.portalTable   = [] # TODO: convert to pool allocator
@@ -70,12 +74,15 @@ class Server:
                 return b'Bad ID', True
             else:
                 log.info('    found')
-                self.notifyRelay(b'01234567', record.portalID, otherID) # TODO: generate token with system urandom (crypto)
+                # TODO: generate token with system urandom (crypto)
+                token = b'01234567'
+                self.notifyRelay(token, record.portalID, otherID)
                 # TODO: add the following to a task queue and wait for positive reply from relay
                 # before notifying the portal
                 otherRecord = self.portalTable[otherIndex]
-                self.notifyPortal(otherRecord, record)
-                return b'realy_ip:port', True # this should be False, until we get confirm from relay & portal
+                self.notifyPortal(token, otherRecord, record)
+                msg = token + RelayInfoMessage
+                return msg, True # this should be False, until we get confirm from relay & portal
 
     def notifyRelay(self, token, callerID, otherID):
         msg =  b'v0.1'  # 4B
@@ -85,8 +92,10 @@ class Server:
         msg += otherID  # 4B
         self.conRT.sendall(msg) # 24B
 
-    def notifyPortal(self, conn, callerRecord):
-        conn.sendall(b'realy_ip:port') # TODO: also send caller's info from callerRecord
+    def notifyPortal(self, token, conn, callerRecord):
+        # TODO: also send caller's info from callerRecord
+        msg = token + RelayInfoMessage
+        conn.sendall(msg)
 
     def main(self):
         socketList = [self.con] + self.portalTable
@@ -116,7 +125,7 @@ class Server:
             log.info('    with portalID: x{0}'.format(portalID.hex()))
 
             # TODO: authenticate
-            conn.sendall(b'\x00')
+            # conn.sendall(b'\x00')
 
             record = PortalConn(portalID, addr, conn)
 
@@ -142,6 +151,7 @@ class Server:
         del self.portalIndexer[portalID]
 
     def process(self, conn):
+        log.info('Portal: x{0}'.format(conn.portalID.hex()))
         try:
             record = self.portalTable[conn.portalIndex]
         except KeyError:
@@ -150,10 +160,13 @@ class Server:
             self.removeConn(conn)
             return
 
-        data = conn.recv(64)
+        try:
+            data = conn.recv(64)
+        except socket.error:
+            data = b''
         if len(data) != 64:
-            # Bad request, drop it
-            log.info('    bad request')
+            # Remove the connection
+            log.info('    disconnect' if len(data) == 0 else '    bad request')
             self.removeConn(conn)
             return
 

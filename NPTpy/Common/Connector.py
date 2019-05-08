@@ -4,6 +4,7 @@ import socket
 
 from .Prefixes import prefixIEC
 from .SmartTabs import t
+from .this_OS import OS, this_OS
 
 class Connector:
 
@@ -25,6 +26,13 @@ class Connector:
         self.socket.close()
         self.log.info(t('Stopped'))
 
+    def tryClose(self):
+        try:
+            self.socket.close()
+        except socket.error:
+            return False
+        return True
+
     # Needed for select()
     def fileno(self):
         return self.socket.fileno()
@@ -33,13 +41,13 @@ class Connector:
 
     def recvfrom(self, bufferSize):
         data, addr = self.socket.recvfrom(bufferSize)
-        self.log.info(t('Received {0}Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
+        self.log.info(t('Received {0} Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
         self.log.debug(t.over('    content: {0}'.format(data)))
         return data, addr
 
     def sendto(self, data, endpoint):
         sentSize = self.socket.sendto(data, endpoint)
-        self.log.info(t('Sent     {0}Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
+        self.log.info(t('Sent     {0} Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
         return sentSize
 
     # Mainly TCP
@@ -65,4 +73,20 @@ class Connector:
 
     def sendall(self, data):
         self.socket.sendall(data)
-        self.log.info(t('Sent     {0}Bytes'.format(prefixIEC(len(data)))))
+        self.log.info(t('Sent     {0} Bytes'.format(prefixIEC(len(data)))))
+
+    def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
+        try:
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            if   this_OS == OS.linux:
+                self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE,  idleTimer)
+                self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval)
+                self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT,   probeCount)
+            elif this_OS == OS.mac:
+                self.socket.setsockopt(socket.IPPROTO_TCP, 0x10, interval)
+            elif this_OS == OS.windows:
+                self.socket.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 1000 * idleTimer, 1000 * interval))
+        except socket.error:
+            return False
+
+        return True
