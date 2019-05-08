@@ -8,11 +8,7 @@ from Servers.Server import Server
 
 s = Server(4020)
 
-s.task()
+while True:
+    print(s.portalIndexer)
+    s.main()
 
-s.task()
-
-print(s.portalTable)
-print(s.portalIndexer)
-
-s.process(s.portalTable[0].conn)

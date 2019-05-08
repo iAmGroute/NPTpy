@@ -5,6 +5,7 @@
 
 import logging
 import socket
+import select
 from recordclass import recordclass
 
 from Common.Connector import Connector
@@ -13,7 +14,7 @@ log   = logging.getLogger(__name__ + '   ')
 logST = logging.getLogger(__name__ + ':ST')
 # logSU = logging.getLogger(__name__ + ':SU')
 
-class RelayConnSocket:
+class RelayConn:
     def __init__(self, baseSocket):
         self.baseSocket = baseSocket
         self.token = b''
@@ -26,11 +27,16 @@ class RelayConnSocket:
         return self.baseSocket.sendall(data)
 
     def tryClose(self):
+        self.other = None
         try:
             self.baseSocket.close()
         except socket.error:
             return False
         return True
+
+    # Needed for select()
+    def fileno(self):
+        return self.baseSocket.fileno()
 
 MapRecord = recordclass('MapRecord', ['indexA', 'indexB'])
 
@@ -41,35 +47,63 @@ class Relay:
         self.conST = Connector(logST, socket.SOCK_STREAM, None, 40401, '0.0.0.0') # for server
         self.con.listen()
         self.conST.listen()
-        self.connSockets = [] # TODO: convert to pool allocator
+        self.connST = None
+        self.connSockets = [] # TODO: convert to pool allocator / slot map
         self.tokenMap    = {} # Dictionary (hash table)
 
-    def taskManage(self):
+    def main(self):
+        socketList = [self.con, self.conST, self.connST] + self.connSockets
+        socketList = filter(None, socketList)
+        readable, writable, exceptional = select.select(socketList, [], socketList)
+        for s in readable:
+            if   s is self.con:    self.task()
+            elif s is self.conST:  self.taskManageAccept()
+            elif s is self.connST: self.taskManage()
+            else:                  self.process(s) # s is in self.connSockets
+        for s in exceptional:
+            if   s is self.con:    pass # TODO: Handle to preven inf loop
+            elif s is self.conST:  self.removeManage()
+            elif s is self.connST: self.removeManage()
+            else:                  self.removeConn(s) # s is in self.connSockets
+
+    def taskManageAccept(self):
         conn, addr = self.conST.accept()
-        # while conn:
-        with conn:
-            try:
-                data = conn.recv(20)
-            except socket.error:
-                pass
-            else:
-                if len(data) == 20:
-                    verb     = data[0:4]
-                    callerID = data[4:8]
-                    otherID  = data[8:12]
-                    token    = data[12:20]
-                    log.info('    new command:')
-                    log.info('    verb: {0} callerID: {1} otherID: {2}'.format(verb, callerID.hex(), otherID.hex()))
-                    log.info('    token: x{0}'.format(token.hex()))
+        conn.setblocking(False)
+        if self.connST:
+            self.removeManage()
+        self.connST = conn
 
-                    # We don't store the IDs, although we should, for validation/security check
-                    if verb == b'ADD.':
-                        self.removeByToken(token)
-                        self.tokenMap[token] = MapRecord(-1, -1)
-                    elif verb == b'DEL.':
-                        self.removeByToken(token)
+    def removeManage(self):
+        try:
+            self.connST.close()
+        except socket.error:
+            pass
+        self.connST = None
 
-                    conn.sendall(b'OK')
+    def taskManage(self):
+        try:
+            data = self.connST.recv(24)
+        except socket.error:
+            pass
+        else:
+            if len(data) == 24:
+                magic    = data[0:4]
+                verb     = data[4:8]
+                token    = data[8:16]
+                callerID = data[16:20]
+                otherID  = data[20:24]
+                logST.info('New command:')
+                logST.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex()))
+                logST.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex(), otherID.hex()))
+
+                # We don't store the IDs, although we should, for validation/security check
+                if verb == b'ADD.':
+                    self.removeByToken(token)
+                    self.tokenMap[token] = MapRecord(-1, -1)
+                elif verb == b'DEL.':
+                    self.removeByToken(token)
+
+                self.connST.sendall(b'OK')
 
     def task(self):
         conn, addr = self.con.accept()
@@ -97,7 +131,7 @@ class Relay:
                 if rec.indexA == -1:
                     # First one to connect
 
-                    newSocket       = RelayConnSocket(conn)
+                    newSocket       = RelayConn(conn)
                     newSocket.token = token
                     rec.indexA = len(self.connSockets)
                     self.connSockets.append(newSocket)
@@ -107,7 +141,7 @@ class Relay:
                 elif rec.indexB == -1:
                     # Second one to connect
 
-                    newSocket       = RelayConnSocket(conn)
+                    newSocket       = RelayConn(conn)
                     newSocket.token = token
                     newSocket.other = self.connSockets[rec.indexA]
                     rec.indexB = len(self.connSockets)
@@ -140,9 +174,9 @@ class Relay:
         return conn.tryClose() if conn else False
 
     def removeConn(self, conn):
-        conn.tryClose()
         if conn.other:
             conn.other.tryClose()
+        conn.tryClose()
         try:
             rec = self.tokenMap[conn.token]
         except KeyError as e:

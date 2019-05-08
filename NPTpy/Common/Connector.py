@@ -25,6 +25,10 @@ class Connector:
         self.socket.close()
         self.log.info(t('Stopped'))
 
+    # Needed for select()
+    def fileno(self):
+        return self.socket.fileno()
+
     # Mainly UDP
 
     def recvfrom(self, bufferSize):

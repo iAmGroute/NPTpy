@@ -2,7 +2,7 @@
 
 import logging
 import socket
-from recordclass import recordclass
+import select
 
 from Common.Connector import Connector
 
@@ -10,9 +10,11 @@ log   = logging.getLogger(__name__ + '   ')
 logRT = logging.getLogger(__name__ + ':RT')
 # logRU = logging.getLogger(__name__ + ':RU')
 
-class ServerConnSocket:
-    def __init__(self, baseSocket):
-        self.baseSocket = baseSocket
+class PortalConn:
+    def __init__(self, portalID, addr, baseSocket):
+        self.portalID    = portalID
+        self.addr        = addr
+        self.baseSocket  = baseSocket
         self.portalIndex = -1
 
     def recv(self, size):
@@ -28,7 +30,9 @@ class ServerConnSocket:
             return False
         return True
 
-PortalRecord = recordclass('PortalRecord', ['portalID', 'addr', 'conn'])
+    # Needed for select()
+    def fileno(self):
+        return self.baseSocket.fileno()
 
 RelayManageAddr = '127.0.0.1'
 RelayManagePort = 40401
@@ -66,22 +70,34 @@ class Server:
                 return b'Bad ID', True
             else:
                 log.info('    found')
-                self.notifyRelay(record.portalID, otherID, b'01234567') # TODO: generate with system urandom (crypto)
+                self.notifyRelay(b'01234567', record.portalID, otherID) # TODO: generate token with system urandom (crypto)
                 # TODO: add the following to a task queue and wait for positive reply from relay
                 # before notifying the portal
                 otherRecord = self.portalTable[otherIndex]
                 self.notifyPortal(otherRecord, record)
                 return b'realy_ip:port', True # this should be False, until we get confirm from relay & portal
 
-    def notifyRelay(self, callerID, otherID, token):
-        msg = b'ADD.'   # 4B
+    def notifyRelay(self, token, callerID, otherID):
+        msg =  b'v0.1'  # 4B
+        msg += b'ADD.'  # 4B
+        msg += token    # 8B
         msg += callerID # 4B
         msg += otherID  # 4B
-        msg += token    # 8B
-        self.conRT.sendall(msg) # 20B
+        self.conRT.sendall(msg) # 24B
 
-    def notifyPortal(self, portalRecord, callerRecord):
-        portalRecord.conn.sendall(b'realy_ip:port') # TODO: also send caller's info from callerRecord
+    def notifyPortal(self, conn, callerRecord):
+        conn.sendall(b'realy_ip:port') # TODO: also send caller's info from callerRecord
+
+    def main(self):
+        socketList = [self.con] + self.portalTable
+        socketList = filter(None, socketList)
+        readable, writable, exceptional = select.select(socketList, [], socketList)
+        for s in readable:
+            if   s is self.con: self.task()
+            else:               self.process(s) # s is in self.connSockets
+        for s in exceptional:
+            if   s is self.con: pass
+            else:               self.removeConn(s) # s is in self.connSockets
 
     def task(self):
         conn, addr = self.con.accept()
@@ -102,7 +118,7 @@ class Server:
             # TODO: authenticate
             conn.sendall(b'\x00')
 
-            record = PortalRecord(portalID, addr, ServerConnSocket(conn))
+            record = PortalConn(portalID, addr, conn)
 
             # Add the record or update the existing one
             try:
@@ -117,7 +133,7 @@ class Server:
                 oldRecord.conn.tryClose()
                 self.portalTable[portalIndex] = record
 
-            record.conn.portalIndex = portalIndex
+            record.portalIndex = portalIndex
 
     def removeConn(self, conn):
         conn.tryClose()
