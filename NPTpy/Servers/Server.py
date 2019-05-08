@@ -100,13 +100,10 @@ class Server:
     def main(self):
         socketList = [self.con] + self.portalTable
         socketList = filter(None, socketList)
-        readable, writable, exceptional = select.select(socketList, [], socketList)
+        readable, writable, exceptional = select.select(socketList, [], [])
         for s in readable:
             if   s is self.con: self.task()
             else:               self.process(s) # s is in self.connSockets
-        for s in exceptional:
-            if   s is self.con: pass
-            else:               self.removeConn(s) # s is in self.connSockets
 
     def task(self):
         conn, addr = self.con.accept()

@@ -54,17 +54,12 @@ class Relay:
     def main(self):
         socketList = [self.con, self.conST, self.connST] + self.connSockets
         socketList = filter(None, socketList)
-        readable, writable, exceptional = select.select(socketList, [], socketList)
+        readable, writable, exceptional = select.select(socketList, [], [])
         for s in readable:
             if   s is self.con:    self.task()
             elif s is self.conST:  self.taskManageAccept()
             elif s is self.connST: self.taskManage()
             else:                  self.process(s) # s is in self.connSockets
-        for s in exceptional:
-            if   s is self.con:    pass # TODO: Handle to prevent inf loop
-            elif s is self.conST:  pass # same
-            elif s is self.connST: self.removeManage()
-            else:                  self.removeConn(s) # s is in self.connSockets
 
     def taskManageAccept(self):
         conn, addr = self.conST.accept()
