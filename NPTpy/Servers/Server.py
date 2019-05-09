@@ -37,7 +37,7 @@ class PortalConn:
     def fileno(self):
         return self.baseSocket.fileno()
 
-RelayAddr = '127.0.0.1'
+RelayAddr = '192.168.11.1'
 RelayPort = 4021
 RelayManageAddr = '127.0.0.1'
 RelayManagePort = 40401
@@ -110,9 +110,10 @@ class Server:
 
     def task(self):
         connSocket, addr = self.con.accept()
-        connSocket.setblocking(False)
+        connSocket.settimeout(0.2)
         try:
             data = connSocket.recv(64)
+            connSocket.setblocking(False)
         except socket.error:
             log.info('    dropped')
         else:

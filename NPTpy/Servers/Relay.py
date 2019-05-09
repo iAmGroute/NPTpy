@@ -105,11 +105,12 @@ class Relay:
 
     def task(self):
         connSocket, addr = self.con.accept()
-        connSocket.setblocking(False)
+        connSocket.settimeout(0.2)
 
         conn = RelayConn(connSocket)
 
         data = conn.tryRecv(64)
+        conn.baseSocket.setblocking(False)
         if len(data) != 64:
             conn.tryClose()
             return
@@ -195,7 +196,7 @@ class Relay:
     def process(self, conn):
         # TODO: avoid reading data if other is not connected,
         # but check to see if this one has disconnected
-        data = conn.tryRecv(2048)
+        data = conn.tryRecv(32768)
         if len(data) < 1:
             # Connection closed (?), remove both
             self.removeConn(conn)
