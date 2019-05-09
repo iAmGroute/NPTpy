@@ -1,7 +1,8 @@
 
 import logging
 import socket
-import time
+import select
+from enum import Enum
 
 from Common.Connector import Connector
 
@@ -12,61 +13,97 @@ logRT = logging.getLogger(__name__ + ':RT')
 ServerAddr = '127.0.0.1'
 ServerPort = 4020
 
-def echo(conn):
-    while True:
-        data = conn.recv(1024)
+class RelayConnector(Connector):
+    class States(Enum):
+        Disconnected = 0
+        WaitClient   = 1
+        Ready        = 2
+
+    state = States.Disconnected
+    index = -1
+
+    def task(self):
+        if   self.state == self.States.Disconnected: return
+        elif self.state == self.States.WaitClient:   self.waitReady()
+        elif self.state == self.States.Ready:        self.echo()
+
+    def connectRelay(self, token, relayPort, relayAddr):
+        data = b''
+        data += token
+        data += b'0' * 56
+        if self.tryConnect((relayAddr, relayPort), data):
+            self.setKeepAlive()
+            self.state = self.States.WaitClient
+            return True
+        else:
+            return False
+
+    def waitReady(self):
+        data = self.recv(8)
+        if data == b'Ready !\n':
+            self.state = self.States.Ready
+        else:
+            self.state = self.States.Disconnected
+            self.tryClose()
+
+    def echo(self):
+        data = self.recv(1024)
         if len(data) < 1:
-            return
-        conn.sendall(data)
+            self.state = self.States.Disconnected
+        self.sendall(data)
+
 
 class Portal:
 
     def __init__(self, portalID, port=0, address='0.0.0.0'):
-        self.portalID = portalID
-        self.port     = port
-        self.address  = address
-        # TODO: change timeout from None to something else (e.g. 2),
-        # once the rest is implemented with select,
-        # same thing at the conRT down below
-        self.conST = Connector(log, socket.SOCK_STREAM, None, port, address)
-        self.connected = False
+        self.portalID  = portalID
+        self.port      = port
+        self.address   = address
+        self.conST     = None
+        self.conRTs    = []
 
-    def tryConnect(self, con, endpoint, data):
-        try:
-            con.connect(endpoint)
-            con.sendall(data)
-            con.setKeepAlive()
-        except socket.error as e:
-            print(e)
-            con.tryClose()
-            return False
-        return True
+    def main(self):
+        if not self.conST:
+            self.connectKA()
+        else:
+            socketList = [self.conST] + self.conRTs
+            socketList = filter(None, socketList)
+            readable, writable, exceptional = select.select(socketList, [], [])
+            for s in readable:
+                if   s is self.conST: self.task()
+                else:                 self.taskRT(s) # s is in self.conRTs
 
     def connectKA(self):
+        self.conST = Connector(log, socket.SOCK_STREAM, 2, self.port, self.address)
         data = b''
         data += self.portalID
         data += b'0' * 60
-        self.connected = self.tryConnect(self.conST, (ServerAddr, ServerPort), data)
-
-    def connectRelay(self, conRT, token, relayPort, relayAddr):
-        data = b''
-        data += token
-        data += b'0' * 56
-        return self.tryConnect(conRT, (relayAddr, relayPort), data)
+        if not self.conST.tryConnect((ServerAddr, ServerPort), data):
+            self.conST = None
 
     def task(self):
-        relayInfo = self.conST.recv(1024)
-        if len(relayInfo) < 1:
-            self.connected = False
+        relayInfo = self.conST.tryRecv(1024)
+        l = len(relayInfo)
+        if l < 11:
+            if l == 0: self.conST = None
             return
         token     = relayInfo[0:8]
         relayPort = int.from_bytes(relayInfo[8:10], 'little')
         relayAddr = str(relayInfo[10:], 'utf-8')
-        with Connector(logRT, socket.SOCK_STREAM, None, self.port, self.address) as conRT:
-            if self.connectRelay(conRT, token, relayPort, relayAddr):
-                data = conRT.recv(8)
-                if data == b'Ready !\n':
-                    echo(conRT)
+
+        conRT = RelayConnector(logRT, socket.SOCK_STREAM, 2, self.port, self.address)
+        for i in range(3):
+            if conRT.connectRelay(token, relayPort, relayAddr):
+                conRT.index = len(self.conRTs)
+                self.conRTs.append(conRT)
+                break
+            else:
+                conRT.tryClose()
+
+    def taskRT(self, conRT):
+        conRT.task()
+        if conRT.state == conRT.States.Disconnected:
+            self.conRTs[conRT.index] = None
 
     # def keepaliveTask(self, serverEP, primary=True):
     #     data = b'0000' + portalID.to_bytes(4, 'little') + b'0000'
