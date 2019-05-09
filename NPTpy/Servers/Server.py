@@ -17,8 +17,11 @@ class PortalConn:
         self.baseSocket  = baseSocket
         self.portalIndex = -1
 
-    def recv(self, size):
-        return self.baseSocket.recv(size)
+    def tryRecv(self, size):
+        try:
+            return self.baseSocket.recv(size)
+        except socket.error:
+            return b''
 
     def sendall(self, data):
         return self.baseSocket.sendall(data)
@@ -103,7 +106,7 @@ class Server:
         readable, writable, exceptional = select.select(socketList, [], [])
         for s in readable:
             if   s is self.con: self.task()
-            else:               self.process(s) # s is in self.connSockets
+            else:               self.process(s) # s is in self.portalTable
 
     def task(self):
         conn, addr = self.con.accept()
@@ -111,7 +114,7 @@ class Server:
         try:
             data = conn.recv(64)
         except socket.error:
-            pass
+            log.info('    dropped')
         else:
             if len(data) != 64:
                 conn.close()
@@ -136,7 +139,7 @@ class Server:
             else:
                 log.info('    renew existing')
                 oldRecord = self.portalTable[portalIndex]
-                oldRecord.conn.tryClose()
+                oldRecord.tryClose()
                 self.portalTable[portalIndex] = record
 
             record.portalIndex = portalIndex
@@ -157,10 +160,7 @@ class Server:
             self.removeConn(conn)
             return
 
-        try:
-            data = conn.recv(64)
-        except socket.error:
-            data = b''
+        data = conn.tryRecv(64)
         if len(data) != 64:
             # Remove the connection
             log.info('    disconnect' if len(data) == 0 else '    bad request')

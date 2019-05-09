@@ -20,8 +20,11 @@ class RelayConn:
         self.token = b''
         self.other = None
 
-    def recv(self, size):
-        return self.baseSocket.recv(size)
+    def tryRecv(self, size):
+        try:
+            return self.baseSocket.recv(size)
+        except socket.error:
+            return b''
 
     def sendall(self, data):
         return self.baseSocket.sendall(data)
@@ -79,7 +82,7 @@ class Relay:
         try:
             data = self.connST.recv(24)
         except socket.error:
-            pass
+            self.removeManage()
         else:
             if len(data) == 24:
                 magic    = data[0:4]
@@ -103,58 +106,52 @@ class Relay:
     def task(self):
         conn, addr = self.con.accept()
         conn.setblocking(False)
+
+        conn = RelayConn(conn)
+
+        data = conn.tryRecv(64)
+        if len(data) != 64:
+            conn.tryClose()
+            return
+
+        conn.token = data[0:8]
+        log.info('    with token: x{0}'.format(conn.token.hex()))
+
         try:
-            data = conn.recv(64)
-        except socket.error:
-            pass
+            rec = self.tokenMap[conn.token]
+        except KeyError:
+            log.info('    INVALID')
+            conn.tryClose()
+            return
         else:
-            if len(data) != 64:
-                conn.close()
-                return
+            if rec.indexA == -1:
+                # First one to connect
 
-            token = data[0:8]
+                rec.indexA = len(self.connSockets)
+                self.connSockets.append(conn)
 
-            log.info('    with token: x{0}'.format(token.hex()))
+                log.info('    indexA: {0:3d}'.format(rec.indexA))
 
-            try:
-                rec = self.tokenMap[token]
-            except KeyError:
-                log.info('    INVALID')
-                conn.close()
-                return
+            elif rec.indexB == -1:
+                # Second one to connect
+                other = self.connSockets[rec.indexA]
+
+                conn.other = other
+                rec.indexB = len(self.connSockets)
+                self.connSockets.append(conn)
+
+                # we can now forward between the 2
+                other.other = conn
+
+                conn.sendall(b'Ready !\n')
+                other.sendall(b'Ready !\n')
+
+                log.info('    indexA: {0:3d}, indexB: {1:3d}'.format(rec.indexA, rec.indexB))
+
             else:
-                if rec.indexA == -1:
-                    # First one to connect
-
-                    newSocket       = RelayConn(conn)
-                    newSocket.token = token
-                    rec.indexA = len(self.connSockets)
-                    self.connSockets.append(newSocket)
-
-                    log.info('    indexA: {0:3d}'.format(rec.indexA))
-
-                elif rec.indexB == -1:
-                    # Second one to connect
-                    other = self.connSockets[rec.indexA]
-
-                    newSocket       = RelayConn(conn)
-                    newSocket.token = token
-                    newSocket.other = other
-                    rec.indexB = len(self.connSockets)
-                    self.connSockets.append(newSocket)
-
-                    # we can now forward between the 2
-                    other.other = newSocket
-
-                    newSocket.sendall(b'Ready !\n')
-                    other.sendall(b'Ready !\n')
-
-                    log.info('    indexA: {0:3d}, indexB: {1:3d}'.format(rec.indexA, rec.indexB))
-
-                else:
-                    log.info('    REUSE')
-                    conn.close()
-                    return
+                log.info('    REUSE')
+                conn.tryClose()
+                return
 
     def removeIndex(self, index):
         try:
@@ -198,7 +195,7 @@ class Relay:
     def process(self, conn):
         # TODO: avoid reading data if other is not connected,
         # but check to see if this one has disconnected
-        data = conn.recv(2048)
+        data = conn.tryRecv(2048)
         if len(data) < 1:
             # Connection closed (?), remove both
             self.removeConn(conn)
