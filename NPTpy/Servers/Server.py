@@ -109,15 +109,15 @@ class Server:
             else:               self.process(s) # s is in self.portalTable
 
     def task(self):
-        conn, addr = self.con.accept()
-        conn.setblocking(False)
+        connSocket, addr = self.con.accept()
+        connSocket.setblocking(False)
         try:
-            data = conn.recv(64)
+            data = connSocket.recv(64)
         except socket.error:
             log.info('    dropped')
         else:
             if len(data) != 64:
-                conn.close()
+                connSocket.close()
                 return
 
             portalID = data[0:4]
@@ -125,24 +125,24 @@ class Server:
             log.info('    with portalID: x{0}'.format(portalID.hex()))
 
             # TODO: authenticate
-            # conn.sendall(b'\x00')
+            # connSocket.sendall(b'\x00')
 
-            record = PortalConn(portalID, addr, conn)
+            conn = PortalConn(portalID, addr, connSocket)
 
-            # Add the record or update the existing one
+            # Add the conn or update the existing one
             try:
                 portalIndex = self.portalIndexer[portalID]
             except KeyError:
                 portalIndex = len(self.portalTable)
-                self.portalTable.append(record)
+                self.portalTable.append(conn)
                 self.portalIndexer[portalID] = portalIndex
             else:
                 log.info('    renew existing')
-                oldRecord = self.portalTable[portalIndex]
-                oldRecord.tryClose()
-                self.portalTable[portalIndex] = record
+                oldConn = self.portalTable[portalIndex]
+                oldConn.tryClose()
+                self.portalTable[portalIndex] = conn
 
-            record.portalIndex = portalIndex
+            conn.portalIndex = portalIndex
 
     def removeConn(self, conn):
         conn.tryClose()

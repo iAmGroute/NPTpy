@@ -65,11 +65,11 @@ class Relay:
             else:                  self.process(s) # s is in self.connSockets
 
     def taskManageAccept(self):
-        conn, addr = self.conST.accept()
-        conn.setblocking(False)
+        connSocket, addr = self.conST.accept()
+        connSocket.setblocking(False)
         if self.connST:
             self.removeManage()
-        self.connST = conn
+        self.connST = connSocket
 
     def removeManage(self):
         try:
@@ -104,10 +104,10 @@ class Relay:
                 self.connST.sendall(b'OK')
 
     def task(self):
-        conn, addr = self.con.accept()
-        conn.setblocking(False)
+        connSocket, addr = self.con.accept()
+        connSocket.setblocking(False)
 
-        conn = RelayConn(conn)
+        conn = RelayConn(connSocket)
 
         data = conn.tryRecv(64)
         if len(data) != 64:
