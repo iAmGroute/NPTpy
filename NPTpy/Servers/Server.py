@@ -74,7 +74,7 @@ class Server:
             try:
                 otherIndex = self.portalIndexer[otherID]
             except KeyError:
-                return b'Bad ID', True
+                return b'Bad ID', False
             else:
                 log.info('    found')
                 # TODO: generate token with system urandom (crypto)
