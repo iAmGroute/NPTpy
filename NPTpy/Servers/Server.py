@@ -85,7 +85,7 @@ class Server:
                 otherRecord = self.portalTable[otherIndex]
                 self.notifyPortal(token, otherRecord, record)
                 msg = token + RelayInfoMessage
-                return msg, True # this should be False, until we get confirm from relay & portal
+                return msg, False
 
     def notifyRelay(self, token, callerID, otherID):
         msg =  b'v0.1'  # 4B
