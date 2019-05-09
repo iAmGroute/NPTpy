@@ -47,7 +47,7 @@ class RelayConnector(Connector):
             self.tryClose()
 
     def echo(self):
-        data = self.recv(1024)
+        data = self.recv(32768)
         if len(data) < 1:
             self.state = self.States.Disconnected
         self.sendall(data)
