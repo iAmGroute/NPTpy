@@ -105,6 +105,21 @@ class Portal:
         if conRT.state == conRT.States.Disconnected:
             self.conRTs[conRT.index] = None
 
+    # 'Client' mode
+    # Notice that the behaviour of the server is symmetric
+    # with respect to who is the client and who the portal,
+    # so sending a request will trigger the same response to both sides.
+    # Therefore, we can simply 'inject' a connect message
+    # and the remaining will be handled automatically.
+    def connectToPortal(self, otherID):
+        if not self.conST:
+            return
+        methodID = 1
+        data =  methodID.to_bytes(4, 'little') 
+        data += otherID
+        data += b'0' * 56
+        self.conST.sendall(data)
+
     # def keepaliveTask(self, serverEP, primary=True):
     #     data = b'0000' + portalID.to_bytes(4, 'little') + b'0000'
     #     code = 0x5A if primary else 0x5B # backup
