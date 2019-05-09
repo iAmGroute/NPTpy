@@ -61,19 +61,25 @@ class Connector:
         self.log.info(t('Connection from\t [{0}]:{1}'.format(*addr)))
         return conn, addr
 
-    def recv(self, bufferSize):
-        data = self.socket.recv(bufferSize)
-        self.log.info(t('Received {0} Bytes'.format(prefixIEC(len(data)))))
-        self.log.debug(t.over('    content: {0}'.format(data)))
-        return data
-
     def connect(self, endpoint):
         self.socket.connect(endpoint)
         self.log.info(t('Connected to\t [{0}]:{1}'.format(*endpoint)))
 
     def sendall(self, data):
         self.socket.sendall(data)
-        self.log.info(t('Sent     {0} Bytes'.format(prefixIEC(len(data)))))
+        self.log.info(t('Sent    \t {0} Bytes'.format(prefixIEC(len(data)))))
+
+    def recv(self, bufferSize):
+        data = self.socket.recv(bufferSize)
+        self.log.info(t('Received\t {0} Bytes'.format(prefixIEC(len(data)))))
+        self.log.debug(t.over('    content: {0}'.format(data)))
+        return data
+
+    def tryRecv(self, bufferSize):
+        try:
+            return self.recv(bufferSize)
+        except socket.error:
+            return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
         try:
@@ -89,4 +95,14 @@ class Connector:
         except socket.error:
             return False
 
+        return True
+
+    def tryConnect(self, endpoint, data=b''):
+        try:
+            self.connect(endpoint)
+            if data: self.sendall(data)
+        except socket.error as e:
+            self.log.warn(t.over('    could not connect: {0}'.format(e)))
+            self.tryClose()
+            return False
         return True
