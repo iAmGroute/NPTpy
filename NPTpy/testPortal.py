@@ -1,3 +1,4 @@
+python = 3
 python
 
 import time
@@ -9,8 +10,6 @@ from Portal import Portal
 p = Portal(b'ABCE')
 
 while True:
-    p.connectKA()
-    while p.connected:
-        p.task()
-    time.sleep(1)
+    print(p.conRTs)
+    p.main()
 
