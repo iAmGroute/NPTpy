@@ -9,23 +9,34 @@ from Common.Connector import Connector
 log   = logging.getLogger(__name__ + '   ')
 logST = logging.getLogger(__name__ + ':ST')
 logRT = logging.getLogger(__name__ + ':RT')
+logDV = logging.getLogger(__name__ + ':DV')
 
 ServerAddr = '127.0.0.1'
 ServerPort = 4020
+
+
+class DeviceConn(Connector):
+    index = -1
+    conRT = None
+
 
 class RelayConnector(Connector):
     class States(Enum):
         Disconnected = 0
         WaitClient   = 1
-        Ready        = 2
+        Connecting   = 2
+        Ready        = 3
 
-    state = States.Disconnected
-    index = -1
+    state  = States.Disconnected
+    parent = None
+    index  = -1
+    conn   = None
 
     def task(self):
         if   self.state == self.States.Disconnected: return
         elif self.state == self.States.WaitClient:   self.waitReady()
-        elif self.state == self.States.Ready:        self.echo()
+        elif self.state == self.States.WaitClient:   self.connectTo()
+        elif self.state == self.States.Ready:        self.forward()
 
     def connectRelay(self, token, relayPort, relayAddr):
         data = b''
@@ -39,19 +50,39 @@ class RelayConnector(Connector):
             return False
 
     def waitReady(self):
-        data = self.recv(8)
+        data = self.tryRecv(8)
         if data == b'Ready !\n':
             self.state = self.States.Ready
         else:
             self.state = self.States.Disconnected
             self.tryClose()
 
-    def echo(self):
-        data = self.recv(32768)
-        if len(data) < 1:
-            self.state = self.States.Disconnected
-        self.sendall(data)
+    def connectTo(self):
+        relayInfo = self.tryRecv(1024)
+        l = len(relayInfo)
+        if l < 11:
+            if l == 0: self.conST = None
+            return
+        token     = relayInfo[0:8]
+        relayPort = int.from_bytes(relayInfo[8:10], 'little')
+        relayAddr = str(relayInfo[10:], 'utf-8')
 
+        conRT = DeviceConn(logRT, socket.SOCK_STREAM, 2, self.port, self.address)
+        for i in range(3):
+            if conRT.connectRelay(token, relayPort, relayAddr):
+                conRT.index = len(self.conRTs)
+                conRT.parent = self
+                self.conRTs.append(conRT)
+                break
+            else:
+                conRT.tryClose()
+
+    def forward(self):
+        if self.conn:
+            data = self.tryRecv(32768)
+            if len(data) < 1:
+                self.state = self.States.Disconnected
+            self.sendall(data)
 
 class Portal:
 
@@ -61,20 +92,21 @@ class Portal:
         self.address   = address
         self.conST     = None
         self.conRTs    = []
+        self.conDVs    = []
 
     def main(self):
         if not self.conST:
             self.connectKA()
         else:
-            socketList = [self.conST] + self.conRTs
+            socketList = [self.conST] + self.conRTs + self.conDVs
             socketList = filter(None, socketList)
             readable, writable, exceptional = select.select(socketList, [], [])
             for s in readable:
                 if   s is self.conST: self.task()
-                else:                 self.taskRT(s) # s is in self.conRTs
+                else:                 self.taskRT(s) # s is in self.conRTs or .conDVs
 
     def connectKA(self):
-        self.conST = Connector(log, socket.SOCK_STREAM, 2, self.port, self.address)
+        self.conST = Connector(logST, socket.SOCK_STREAM, 2, self.port, self.address)
         data = b''
         data += self.portalID
         data += b'0' * 60
@@ -94,6 +126,7 @@ class Portal:
         conRT = RelayConnector(logRT, socket.SOCK_STREAM, 2, self.port, self.address)
         for i in range(3):
             if conRT.connectRelay(token, relayPort, relayAddr):
+                conRT.parent = self
                 conRT.index = len(self.conRTs)
                 self.conRTs.append(conRT)
                 break
@@ -119,6 +152,7 @@ class Portal:
         data += otherID
         data += b'0' * 56
         self.conST.sendall(data)
+
 
     # def keepaliveTask(self, serverEP, primary=True):
     #     data = b'0000' + portalID.to_bytes(4, 'little') + b'0000'
