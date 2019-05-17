@@ -15,11 +15,28 @@ ServerAddr = '127.0.0.1'
 ServerPort = 4020
 
 
+class DeviceListener(Connector):
+
+    def __init__(self, conRT, mySocket):
+        Connector.__init__(self, logDV, mySocket)
+        self.conRT = conRT
+
+    def task(self):
+
+        connSocket, addr = self.accept()
+        connSocket.setblocking(False)
+        conn = DeviceConn(self.conRT, connSocket)
+
+        self.conRT.parent.conRTs[self.conRT.index] = self.conRT
+        self.conRT.parent.conDVs[self.conRT.index] = conn
+        self.conRT.conn = conn
+
+
 class DeviceConn(Connector):
 
-    def __init__(self, mySocket):
+    def __init__(self, conRT, mySocket):
         Connector.__init__(self, logDV, mySocket)
-        self.conRT = None
+        self.conRT = conRT
 
     def task(self):
         data = self.tryRecv(32768)
@@ -38,7 +55,7 @@ class RelayConn(Connector):
     class States(Enum):
         Disconnected = 0
         WaitReady    = 1
-        WaitDevice   = 2
+        Connecting   = 2
         Ready        = 3
 
     mode   = Modes.Portal
@@ -50,7 +67,7 @@ class RelayConn(Connector):
     def task(self):
         if   self.state == self.States.Disconnected: return
         elif self.state == self.States.WaitReady:    self.waitReady()
-        elif self.state == self.States.WaitDevice:   self.waitDevice()
+        elif self.state == self.States.Connecting:   self.connecting()
         elif self.state == self.States.Ready:        self.forward()
 
     def disconnect(self):
@@ -71,31 +88,30 @@ class RelayConn(Connector):
     def waitReady(self):
         data = self.tryRecv(8)
         if data == b'Ready !\n':
-            self.state = self.States.WaitDevice
-            if self.mode == self.Modes.Client:
+            if self.mode == self.Modes.Portal:
+                self.state = self.States.Connecting
+            else:
+                self.state = self.States.Ready
                 self.listenDV()
         else:
             self.disconnect()
 
     def listenDV(self):
-        self.conn = Connector(logDV, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
+        self.conn = DeviceListener(self, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
         self.conn.listen()
+        # TODO: add support for more than 1 connections (channels) and remove the following
+        self.parent.conRTs[self.index] = self.conn
 
-    def waitDevice(self):
-        if   self.mode == self.Modes.Portal: self.connectTo()
-        elif self.mode == self.Modes.Client: self.acceptDV()
-
-    def connectTo(self):
+    def connecting(self):
         deviceInfo = self.tryRecv(1024)
         l = len(deviceInfo)
         if l > 2:
             devicePort = int.from_bytes(deviceInfo[0:2], 'little')
             deviceAddr = str(deviceInfo[2:], 'utf-8')
 
-            self.conn = DeviceConn(Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
+            self.conn = DeviceConn(self, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
             for i in range(3):
                 if self.conn.tryConnect((deviceAddr, devicePort)):
-                    self.conn.conRT = self
                     self.state = self.States.Ready
                     self.parent.conDVs[self.index] = self.conn
                     return
@@ -103,11 +119,6 @@ class RelayConn(Connector):
                     self.conn.tryClose()
             self.conn = None
         self.disconnect()
-
-    def acceptDV(self):
-        connSocket, addr = self.conn.accept()
-        connSocket.setblocking(False)
-        self.conn = DeviceConn(connSocket)
 
     def forward(self):
         data = self.tryRecv(32768)
