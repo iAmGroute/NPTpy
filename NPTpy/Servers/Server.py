@@ -10,32 +10,12 @@ log   = logging.getLogger(__name__ + '   ')
 logRT = logging.getLogger(__name__ + ':RT')
 # logRU = logging.getLogger(__name__ + ':RU')
 
-class PortalConn:
-    def __init__(self, portalID, addr, baseSocket):
+class PortalConn(Connector):
+    def __init__(self, portalID, addr, mySocket):
+        Connector.__init__(self, log, mySocket)
         self.portalID    = portalID
         self.addr        = addr
-        self.baseSocket  = baseSocket
         self.portalIndex = -1
-
-    def tryRecv(self, size):
-        try:
-            return self.baseSocket.recv(size)
-        except socket.error:
-            return b''
-
-    def sendall(self, data):
-        return self.baseSocket.sendall(data)
-
-    def tryClose(self):
-        try:
-            self.baseSocket.close()
-        except socket.error:
-            return False
-        return True
-
-    # Needed for select()
-    def fileno(self):
-        return self.baseSocket.fileno()
 
 RelayAddr = '192.168.11.1'
 RelayPort = 4021

@@ -14,32 +14,16 @@ log   = logging.getLogger(__name__ + '   ')
 logST = logging.getLogger(__name__ + ':ST')
 # logSU = logging.getLogger(__name__ + ':SU')
 
-class RelayConn:
-    def __init__(self, baseSocket):
-        self.baseSocket = baseSocket
+class RelayConn(Connector):
+
+    def __init__(self, mySocket):
+        Connector.__init__(self, log, mySocket)
         self.token = b''
         self.other = None
 
-    def tryRecv(self, size):
-        try:
-            return self.baseSocket.recv(size)
-        except socket.error:
-            return b''
-
-    def sendall(self, data):
-        return self.baseSocket.sendall(data)
-
     def tryClose(self):
         self.other = None
-        try:
-            self.baseSocket.close()
-        except socket.error:
-            return False
-        return True
-
-    # Needed for select()
-    def fileno(self):
-        return self.baseSocket.fileno()
+        super().tryClose()
 
 MapRecord = recordclass('MapRecord', ['indexA', 'indexB'])
 
@@ -110,7 +94,7 @@ class Relay:
         conn = RelayConn(connSocket)
 
         data = conn.tryRecv(64)
-        conn.baseSocket.setblocking(False)
+        conn.socket.setblocking(False)
         if len(data) != 64:
             conn.tryClose()
             return
@@ -198,8 +182,12 @@ class Relay:
         # but check to see if this one has disconnected
         data = conn.tryRecv(32768)
         if len(data) < 1:
-            # Connection closed (?), remove both
+            # Connection closed, remove both
             self.removeConn(conn)
 
         if conn.other:
-            conn.other.sendall(data)
+            try:
+                conn.other.sendall(data)
+            except OSError:
+                # Connection closed (?), remove both
+                self.removeConn(conn)

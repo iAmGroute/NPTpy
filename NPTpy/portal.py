@@ -16,7 +16,11 @@ ServerPort = 4020
 
 
 class DeviceConn(Connector):
-    conRT = None
+
+    def __init__(self, mySocket):
+        Connector.__init__(self, logDV, mySocket)
+        self.conRT = None
+
     def task(self):
         data = self.tryRecv(32768)
         if len(data) < 1:
@@ -25,7 +29,7 @@ class DeviceConn(Connector):
         self.conRT.sendall(data)
 
 
-class RelayConnector(Connector):
+class RelayConn(Connector):
 
     class Modes(Enum):
         Portal = 0
@@ -74,11 +78,8 @@ class RelayConnector(Connector):
             self.disconnect()
 
     def listenDV(self):
-        connSocket, addr = self.conn.accept()
-        connSocket.settimeout(0.2)
-        connSocket.setblocking(False)
-        # We need to upgrade connSocket from socket.socket to Connector
-        self.conn = connSocket
+        self.conn = Connector(logDV, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
+        self.conn.listen()
 
     def waitDevice(self):
         if   self.mode == self.Modes.Portal: self.connectTo()
@@ -91,7 +92,7 @@ class RelayConnector(Connector):
             devicePort = int.from_bytes(deviceInfo[0:2], 'little')
             deviceAddr = str(deviceInfo[2:], 'utf-8')
 
-            self.conn = DeviceConn(logDV, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
+            self.conn = DeviceConn(Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
             for i in range(3):
                 if self.conn.tryConnect((deviceAddr, devicePort)):
                     self.conn.conRT = self
@@ -104,7 +105,9 @@ class RelayConnector(Connector):
         self.disconnect()
 
     def acceptDV(self):
-        self.conn.listen()
+        connSocket, addr = self.conn.accept()
+        connSocket.setblocking(False)
+        self.conn = DeviceConn(connSocket)
 
     def forward(self):
         data = self.tryRecv(32768)
@@ -156,7 +159,7 @@ class Portal:
         relayPort = int.from_bytes(relayInfo[8:10], 'little')
         relayAddr = str(relayInfo[10:], 'utf-8')
 
-        conRT = RelayConnector(logRT, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        conRT = RelayConn(logRT, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
         for i in range(3):
             if conRT.connectRelay(token, relayPort, relayAddr):
                 conRT.parent = self
@@ -170,7 +173,7 @@ class Portal:
     def taskRTorDV(self, con):
         con.task()
 
-        conRT = con if isinstance(con, RelayConnector) else con.conRT
+        conRT = con if isinstance(con, RelayConn) else con.conRT
         if conRT.state == conRT.States.Disconnected:
             self.conRTs[conRT.index] = None
             self.conDVs[conRT.index] = None
