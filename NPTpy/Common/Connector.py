@@ -67,8 +67,19 @@ class Connector:
         return conn, addr
 
     def connect(self, endpoint):
+        self.log.info(t('Connecting to\t [{0}]:{1}'.format(*endpoint)))
         self.socket.connect(endpoint)
-        self.log.info(t('Connected to\t [{0}]:{1}'.format(*endpoint)))
+        self.log.info(t('    connected'))
+
+    def tryConnect(self, endpoint, data=b''):
+        try:
+            self.connect(endpoint)
+            if data: self.sendall(data)
+        except socket.error as e:
+            self.log.warn(t.over('    could not connect: {0}'.format(e)))
+            self.tryClose()
+            return False
+        return True
 
     def sendall(self, data):
         self.socket.sendall(data)
@@ -98,16 +109,5 @@ class Connector:
             elif this_OS == OS.windows:
                 self.socket.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 1000 * idleTimer, 1000 * interval))
         except socket.error:
-            return False
-
-        return True
-
-    def tryConnect(self, endpoint, data=b''):
-        try:
-            self.connect(endpoint)
-            if data: self.sendall(data)
-        except socket.error as e:
-            self.log.warn(t.over('    could not connect: {0}'.format(e)))
-            self.tryClose()
             return False
         return True
