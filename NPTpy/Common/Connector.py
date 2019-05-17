@@ -8,14 +8,19 @@ from .this_OS import OS, this_OS
 
 class Connector:
 
-    def __init__(self, log=None, socketType=socket.SOCK_DGRAM, timeout=None, port=0, address='0.0.0.0'):
+    def __init__(self, log, mySocket):
         self.log = log or logging.getLogger('dummy')
+        self.socket = mySocket
+        address, port = mySocket.getsockname()
+        self.log.info(t('Started on\t [{0}]:{1}'.format(address, port)))
+
+    @staticmethod
+    def new(socketType=socket.SOCK_DGRAM, timeout=None, port=0, address='0.0.0.0'):
         s = socket.socket(socket.AF_INET, socketType)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.settimeout(timeout)
         s.bind((address, port))
-        self.socket = s
-        self.log.info(t('Started on\t [{0}]:{1}'.format(address, port)))
+        return s
 
     def __enter__(self):
         return self

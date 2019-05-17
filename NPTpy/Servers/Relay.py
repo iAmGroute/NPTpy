@@ -46,8 +46,8 @@ MapRecord = recordclass('MapRecord', ['indexA', 'indexB'])
 class Relay:
 
     def __init__(self, port, address='0.0.0.0'):
-        self.con   = Connector(log,   socket.SOCK_STREAM, None, port, address) # for portals/clients
-        self.conST = Connector(logST, socket.SOCK_STREAM, None, 40401, '0.0.0.0') # for server
+        self.con   = Connector(log,   Connector.new(socket.SOCK_STREAM, None,  port,   address)) # for portals/clients
+        self.conST = Connector(logST, Connector.new(socket.SOCK_STREAM, None, 40401, '0.0.0.0')) # for server
         self.con.listen()
         self.conST.listen()
         self.connST = None

@@ -47,8 +47,8 @@ RelayInfoMessage = RelayPort.to_bytes(2, 'little') + bytes(RelayAddr, 'utf-8')
 class Server:
 
     def __init__(self, port, address='0.0.0.0'):
-        self.con   = Connector(log,   socket.SOCK_STREAM, None, port, address)
-        self.conRT = Connector(logRT, socket.SOCK_STREAM, None, 0, '0.0.0.0')
+        self.con   = Connector(log,   Connector.new(socket.SOCK_STREAM, None, port,   address))
+        self.conRT = Connector(logRT, Connector.new(socket.SOCK_STREAM, None,    0, '0.0.0.0'))
         self.con.listen()
         self.conRT.connect((RelayManageAddr, RelayManagePort))
         self.portalTable   = [] # TODO: convert to pool allocator

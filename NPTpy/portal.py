@@ -91,7 +91,7 @@ class RelayConnector(Connector):
             devicePort = int.from_bytes(deviceInfo[0:2], 'little')
             deviceAddr = str(deviceInfo[2:], 'utf-8')
 
-            self.conn = DeviceConn(logDV, socket.SOCK_STREAM, 2, self.parent.port, self.parent.address)
+            self.conn = DeviceConn(logDV, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
             for i in range(3):
                 if self.conn.tryConnect((deviceAddr, devicePort)):
                     self.conn.conRT = self
@@ -139,7 +139,7 @@ class Portal:
                 else:                 self.taskRTorDV(s) # s is in self.conRTs or .conDVs
 
     def connectKA(self):
-        self.conST = Connector(logST, socket.SOCK_STREAM, 2, self.port, self.address)
+        self.conST = Connector(logST, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
         data = b''
         data += self.portalID
         data += b'0' * 60
@@ -156,7 +156,7 @@ class Portal:
         relayPort = int.from_bytes(relayInfo[8:10], 'little')
         relayAddr = str(relayInfo[10:], 'utf-8')
 
-        conRT = RelayConnector(logRT, socket.SOCK_STREAM, 2, self.port, self.address)
+        conRT = RelayConnector(logRT, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
         for i in range(3):
             if conRT.connectRelay(token, relayPort, relayAddr):
                 conRT.parent = self
