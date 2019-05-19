@@ -28,14 +28,14 @@ class Connector:
     def __exit__(self, type=None, value=None, traceback=None):
         # if self.socket.type == socket.SOCK_STREAM:
         #     self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
-        self.log.info(t('Stopped'))
+        self.tryClose()
 
     def tryClose(self):
         try:
             self.socket.close()
         except socket.error:
             return False
+        self.log.info(t('Stopped'))
         return True
 
     # Needed for select()
