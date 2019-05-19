@@ -26,7 +26,7 @@ class Link:
         # without losing the active channels
         # if all else fails:
         self.close()
-        self.myPortal.removeMe(self.myID)
+        self.myPortal.removeLink(self.myID)
 
     def sendPacket(self, packet):
         try:
@@ -39,6 +39,10 @@ class Link:
         self.con.tryClose()
         for ep in self.eps:
             ep.close()
+
+    def removeEP(self, channelID):
+        self.eps[channelID] = None
+        self.eps[0].requestDeleteChannel(channelID)
 
     # Needed for select()
     def fileno(self):
@@ -71,6 +75,7 @@ class Link:
                 log.warn('    epID not found')
 
             self.buffer = self.buffer[totalLen:]
+
 
     # Control channel functions
 

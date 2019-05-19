@@ -14,7 +14,7 @@ class ChannelData(ChannelEndpoint):
         try:
             self.myCon.sendall(data)
         except ConnectionAbortedError:
-            self.myLink.removeMe(self.myID)
+            self.myLink.removeEP(self.myID)
 
     def close(self):
         self.myCon.tryClose()
@@ -27,6 +27,6 @@ class ChannelData(ChannelEndpoint):
     def task(self):
         data = self.myCon.tryRecv(32768)
         if len(data) < 1:
-            self.myLink.removeMe(self.myID)
+            self.myLink.removeEP(self.myID)
             return
         self.sendMessage(data)
