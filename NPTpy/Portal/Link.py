@@ -48,6 +48,13 @@ class Link:
     def fileno(self):
         return self.con.fileno()
 
+
+    # TODO: add 2-state implementation (bring from RelayConn)
+    # since the relay will start the connection with a 'Ready !' message
+
+    # TODO: add listeners (server sockets) for new channel requests
+
+
     # Called after select()
     def task(self):
 

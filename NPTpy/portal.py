@@ -25,7 +25,7 @@ class DeviceListener(Connector):
         connSocket.setblocking(False)
         conn = DeviceConn(self.conRT, connSocket)
 
-        self.conRT.parent.conRTs[self.conRT.index] = self.conRT
+        self.conRT.parent.links[self.conRT.index] = self.conRT
         self.conRT.parent.conDVs[self.conRT.index] = conn
         self.conRT.conn = conn
 
@@ -102,7 +102,7 @@ class RelayConn(Connector):
         self.conn = DeviceListener(self, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
         self.conn.listen()
         # TODO: add support for more than 1 connections (channels) and remove the following
-        self.parent.conRTs[self.index] = self.conn
+        self.parent.links[self.index] = self.conn
 
     def connecting(self):
         deviceInfo = self.tryRecv(1024)
@@ -144,19 +144,24 @@ class Portal:
         self.port     = port
         self.address  = address
         self.conST    = None
-        self.conRTs   = []
-        self.conDVs   = []
+        self.links   = []
+
+    # Needed for select()
+    def fileno(self):
+        return self.conST.fileno()
 
     def main(self):
         if not self.conST:
             self.connectKA()
         else:
-            socketList = [self.conST] + self.conRTs + self.conDVs
+            socketList = [self]
+            for conRT in self.links:
+                socketList.append(conRT)
+                socketList.extend(conRT.eps[1:])
             socketList = filter(None, socketList)
             readable, writable, exceptional = select.select(socketList, [], [])
             for s in readable:
-                if   s is self.conST: self.task()
-                else:                 self.taskRTorDV(s) # s is in self.conRTs or .conDVs
+                s.task()
 
     def connectKA(self):
         self.conST = Connector(logST, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
@@ -176,24 +181,26 @@ class Portal:
         relayPort = int.from_bytes(relayInfo[8:10], 'little')
         relayAddr = str(relayInfo[10:], 'utf-8')
 
-        conRT = RelayConn(logRT, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        # TODO: move the following to Link
+        # so that it can retry the connection if it fails
+        # the link should also decide when to try for a direct connection
+        conRT = Connector(logRT, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        data = token + b'0' * 56
         for i in range(3):
-            if conRT.connectRelay(token, relayPort, relayAddr):
-                conRT.parent = self
-                conRT.index = len(self.conRTs)
-                self.conRTs.append(conRT)
-                self.conDVs.append(None)
+            if conRT.tryConnect((relayAddr, relayPort), data):
+                conRT.setKeepAlive()
                 break
             else:
                 conRT.tryClose()
+        else:
+            conRT = None
 
-    def taskRTorDV(self, con):
-        con.task()
+        if conRT:
+            link = Link(len(self.links), self, conRT.socket)
+            self.links.append(link)
 
-        conRT = con if isinstance(con, RelayConn) else con.conRT
-        if conRT.state == conRT.States.Disconnected:
-            self.conRTs[conRT.index] = None
-            self.conDVs[conRT.index] = None
+    def removeLink(self, linkID):
+        self.links[linkID] = None
 
     # 'Client' mode
     # Notice that the behaviour of the server is symmetric
