@@ -8,8 +8,6 @@ from Common.Connector import Connector
 
 log   = logging.getLogger(__name__ + '   ')
 logST = logging.getLogger(__name__ + ':ST')
-logRT = logging.getLogger(__name__ + ':RT')
-logDV = logging.getLogger(__name__ + ':DV')
 
 ServerAddr = '127.0.0.1'
 ServerPort = 4020
@@ -43,7 +41,7 @@ class DeviceConn(Connector):
         if len(data) < 1:
             self.conRT.disconnect()
             return
-        self.conRT.sendall(data)
+        self.conRT.sendall(b'\x00' + data)
 
 
 class RelayConn(Connector):
@@ -88,13 +86,17 @@ class RelayConn(Connector):
     def waitReady(self):
         data = self.tryRecv(8)
         if data == b'Ready !\n':
-            if self.mode == self.Modes.Portal:
-                self.state = self.States.Connecting
-            else:
-                self.state = self.States.Ready
-                self.listenDV()
+            self.newChannel()
         else:
             self.disconnect()
+
+    def newChannel(self):
+        self.sendall(b'\xFF')
+        if self.mode == self.Modes.Portal:
+            self.state = self.States.Connecting
+        else:
+            self.state = self.States.Ready
+            self.listenDV()
 
     def listenDV(self):
         self.conn = DeviceListener(self, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
@@ -124,12 +126,16 @@ class RelayConn(Connector):
         data = self.tryRecv(32768)
         if len(data) < 1:
             self.conn.tryClose()
-            self.disconnect()
+            self.newChannel()
             return
-        try:
-            self.conn.sendall(data)
-        except ConnectionAbortedError:
-            self.disconnect()
+        if data[0] == b'\x00':
+            try:
+                self.conn.sendall(data[1:])
+            except ConnectionAbortedError:
+                self.newChannel()
+        elif data[0] == b'\xFF':
+            self.conn.tryClose()
+            self.newChannel()
 
 class Portal:
 
