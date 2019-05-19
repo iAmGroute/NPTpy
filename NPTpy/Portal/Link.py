@@ -17,7 +17,7 @@ class Link:
         self.myID     = myID
         self.myPortal = myPortal
         self.con      = Connector(log, mySocket)
-        self.eps      = [] # TODO: convert to slotList
+        self.eps      = [ChannelControl(0, self)] # TODO: convert to slotList
         self.buffer   = b''
 
     def connectionDropped(self):
