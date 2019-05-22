@@ -106,6 +106,7 @@ class Relay:
             rec = self.tokenMap[conn.token]
         except KeyError:
             log.info('    INVALID')
+            conn.sendall(b'Bad T !\n')
             conn.tryClose()
             return
         else:
@@ -135,6 +136,7 @@ class Relay:
 
             else:
                 log.info('    REUSE')
+                conn.sendall(b'Bad T !\n')
                 conn.tryClose()
                 return
 

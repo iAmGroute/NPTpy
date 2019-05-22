@@ -13,30 +13,33 @@ logEP = logging.getLogger(__name__ + ':EP')
 
 class Link:
 
-    def __init__(self, myID, myPortal, mySocket):
-        self.myID     = myID
-        self.myPortal = myPortal
-        self.con      = Connector(log, mySocket)
-        self.eps      = [ChannelControl(0, self)] # TODO: convert to slotList
-        self.buffer   = b''
+    class States(Enum):
+        Disconnected = 0
+        WaitReady    = 1
+        Forwarding   = 2
 
-    def connectionDropped(self):
-        # TODO:
-        # try to re-establish the connection,
-        # without losing the active channels
-        # if all else fails:
-        self.close()
-        self.myPortal.removeLink(self.myID)
+    def __init__(self, myID, myPortal, myToken, relayPort, relayAddr, myPort=0, myAddress='0.0.0.0'):
+        self.myID         = myID
+        self.myPortal     = myPortal
+        self.myToken      = myToken
+        self.relayPort    = relayPort
+        self.relayAddress = relayAddress
+        self.myPort       = myPort
+        self.myAddress    = myAddress
+        self.eps          = [ChannelControl(0, self)] # TODO: convert to slotList
+        self.buffer       = b''
+        self.state        = self.States.Disconnected
+        self.conRT        = None
 
     def sendPacket(self, packet):
         try:
             self.sendall(packet)
         except ConnectionAbortedError:
             log.exception(logEP)
-            self.connectionDropped()
+            self.reconnect()
 
     def close(self):
-        self.con.tryClose()
+        self.conRT.tryClose()
         for ep in self.eps:
             ep.close()
 
@@ -44,23 +47,62 @@ class Link:
         self.eps[channelID] = None
         self.eps[0].requestDeleteChannel(channelID)
 
+    def maintenace(self):
+        if not self.conRT:
+            self.taskConnect()
+
+    def reconnect(self):
+        self.conRT.tryClose()
+        self.conRT = None
+        self.state = self.States.Disconnected
+        self.taskConnect()
+
+    def disconnect(self):
+        self.close()
+        self.myPortal.removeLink(self.myID)
+
     # Needed for select()
     def fileno(self):
-        return self.con.fileno()
-
-
-    # TODO: add 2-state implementation (bring from RelayConn)
-    # since the relay will start the connection with a 'Ready !' message
-
-    # TODO: add listeners (server sockets) for new channel requests
-
+        return self.conRT.fileno()
 
     # Called after select()
     def task(self):
+        if   self.state == self.States.Disconnected: self.taskConnect() # should not ever be called
+        elif self.state == self.States.WaitReady:    self.taskReady()
+        elif self.state == self.States.Forwarding:   self.taskForward()
+
+    # TODO: add listeners (server sockets) for new channel requests
+
+    def taskConnect(self):
+
+        assert not self.conRT
+
+        conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.myPort, self.myAddress))
+        data = self.myToken + b'0' * 56
+        for i in range(3):
+            if conRT.tryConnect((self.relayAddr, self.relayPort), data):
+                conRT.setKeepAlive()
+                break
+            else:
+                conRT.tryClose()
+        else:
+            conRT = None
+
+        if conRT:
+            self.conRT = conRT
+            self.state = self.States.WaitReady
+
+    def taskReady(self):
+        data = self.conRT.tryRecv(8)
+        if   data == b'Ready !\n': self.state = self.States.Forwarding
+        elif data == b'Bad T !\n': self.disconnect()
+        else:                      self.reconnect()
+
+    def taskForward(self):
 
         data = self.tryRecv(32768)
         if len(data) < 1:
-            self.connectionDropped()
+            self.reconnect()
             return
 
         self.buffer += data
@@ -84,7 +126,7 @@ class Link:
             self.buffer = self.buffer[totalLen:]
 
 
-    # Control channel functions
+    # Functions called by control channel
 
     def newChannel(channelID, devicePort, deviceAddr):
 

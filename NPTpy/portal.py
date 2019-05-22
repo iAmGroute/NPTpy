@@ -151,14 +151,22 @@ class Portal:
         return self.conST.fileno()
 
     def main(self):
+
         if not self.conST:
             self.connectKA()
+
         else:
+
+            for link in self.links:
+                if link:
+                    link.maintenance()
+
             socketList = [self]
-            for conRT in self.links:
-                socketList.append(conRT)
-                socketList.extend(conRT.eps[1:])
+            for link in self.links:
+                socketList.append(link)
+                socketList.extend(link.eps)
             socketList = filter(None, socketList)
+
             readable, writable, exceptional = select.select(socketList, [], [])
             for s in readable:
                 s.task()
@@ -181,23 +189,9 @@ class Portal:
         relayPort = int.from_bytes(relayInfo[8:10], 'little')
         relayAddr = str(relayInfo[10:], 'utf-8')
 
-        # TODO: move the following to Link
-        # so that it can retry the connection if it fails
-        # the link should also decide when to try for a direct connection
-        conRT = Connector(logRT, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
-        data = token + b'0' * 56
-        for i in range(3):
-            if conRT.tryConnect((relayAddr, relayPort), data):
-                conRT.setKeepAlive()
-                break
-            else:
-                conRT.tryClose()
-        else:
-            conRT = None
-
-        if conRT:
-            link = Link(len(self.links), self, conRT.socket)
-            self.links.append(link)
+        # TODO: allow for different binding port & address than self.port, self.address
+        link = Link(len(self.links), self, conRT.socket, token, self.port, self.address)
+        self.links.append(link)
 
     def removeLink(self, linkID):
         self.links[linkID] = None
