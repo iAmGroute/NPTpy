@@ -13,10 +13,11 @@ logEP = logging.getLogger(__name__ + ':EP')
 
 class Link:
 
-    class States(Enum):
+    class States:
         Disconnected = 0
         WaitReady    = 1
         Forwarding   = 2
+
 
     def __init__(self, myID, myPortal, myToken, relayPort, relayAddr, myPort=0, myAddress='0.0.0.0'):
         self.myID         = myID
@@ -26,30 +27,36 @@ class Link:
         self.relayAddress = relayAddress
         self.myPort       = myPort
         self.myAddress    = myAddress
-        self.eps          = [ChannelControl(0, self)] # TODO: convert to slotList
+        self.listeners    = []
+        self.epControl    = ChannelControl(0, self)
+        self.eps          = [epControl] # TODO: convert to slotList
+        self.epls         = [None]      # The listeners that corespond to the above endpoints
         self.buffer       = b''
         self.state        = self.States.Disconnected
         self.conRT        = None
 
-    def sendPacket(self, packet):
-        try:
-            self.sendall(packet)
-        except ConnectionAbortedError:
-            log.exception(logEP)
-            self.reconnect()
+
+    def addListener(self, devicePort, deviceAddr, port, address):
+        listener = Listener(len(self.listeners, self, devicePort, deviceAddr, port, address))
+        self.listeners.append(listener)
+
 
     def close(self):
         self.conRT.tryClose()
         for ep in self.eps:
             ep.close()
 
+
     def removeEP(self, channelID):
-        self.eps[channelID] = None
-        self.eps[0].requestDeleteChannel(channelID)
+        self.eps[channelID]  = None
+        self.epls[channelID] = None
+        self.epControl.requestDeleteChannel(channelID)
+
 
     def maintenace(self):
         if not self.conRT:
             self.taskConnect()
+
 
     def reconnect(self):
         self.conRT.tryClose()
@@ -57,13 +64,16 @@ class Link:
         self.state = self.States.Disconnected
         self.taskConnect()
 
+
     def disconnect(self):
         self.close()
         self.myPortal.removeLink(self.myID)
 
+
     # Needed for select()
     def fileno(self):
         return self.conRT.fileno()
+
 
     # Called after select()
     def task(self):
@@ -71,7 +81,6 @@ class Link:
         elif self.state == self.States.WaitReady:    self.taskReady()
         elif self.state == self.States.Forwarding:   self.taskForward()
 
-    # TODO: add listeners (server sockets) for new channel requests
 
     def taskConnect(self):
 
@@ -92,11 +101,13 @@ class Link:
             self.conRT = conRT
             self.state = self.States.WaitReady
 
+
     def taskReady(self):
         data = self.conRT.tryRecv(8)
         if   data == b'Ready !\n': self.state = self.States.Forwarding
         elif data == b'Bad T !\n': self.disconnect()
         else:                      self.reconnect()
+
 
     def taskForward(self):
 
@@ -126,9 +137,43 @@ class Link:
             self.buffer = self.buffer[totalLen:]
 
 
-    # Functions called by control channel
+    # Called by ChannelEndpoint,
+    # sends <packet> through the link to the remote portal.
+    def sendPacket(self, packet):
+        try:
+            self.sendall(packet)
+        except ConnectionAbortedError:
+            log.exception(logEP)
+            self.reconnect()
 
-    def newChannel(channelID, devicePort, deviceAddr):
+
+    # Functions called by control channel and listeners
+
+    def reserveChannel(self, listener):
+        channelID = len(self.eps)
+        self.eps.append(None)
+        self.epls.append(listener)
+        return channelID
+
+
+    def addChannel(self, channelID, conn):
+
+        if channelID <= 0 or not conn:
+            return False
+
+        while channelID >= len(self.eps):
+            self.eps.append(None)
+            self.epls.append(None)
+
+        if self.eps[channelID]:
+            self.deleteChannel(channelID)
+
+        self.eps[channelID] = ChannelData(channelID, self, conn)
+
+        return True
+
+
+    def newChannel(self, channelID, devicePort, deviceAddr):
 
         conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
         for i in range(3):
@@ -139,42 +184,42 @@ class Link:
         else:
             conn = None
 
-        if conn:
+        return self.addChannel(channelID, conn)
 
-            while channelID >= len(self.eps):
-                self.eps.append(None)
 
-            if self.eps[channelID]:
-                self.deleteChannel(channelID)
+    def newChannelFromSocket(self, channelID, channelSocket):
+        conn = Connector(logEP, channelSocket)
+        return self.addChannel(channelID, conn)
 
-            self.eps[channelID] = ChannelData(channelID, self, conn)
 
+    # Accept local connection
+    # by calling accept() on the listener (= socket accept)
+    # that corresponds to the channelID
+    def acceptChannel(self, channelID):
+        try:
+            listener = self.epls[channelID]
+            return listener.accept(channelID)
+        except (IndexError, AttributeError):
+            return False
+
+
+    # Accept local connection
+    # by calling decline() on the listener (= socket accept and close immediately)
+    # that corresponds to the channelID
+    def declineChannel(self, channelID):
+        try:
+            listener = self.epls[channelID]
+            return listener.accept(channelID)
+        except (IndexError, AttributeError):
+            return False
+
+
+    def deleteChannel(self, channelID):
+        try:
+            self.eps[channelID].close()
+            self.eps[channelID]  = None
+            self.epls[channelID] = None
             return True
-
-        else:
+        except (IndexError, AttributeError):
             return False
 
-    def acceptChannel(channelID):
-        # TODO: accept incoming connection
-        # by calling accept() on the listener (= socket accept)
-        # that corresponds to the channelID
-        return False
-
-    def declineChannel(channelID):
-        # TODO: accept incoming connection
-        # by calling decline() on the listener (= socket accept and close immediately)
-        # that corresponds to the channelID
-        return False
-
-    def deleteChannel(channelID):
-
-        if channelID >= len(self.eps):
-            return False
-
-        ep = self.eps[channelID]
-        if ep:
-            ep.close()
-            self.eps[channelID] = None
-            return True
-        else:
-            return False

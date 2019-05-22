@@ -27,6 +27,12 @@ class ChannelControl(ChannelEndpoint):
     def close(self):
         pass
 
+    # Note:
+    #   The prefix 'request' means we send to the other portal,
+    #     and the task is done by the other portal.
+    #   The prefix 'action' means we have received from the other portal,
+    #     and the task is done by this portal's Link.
+
     def requestNewChannel(self, channelID, devicePort, deviceAddr):
         request  = b'n'
         request += channelID.to_bytes(2, 'little')
