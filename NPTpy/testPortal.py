@@ -3,13 +3,13 @@ python
 
 import time
 import logging
-logging.basicConfig(format='%(created).3f [%(name)s|%(levelname)s] %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=logging.INFO)
 
-from Portal import Portal
+from Portal.Portal import Portal
 
 p = Portal(b'ABCE')
 
 while True:
-    print(p.conRTs)
+    # print(p.links)
     p.main()
 

@@ -3,9 +3,9 @@ python
 
 import time
 import logging
-logging.basicConfig(format='%(created).3f [%(name)s|%(levelname)s] %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=logging.INFO)
 
-from Portal import Portal
+from Portal.Portal import Portal
 
 c = Portal(b'ABCF')
 
@@ -15,17 +15,12 @@ c.connectToPortal(b'ABCE')
 
 c.main()
 
-c.conRTs[0].mode = c.conRTs[0].Modes.Client
 
 c.main()
-c.main()
 
-data = (8080).to_bytes(2, 'little')
-data += b'192.168.11.11'
-
-c.conRTs[0].sendall(data)
+c.links[0].addListener(5201, '192.168.11.11', 1234, '0.0.0.0')
 
 while True:
-    print(c.conRTs)
+    # print(c.links[0].eps)
     c.main()
 

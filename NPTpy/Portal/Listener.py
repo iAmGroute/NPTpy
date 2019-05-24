@@ -9,14 +9,13 @@ log = logging.getLogger(__name__)
 class Listener:
 
     def __init__(self, myID, myLink, devicePort, deviceAddr, myPort, myAddress):
-        self.myID          = myID
-        self.myLink        = myLink
-        self.devicePort    = devicePort
-        self.deviceAddress = deviceAddress
-        self.con           = Connector(log, Connector.new(socket.SOCK_STREAM, None, myPort, myAddress))
-        self.con.setblocking(False)
+        self.myID       = myID
+        self.myLink     = myLink
+        self.devicePort = devicePort
+        self.deviceAddr = deviceAddr
+        self.con        = Connector(log, Connector.new(socket.SOCK_STREAM, None, myPort, myAddress))
         self.con.listen()
-        self.pending = 0
+        self.allowSelect = True
 
 
     def close(self):
@@ -30,20 +29,20 @@ class Listener:
 
     # Called after select()
     def task(self):
-        self.pending += 1
-        channelID = reserveChannel(self)
+        self.allowSelect = False
+        channelID = self.myLink.reserveChannel(self)
         self.myLink.epControl.requestNewChannel(channelID, self.devicePort, self.deviceAddr)
 
 
     def accept(self, channelID):
 
-        if self.pending <= 0:
+        if self.allowSelect:
             return False
 
-        self.pending -= 1
+        self.allowSelect = True
 
         connSocket, addr = self.con.accept()
-        connSocket.setblocking(False)
+        # connSocket.setblocking(False)
 
         self.myLink.newChannelFromSocket(channelID, connSocket)
 
@@ -52,10 +51,10 @@ class Listener:
 
     def decline(self, channelID):
 
-        if self.pending <= 0:
+        if self.allowSelect:
             return False
 
-        self.pending -= 1
+        self.allowSelect = True
 
         connSocket, addr = self.con.accept()
         connSocket.setblocking(False)

@@ -84,6 +84,7 @@ class Connector:
     def sendall(self, data):
         self.socket.sendall(data)
         self.log.info(t('Sent    \t {0} Bytes'.format(prefixIEC(len(data)))))
+        self.log.debug(t.over('    content: {0}'.format(data)))
 
     def recv(self, bufferSize):
         data = self.socket.recv(bufferSize)

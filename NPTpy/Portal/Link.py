@@ -7,6 +7,7 @@ from Common.Connector import Connector
 from .ChannelEndpoint import ChannelEndpoint
 from .ChannelControl  import ChannelControl
 from .ChannelData     import ChannelData
+from .Listener        import Listener
 
 log   = logging.getLogger(__name__ + '   ')
 logEP = logging.getLogger(__name__ + ':EP')
@@ -19,32 +20,43 @@ class Link:
         Forwarding   = 2
 
 
-    def __init__(self, myID, myPortal, myToken, relayPort, relayAddr, myPort=0, myAddress='0.0.0.0'):
-        self.myID         = myID
-        self.myPortal     = myPortal
-        self.myToken      = myToken
-        self.relayPort    = relayPort
-        self.relayAddress = relayAddress
-        self.myPort       = myPort
-        self.myAddress    = myAddress
-        self.listeners    = []
-        self.epControl    = ChannelControl(0, self)
-        self.eps          = [epControl] # TODO: convert to slotList
-        self.epls         = [None]      # The listeners that corespond to the above endpoints
-        self.buffer       = b''
-        self.state        = self.States.Disconnected
-        self.conRT        = None
+    def __init__(self, myID, myPortal, myToken, relayPort, relayAddr, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
+        self.myID        = myID
+        self.myPortal    = myPortal
+        self.myToken     = myToken
+        self.relayPort   = relayPort
+        self.relayAddr   = relayAddr
+        self.rtPort      = rtPort
+        self.rtAddr      = rtAddr
+        self.ltPort      = ltPort
+        self.ltAddr      = ltAddr
+        self.listeners   = []
+        self.epControl   = ChannelControl(0, self)
+        self.eps         = [self.epControl] # TODO: convert to slotList
+        self.epls        = [None]           # The listeners that corespond to the above endpoints
+        self.buffer      = b''
+        self.state       = self.States.Disconnected
+        self.conRT       = None
+        self.allowSelect = True
 
 
     def addListener(self, devicePort, deviceAddr, port, address):
-        listener = Listener(len(self.listeners, self, devicePort, deviceAddr, port, address))
+        listener = Listener(len(self.listeners), self, devicePort, deviceAddr, port, address)
         self.listeners.append(listener)
 
 
     def close(self):
         self.conRT.tryClose()
-        for ep in self.eps:
-            ep.close()
+        for i in range(len(self.eps)):
+            ep = self.eps[i]
+            if ep:
+                ep.close()
+            self.eps[i]  = None
+            self.epls[i] = None
+        for i in range(len(self.listeners)):
+            listener = self.listeners[i]
+            if listener:
+                listener.close()
 
 
     def removeEP(self, channelID):
@@ -53,7 +65,7 @@ class Link:
         self.epControl.requestDeleteChannel(channelID)
 
 
-    def maintenace(self):
+    def maintenance(self):
         if not self.conRT:
             self.taskConnect()
 
@@ -86,7 +98,7 @@ class Link:
 
         assert not self.conRT
 
-        conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.myPort, self.myAddress))
+        conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
         data = self.myToken + b'0' * 56
         for i in range(3):
             if conRT.tryConnect((self.relayAddr, self.relayPort), data):
@@ -111,7 +123,7 @@ class Link:
 
     def taskForward(self):
 
-        data = self.tryRecv(32768)
+        data = self.conRT.tryRecv(32768)
         if len(data) < 1:
             self.reconnect()
             return
@@ -121,7 +133,7 @@ class Link:
         while len(self.buffer) >= 4:
 
             header = self.buffer[0:4]
-            totalLen = int.from_bytes(header[0:2], 'little')
+            totalLen = int.from_bytes(header[0:2], 'little') + 4
             epID     = int.from_bytes(header[2:4], 'little')
 
             # Check if we need more bytes to complete the packet
@@ -141,8 +153,8 @@ class Link:
     # sends <packet> through the link to the remote portal.
     def sendPacket(self, packet):
         try:
-            self.sendall(packet)
-        except ConnectionAbortedError:
+            self.conRT.sendall(packet)
+        except OSError:
             log.exception(logEP)
             self.reconnect()
 
@@ -175,7 +187,7 @@ class Link:
 
     def newChannel(self, channelID, devicePort, deviceAddr):
 
-        conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.parent.port, self.parent.address))
+        conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
         for i in range(3):
             if conn.tryConnect((deviceAddr, devicePort)):
                 break
@@ -209,7 +221,7 @@ class Link:
     def declineChannel(self, channelID):
         try:
             listener = self.epls[channelID]
-            return listener.accept(channelID)
+            return listener.decline(channelID)
         except (IndexError, AttributeError):
             return False
 

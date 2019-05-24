@@ -2,12 +2,12 @@
 import logging
 import socket
 import select
-from enum import Enum
 
 from Common.Connector import Connector
 
-log   = logging.getLogger(__name__ + '   ')
-logST = logging.getLogger(__name__ + ':ST')
+from .Link import Link
+
+log = logging.getLogger(__name__)
 
 ServerAddr = '127.0.0.1'
 ServerPort = 4020
@@ -18,8 +18,9 @@ class Portal:
         self.portalID = portalID
         self.port     = port
         self.address  = address
+        self.links    = []
         self.conST    = None
-        self.links   = []
+        self.allowSelect = True
 
 
     # Needed for select()
@@ -40,10 +41,11 @@ class Portal:
 
             socketList = [self]
             for link in self.links:
-                socketList.append(link)
-                socketList.extend(link.listeners)
-                socketList.extend(link.eps)
-            socketList = filter(None, socketList)
+                if link:
+                    socketList.append(link)
+                    socketList.extend(link.listeners)
+                    socketList.extend(link.eps[1:])
+            socketList = [s for s in socketList if s and s.allowSelect]
 
             readable, writable, exceptional = select.select(socketList, [], [])
             for s in readable:
@@ -51,7 +53,7 @@ class Portal:
 
 
     def connectKA(self):
-        self.conST = Connector(logST, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        self.conST = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
         data = b''
         data += self.portalID
         data += b'0' * 60
@@ -60,18 +62,20 @@ class Portal:
 
 
     def task(self):
+
         relayInfo = self.conST.tryRecv(1024)
         l = len(relayInfo)
         if l < 11:
             if l == 0: self.conST = None
             return
+
         token     = relayInfo[0:8]
         relayPort = int.from_bytes(relayInfo[8:10], 'little')
         relayAddr = str(relayInfo[10:], 'utf-8')
 
         # TODO: allow for different binding port & address than self.port, self.address
         # and provide the remote portal's ID instead of the token/relay info
-        link = Link(len(self.links), self, conRT.socket, token, relayPort, relayAddr, self.port, self.address)
+        link = Link(len(self.links), self, token, relayPort, relayAddr, self.port, self.address)
         self.links.append(link)
 
 
