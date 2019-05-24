@@ -89,12 +89,14 @@ class Relay:
 
     def task(self):
         connSocket, addr = self.con.accept()
-        connSocket.settimeout(0.2)
+        # connSocket.settimeout(0.2)
 
         conn = RelayConn(connSocket)
 
         data = conn.tryRecv(64)
-        conn.socket.setblocking(False)
+        # TODO: states + select instead of non-block,
+        # since sendall() must be able block
+        # conn.socket.setblocking(False)
         if len(data) != 64:
             conn.tryClose()
             return
