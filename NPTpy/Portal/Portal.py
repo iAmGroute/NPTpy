@@ -15,11 +15,11 @@ ServerPort = 4020
 class Portal:
 
     def __init__(self, portalID, port=0, address='0.0.0.0'):
-        self.portalID = portalID
-        self.port     = port
-        self.address  = address
-        self.links    = []
-        self.conST    = None
+        self.portalID    = portalID
+        self.port        = port
+        self.address     = address
+        self.links       = []
+        self.conST       = None
         self.allowSelect = True
 
 
@@ -59,6 +59,8 @@ class Portal:
         data += b'0' * 60
         if not self.conST.tryConnect((ServerAddr, ServerPort), data):
             self.conST = None
+        else:
+            self.conST.socket.settimeout(None)
 
 
     def task(self):
@@ -98,34 +100,3 @@ class Portal:
         data += b'0' * 56
         self.conST.sendall(data)
 
-
-    # def keepaliveTask(self, serverEP, primary=True):
-    #     data = b'0000' + portalID.to_bytes(4, 'little') + b'0000'
-    #     code = 0x5A if primary else 0x5B # backup
-    #     i = 0
-    #     while True:
-    #         # Register message every 4 messages
-    #         # the other 3 are ignored by the server,
-    #         # but keep the NAT happy.
-    #         data[0] = code if (i % 4) == 0 else 0x00
-    #         # TODO: grenerate OTP
-    #         #data[8:12] = --- new OTP ---
-    #         # TODO: add primary server's GUID/url if primary == False
-    #         self.con.sendto(data, serverEP)
-    #         time.sleep(4)
-
-    # def listen(self):
-    #     data, addr = self.con.recvfrom(256)
-    #     header = data[0:4]
-    #     otp    = data[4:8]
-
-    #     # TODO: verify otp
-
-    #     if header == b'CONN':
-    #         self.connect()
-    #     elif header == b'CONT':
-    #         serverURL = str(data[8:], 'utf-8')
-    #         self.connect(serverURL)
-
-    #     # TODO: add dead timer countdown for server
-    #     # reset the countdown

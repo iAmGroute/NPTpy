@@ -190,6 +190,7 @@ class Link:
         conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
         for i in range(3):
             if conn.tryConnect((deviceAddr, devicePort)):
+                conn.socket.settimeout(None)
                 break
             else:
                 conn.tryClose()
