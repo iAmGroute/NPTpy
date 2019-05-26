@@ -3,6 +3,7 @@
 import logging
 import socket
 import select
+import os      # for os.urandom
 
 from Common.Connector import Connector
 
@@ -51,8 +52,7 @@ class Server:
                 return b'Bad ID', False
             else:
                 log.info('    found')
-                # TODO: generate token with system urandom (crypto)
-                token = b'01234567'
+                token = os.urandom(8)
                 self.notifyRelay(token, record.portalID, otherID)
                 # TODO: add the following to a task queue and wait for positive reply from relay
                 # before notifying the portal
