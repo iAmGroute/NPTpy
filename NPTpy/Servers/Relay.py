@@ -46,6 +46,7 @@ class Relay:
         self.connSockets = [] # TODO: convert to pool allocator / slot map
         self.tokenMap    = {} # Dictionary (hash table)
 
+
     def main(self):
         socketList = [self.con, self.conST, self.connST] + self.connSockets
         socketList = filter(None, socketList)
@@ -56,44 +57,45 @@ class Relay:
             elif s is self.connST: self.taskManage()
             else:                  self.process(s) # s is in self.connSockets
 
+
     def taskManageAccept(self):
         connSocket, addr = self.conST.accept()
-        connSocket.setblocking(False)
+        # connSocket.setblocking(False)
         if self.connST:
             self.removeManage()
-        self.connST = connSocket
+        self.connST = Connector(logST, connSocket)
+
 
     def removeManage(self):
-        try:
-            self.connST.close()
-        except socket.error:
-            pass
+        self.connST.tryClose()
         self.connST = None
 
+
     def taskManage(self):
-        try:
-            data = self.connST.recv(24)
-        except socket.error:
+
+        data = self.connST.tryRecv(24)
+        if len(data) != 24:
             self.removeManage()
-        else:
-            if len(data) == 24:
-                magic    = data[0:4]
-                verb     = data[4:8]
-                token    = data[8:16]
-                callerID = data[16:20]
-                otherID  = data[20:24]
-                logST.info('New command:')
-                logST.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex()))
-                logST.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex(), otherID.hex()))
+            return
 
-                # We don't store the IDs, although we should, for validation/security check
-                if verb == b'ADD.':
-                    self.removeByToken(token)
-                    self.tokenMap[token] = MapRecord(-1, -1)
-                elif verb == b'DEL.':
-                    self.removeByToken(token)
+        magic    = data[0:4]
+        verb     = data[4:8]
+        token    = data[8:16]
+        callerID = data[16:20]
+        otherID  = data[20:24]
+        logST.info('New command:')
+        logST.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex()))
+        logST.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex(), otherID.hex()))
 
-                self.connST.sendall(b'OK')
+        # We don't store the IDs, although we should, for validation/security check
+        if verb == b'ADD.':
+            self.removeByToken(token)
+            self.tokenMap[token] = MapRecord(-1, -1)
+        elif verb == b'DEL.':
+            self.removeByToken(token)
+
+        self.connST.sendall(b'OK')
+
 
     def task(self):
         connSocket, addr = self.con.accept()
@@ -150,12 +152,14 @@ class Relay:
                 conn.tryClose()
                 return
 
+
     def removeIndex(self, index):
         try:
             self.connSockets[index] = None
         except IndexError:
             return False
         return True
+
 
     def closeByIndex(self, index):
         try:
@@ -165,6 +169,7 @@ class Relay:
             conn = None
 
         return conn.tryClose() if conn else False
+
 
     def removeConn(self, conn):
         if conn.other:
@@ -179,6 +184,7 @@ class Relay:
             self.removeIndex(rec.indexB)
             del self.tokenMap[conn.token]
 
+
     def removeByToken(self, token):
         try:
             rec = self.tokenMap[token]
@@ -188,6 +194,7 @@ class Relay:
             self.closeByIndex(rec.indexA)
             self.closeByIndex(rec.indexB)
             del self.tokenMap[token]
+
 
     def process(self, conn):
         # TODO: avoid reading data if other is not connected,
@@ -203,3 +210,4 @@ class Relay:
             except OSError:
                 # Connection closed (?), remove both
                 self.removeConn(conn)
+
