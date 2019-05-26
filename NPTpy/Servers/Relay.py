@@ -6,7 +6,6 @@
 import logging
 import socket
 import select
-from recordclass import recordclass
 
 from Common.Connector import Connector
 
@@ -25,7 +24,16 @@ class RelayConn(Connector):
         self.other = None
         super().tryClose()
 
-MapRecord = recordclass('MapRecord', ['indexA', 'indexB'])
+
+class MapRecord:
+
+    def __init__(self, indexA, indexB):
+        self.indexA = indexA
+        self.indexB = indexB
+
+    def __repr__(self):
+        return '(indexA: {0}, indexB: {1})'.format(self.indexA, self.indexB)
+
 
 class Relay:
 
