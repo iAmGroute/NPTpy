@@ -98,16 +98,15 @@ class Link:
 
         assert not self.conRT
 
-        conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
         data = self.myToken + b'0' * 56
         for i in range(3):
+            conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
             if conRT.tryConnect((self.relayAddr, self.relayPort), data):
                 conRT.setKeepAlive()
                 break
             else:
                 conRT.tryClose()
-        else:
-            conRT = None
+                conRT = None
 
         if conRT:
             self.conRT = conRT
@@ -187,15 +186,14 @@ class Link:
 
     def newChannel(self, channelID, devicePort, deviceAddr):
 
-        conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
         for i in range(3):
+            conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
             if conn.tryConnect((deviceAddr, devicePort)):
                 conn.socket.settimeout(None)
                 break
             else:
                 conn.tryClose()
-        else:
-            conn = None
+                conn = None
 
         return self.addChannel(channelID, conn)
 
