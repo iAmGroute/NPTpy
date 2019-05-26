@@ -9,13 +9,13 @@ log = logging.getLogger(__name__)
 class Listener:
 
     def __init__(self, myID, myLink, devicePort, deviceAddr, myPort, myAddress):
-        self.myID       = myID
-        self.myLink     = myLink
-        self.devicePort = devicePort
-        self.deviceAddr = deviceAddr
-        self.con        = Connector(log, Connector.new(socket.SOCK_STREAM, None, myPort, myAddress))
-        self.con.listen()
+        self.myID        = myID
+        self.myLink      = myLink
+        self.devicePort  = devicePort
+        self.deviceAddr  = deviceAddr
         self.allowSelect = True
+        self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, None, myPort, myAddress))
+        self.con.listen()
 
 
     def close(self):
@@ -59,7 +59,7 @@ class Listener:
         connSocket, addr = self.con.accept()
         connSocket.setblocking(False)
         try:
-            self.socket.close()
+            connSocket.close()
         except socket.error:
             pass
 
