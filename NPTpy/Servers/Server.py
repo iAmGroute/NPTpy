@@ -17,22 +17,16 @@ class PortalConn(Connector):
         self.addr        = addr
         self.portalIndex = -1
 
-RelayAddr = '192.168.11.1'
-RelayPort = 4021
-RelayManageAddr = '127.0.0.1'
-RelayManagePort = 40401
-
-RelayInfoMessage = RelayPort.to_bytes(2, 'little') + bytes(RelayAddr, 'utf-8')
-
 class Server:
 
-    def __init__(self, port, address='0.0.0.0'):
-        self.con   = Connector(log,   Connector.new(socket.SOCK_STREAM, None, port,   address))
-        self.conRT = Connector(logRT, Connector.new(socket.SOCK_STREAM, None,    0, '0.0.0.0'))
+    def __init__(self, port, address, internalPort, internalAddr, relayPort, relayAddr, relayInternalPort, relayInternalAddr):
+        self.con   = Connector(log,   Connector.new(socket.SOCK_STREAM, None,         port,      address))
+        self.conRT = Connector(logRT, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr))
         self.con.listen()
-        self.conRT.connect((RelayManageAddr, RelayManagePort))
-        self.portalTable   = [] # TODO: convert to pool allocator
-        self.portalIndexer = {} # Dictionary (hash table)
+        self.conRT.connect((relayInternalAddr, relayInternalPort))
+        self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
+        self.portalTable      = [] # TODO: convert to pool allocator
+        self.portalIndexer    = {} # Dictionary (hash table)
 
     class Methods:
         # A method returns <(reply, close)>,
@@ -64,7 +58,7 @@ class Server:
                 # before notifying the portal
                 otherRecord = self.portalTable[otherIndex]
                 self.notifyPortal(token, otherRecord, record)
-                msg = token + RelayInfoMessage
+                msg = token + self.relayInfoMessage
                 return msg, False
 
     def notifyRelay(self, token, callerID, otherID):
@@ -77,7 +71,7 @@ class Server:
 
     def notifyPortal(self, token, conn, callerRecord):
         # TODO: also send caller's info from callerRecord
-        msg = token + RelayInfoMessage
+        msg = token + self.relayInfoMessage
         conn.sendall(msg)
 
     def main(self):

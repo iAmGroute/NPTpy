@@ -9,13 +9,12 @@ from .Link import Link
 
 log = logging.getLogger(__name__)
 
-ServerAddr = '127.0.0.1'
-ServerPort = 4020
-
 class Portal:
 
-    def __init__(self, portalID, port=0, address='0.0.0.0'):
+    def __init__(self, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
         self.portalID    = portalID
+        self.serverPort  = serverPort
+        self.serverAddr  = serverAddr
         self.port        = port
         self.address     = address
         self.links       = []
@@ -57,7 +56,7 @@ class Portal:
         data = b''
         data += self.portalID
         data += b'0' * 60
-        if not self.conST.tryConnect((ServerAddr, ServerPort), data):
+        if not self.conST.tryConnect((self.serverAddr, self.serverPort), data):
             self.conST = None
         else:
             self.conST.socket.settimeout(None)
@@ -95,7 +94,7 @@ class Portal:
         if not self.conST:
             return
         methodID = 1
-        data =  methodID.to_bytes(4, 'little') 
+        data =  methodID.to_bytes(4, 'little')
         data += otherID
         data += b'0' * 56
         self.conST.sendall(data)

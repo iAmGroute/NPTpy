@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 python = 3
 python
 
@@ -7,7 +8,10 @@ logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=loggin
 
 from Portal.Portal import Portal
 
-p = Portal(b'ABCE')
+ServerAddr = 'k0.servers.netport.io'
+ServerPort = 4020
+
+p = Portal(b'ABCE', ServerPort, ServerAddr)
 
 while True:
     # print(p.links)
