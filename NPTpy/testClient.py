@@ -8,7 +8,7 @@ logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=loggin
 
 from Portal.Portal import Portal
 
-ServerAddr = 'k0.servers.netport.io'
+ServerAddr = '192.168.11.1'
 ServerPort = 4020
 
 c = Portal(b'ABCF', ServerPort, ServerAddr)

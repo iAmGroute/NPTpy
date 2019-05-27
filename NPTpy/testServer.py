@@ -8,7 +8,7 @@ logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=loggin
 
 from Servers.Server import Server
 
-RelayAddr = 'r0.servers.netport.io'
+RelayAddr = '192.168.11.1'
 RelayPort = 4021
 RelayManageAddr = '127.0.0.1'
 RelayManagePort = 40401
