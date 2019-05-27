@@ -14,7 +14,7 @@ class SecureClientConnector(Connector):
         self.socket     = None
 
     def secure(self, serverHostname, caFilename=None, caDirpath=None, caData=None):
-        self.sslContext = ssl.create_default_context(caFilename, caDirpath, caData)
+        self.sslContext = ssl.create_default_context(cafile=caFilename, capath=caDirpath, cadata=caData)
         self.socket     = self.sslContext.wrap_socket(self.rawSocket, server_hostname=serverHostname)
 
 
