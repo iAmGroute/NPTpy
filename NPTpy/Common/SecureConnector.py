@@ -16,7 +16,7 @@ class SecureClientConnector(Connector):
 class SecureServerConnector(Connector):
 
     def secure(self, certFilename, keyFilename=None, keyPassword=None):
-        self.sslContext          = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        self.sslContext          = ssl.SSLContext(ssl.PROTOCOL_TLS)
         self.sslContext.options |= ssl.OP_NO_TLSv1
         self.sslContext.options |= ssl.OP_NO_TLSv1_1
         self.sslContext.load_cert_chain(certFilename, keyFilename, keyPassword)
