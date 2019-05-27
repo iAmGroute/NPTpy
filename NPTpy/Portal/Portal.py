@@ -12,7 +12,8 @@ log = logging.getLogger(__name__)
 
 class Portal:
 
-    def __init__(self, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
+    def __init__(self, isClient, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
+        self.isClient    = isClient
         self.portalID    = portalID
         self.serverPort  = serverPort
         self.serverAddr  = serverAddr
@@ -78,7 +79,7 @@ class Portal:
 
         # TODO: allow for different binding port & address than self.port, self.address
         # and provide the remote portal's ID instead of the token/relay info
-        link = Link(len(self.links), self, token, relayPort, relayAddr, self.port, self.address)
+        link = Link(self.isClient, len(self.links), self, token, relayPort, relayAddr, self.port, self.address)
         self.links.append(link)
 
 

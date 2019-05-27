@@ -2,7 +2,9 @@
 import logging
 import socket
 
-from Common.Connector import Connector
+from Common.Connector       import Connector
+from Common.SecureConnector import SecureClientConnector
+from Common.SecureConnector import SecureServerConnector
 
 from .ChannelEndpoint import ChannelEndpoint
 from .ChannelControl  import ChannelControl
@@ -20,7 +22,8 @@ class Link:
         Forwarding   = 2
 
 
-    def __init__(self, myID, myPortal, myToken, relayPort, relayAddr, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
+    def __init__(self, isClient, myID, myPortal, myToken, relayPort, relayAddr, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
+        self.isClient    = isClient
         self.myID        = myID
         self.myPortal    = myPortal
         self.myToken     = myToken
@@ -47,6 +50,7 @@ class Link:
 
     def close(self):
         self.conRT.tryClose()
+        self.conRT = None
         for i in range(len(self.eps)):
             ep = self.eps[i]
             if ep:
@@ -57,6 +61,7 @@ class Link:
             listener = self.listeners[i]
             if listener:
                 listener.close()
+            listener = None
 
 
     def removeEP(self, channelID):
@@ -70,6 +75,14 @@ class Link:
             self.taskConnect()
 
 
+    def secureForward(self):
+        if self.isClient:
+            self.conRT.secure(serverHostname='portal', caFilename='portal.cer')
+        else:
+            self.conRT.secure(certFilename='portal.cer', keyFilename='portal.key')
+        self.state = self.States.Forwarding
+
+
     def reconnect(self):
         self.conRT.tryClose()
         self.conRT = None
@@ -78,6 +91,7 @@ class Link:
 
 
     def disconnect(self):
+        self.state = self.States.Disconnected
         self.close()
         self.myPortal.removeLink(self.myID)
 
@@ -99,8 +113,14 @@ class Link:
         assert not self.conRT
 
         data = self.myToken + b'0' * 56
+
         for i in range(3):
-            conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
+
+            if self.isClient:
+                conRT = SecureClientConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
+            else:
+                conRT = SecureServerConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
+
             if conRT.tryConnect((self.relayAddr, self.relayPort), data):
                 conRT.setKeepAlive()
                 break
@@ -115,7 +135,7 @@ class Link:
 
     def taskReady(self):
         data = self.conRT.tryRecv(8)
-        if   data == b'Ready !\n': self.state = self.States.Forwarding
+        if   data == b'Ready !\n': self.secureForward()
         elif data == b'Bad T !\n': self.disconnect()
         else:                      self.reconnect()
 

@@ -11,7 +11,7 @@ from Portal.Portal import Portal
 ServerAddr = '192.168.11.1'
 ServerPort = 4020
 
-c = Portal(b'ABCF', ServerPort, ServerAddr)
+c = Portal(True, b'ABCF', ServerPort, ServerAddr)
 
 c.main()
 
