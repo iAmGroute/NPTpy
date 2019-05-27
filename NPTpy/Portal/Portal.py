@@ -2,6 +2,7 @@
 import logging
 import socket
 import select
+import time
 
 from Common.Connector       import Connector
 from Common.SecureConnector import SecureClientConnector
@@ -61,8 +62,9 @@ class Portal:
         data += b'0' * 60
         if not self.conST.tryConnect((self.serverAddr, self.serverPort), data):
             self.conST = None
-        else:
-            self.conST.socket.settimeout(None)
+            time.sleep(10)
+            return
+        self.conST.socket.settimeout(None)
 
 
     def task(self):
