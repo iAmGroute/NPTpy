@@ -40,7 +40,7 @@ class Link:
         self.buffer      = b''
         self.state       = self.States.Disconnected
         self.conRT       = None
-        self.allowSelect = True
+        self.allowSelect = False
 
 
     def addListener(self, devicePort, deviceAddr, port, address):
@@ -50,7 +50,8 @@ class Link:
 
     def close(self):
         self.conRT.tryClose()
-        self.conRT = None
+        self.conRT       = None
+        self.allowSelect = False
         for i in range(len(self.eps)):
             ep = self.eps[i]
             if ep:
@@ -85,7 +86,8 @@ class Link:
 
     def reconnect(self):
         self.conRT.tryClose()
-        self.conRT = None
+        self.conRT       = None
+        self.allowSelect = False
         self.state = self.States.Disconnected
         self.taskConnect()
 
@@ -129,7 +131,8 @@ class Link:
                 conRT = None
 
         if conRT:
-            self.conRT = conRT
+            self.conRT       = conRT
+            self.allowSelect = True
             self.state = self.States.WaitReady
 
 
