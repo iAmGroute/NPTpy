@@ -5,7 +5,8 @@ import socket
 import select
 import os      # for os.urandom
 
-from Common.Connector import Connector
+from Common.Connector       import Connector
+from Common.SecureConnector import SecureServerConnector
 
 log   = logging.getLogger(__name__ + '   ')
 logRT = logging.getLogger(__name__ + ':RT')
@@ -21,8 +22,9 @@ class PortalConn(Connector):
 class Server:
 
     def __init__(self, port, address, internalPort, internalAddr, relayPort, relayAddr, relayInternalPort, relayInternalAddr):
-        self.con   = Connector(log,   Connector.new(socket.SOCK_STREAM, None,         port,      address))
-        self.conRT = Connector(logRT, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr))
+        self.con   = SecureServerConnector(log,   Connector.new(socket.SOCK_STREAM, None,         port,      address))
+        self.conRT =             Connector(logRT, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr))
+        self.con.secure(certFilename='server.cer', keyFilename='server.key')
         self.con.listen()
         self.conRT.connect((relayInternalAddr, relayInternalPort))
         self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')

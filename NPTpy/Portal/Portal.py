@@ -3,7 +3,8 @@ import logging
 import socket
 import select
 
-from Common.Connector import Connector
+from Common.Connector       import Connector
+from Common.SecureConnector import SecureClientConnector
 
 from .Link import Link
 
@@ -52,7 +53,8 @@ class Portal:
 
 
     def connectKA(self):
-        self.conST = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        self.conST = SecureClientConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        self.conST.secure(serverHostname='server', caFilename='server.cer')
         data = b''
         data += self.portalID
         data += b'0' * 60
