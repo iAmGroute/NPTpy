@@ -107,3 +107,6 @@ venv.bak/
 *.cer
 *.pem
 *.key
+
+# logfiles
+*.log
