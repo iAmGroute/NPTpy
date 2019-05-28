@@ -127,7 +127,6 @@ class Link:
                 conRT.setKeepAlive()
                 break
             else:
-                conRT.tryClose()
                 conRT = None
 
         if conRT:
