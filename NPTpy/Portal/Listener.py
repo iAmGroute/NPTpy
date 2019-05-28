@@ -60,7 +60,7 @@ class Listener:
         connSocket.setblocking(False)
         try:
             connSocket.close()
-        except socket.error:
+        except OSError:
             pass
 
         return True

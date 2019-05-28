@@ -85,12 +85,15 @@ class Server:
             else:               self.process(s) # s is in self.portalTable
 
     def task(self):
-        connSocket, addr = self.con.accept()
+        try:
+            connSocket, addr = self.con.accept()
+        except OSError:
+            return
         connSocket.settimeout(0.2)
         try:
             data = connSocket.recv(64)
             connSocket.setblocking(False)
-        except socket.error:
+        except OSError:
             log.info('    dropped')
         else:
             if len(data) != 64:

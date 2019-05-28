@@ -33,7 +33,7 @@ class Connector:
     def tryClose(self):
         try:
             self.socket.close()
-        except socket.error:
+        except OSError:
             return False
         self.log.info(t('Stopped'))
         return True
@@ -75,7 +75,7 @@ class Connector:
         try:
             self.connect(endpoint)
             if data: self.sendall(data)
-        except socket.error as e:
+        except OSError as e:
             self.log.warn(t.over('    could not connect: {0}'.format(e)))
             self.tryClose()
             return False
@@ -95,7 +95,7 @@ class Connector:
     def tryRecv(self, bufferSize):
         try:
             return self.recv(bufferSize)
-        except socket.error:
+        except OSError:
             return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
@@ -109,6 +109,6 @@ class Connector:
                 self.socket.setsockopt(socket.IPPROTO_TCP, 0x10, interval)
             elif this_OS == OS.windows:
                 self.socket.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 1000 * idleTimer, 1000 * interval))
-        except socket.error:
+        except OSError:
             return False
         return True
