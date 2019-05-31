@@ -112,12 +112,12 @@ class Relay:
             return
 
         conn.token = data[0:8]
-        log.info('    with token: x{0}'.format(conn.token.hex()))
+        logP.info('    with token: x{0}'.format(conn.token.hex()))
 
         try:
             rec = self.tokenMap[conn.token]
         except KeyError:
-            log.info('    INVALID')
+            logP.info('    INVALID')
             conn.sendall(b'Bad T !\n')
             conn.tryClose()
             return
@@ -128,7 +128,7 @@ class Relay:
                 rec.indexA = len(self.connSockets)
                 self.connSockets.append(conn)
 
-                log.info('    indexA: {0:3d}'.format(rec.indexA))
+                logP.info('    indexA: {0:3d}'.format(rec.indexA))
 
             elif rec.indexB == -1:
                 # Second one to connect
@@ -144,10 +144,10 @@ class Relay:
                 conn.sendall(b'Ready !\n')
                 other.sendall(b'Ready !\n')
 
-                log.info('    indexA: {0:3d}, indexB: {1:3d}'.format(rec.indexA, rec.indexB))
+                logP.info('    indexA: {0:3d}, indexB: {1:3d}'.format(rec.indexA, rec.indexB))
 
             else:
-                log.info('    REUSE')
+                logP.info('    REUSE')
                 conn.sendall(b'Bad T !\n')
                 conn.tryClose()
                 return
