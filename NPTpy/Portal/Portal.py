@@ -9,7 +9,7 @@ from Common.SecureConnector import SecureClientConnector
 
 from .Link import Link
 
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__ + '  ')
 
 class Portal:
 

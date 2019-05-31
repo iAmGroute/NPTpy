@@ -11,8 +11,8 @@ from .ChannelControl  import ChannelControl
 from .ChannelData     import ChannelData
 from .Listener        import Listener
 
-log   = logging.getLogger(__name__ + '   ')
-logEP = logging.getLogger(__name__ + ':EP')
+log   = logging.getLogger(__name__ + '    ')
+logEP = logging.getLogger(__name__ + ' :EP')
 
 class Link:
 
