@@ -94,11 +94,11 @@ class ChannelControl(ChannelEndpoint):
         self.logResult(channelID, ok, 'ready to accept')
 
         if ok:
-            self.logResult(channelID, ok, 'accepted')
             ok = self.myLink.acceptChannel(channelID)
+            self.logResult(channelID, ok, 'accepted')
         else:
-            self.logResult(channelID, ok, 'declined')
             ok = self.myLink.declineChannel(channelID)
+            self.logResult(channelID, ok, 'declined')
 
 
     def requestDeleteChannel(self, channelID):
