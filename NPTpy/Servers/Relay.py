@@ -83,9 +83,9 @@ class Relay:
         token    = data[8:16]
         callerID = data[16:20]
         otherID  = data[20:24]
-        logST.info('New command:')
-        logST.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex()))
-        logST.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex(), otherID.hex()))
+        logS.info('New command:')
+        logS.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex()))
+        logS.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex(), otherID.hex()))
 
         # We don't store the IDs, although we should, for validation/security check
         if verb == b'ADD.':
