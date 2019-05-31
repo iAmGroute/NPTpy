@@ -123,7 +123,8 @@ class Link:
             else:
                 conRT = SecureServerConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
 
-            if conRT.tryConnect((self.relayAddr, self.relayPort), data):
+            if conRT.tryConnect((self.relayAddr, self.relayPort)):
+                conRT.sendall(data)
                 conRT.setKeepAlive()
                 break
             else:

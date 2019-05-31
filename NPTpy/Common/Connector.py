@@ -93,10 +93,9 @@ class Connector:
         self.socket.connect(endpoint)
         self.log.log(23, t('    connected'))
 
-    def tryConnect(self, endpoint, data=b''):
+    def tryConnect(self, endpoint):
         try:
             self.connect(endpoint)
-            if data: self.sendall(data)
         except OSError as e:
             self.log.log(23, t.over('    could not connect: {0}'.format(e)))
             self.tryClose()

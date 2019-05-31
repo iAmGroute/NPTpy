@@ -60,10 +60,11 @@ class Portal:
         data = b''
         data += self.portalID
         data += b'0' * 60
-        if not self.conST.tryConnect((self.serverAddr, self.serverPort), data):
+        if not self.conST.tryConnect((self.serverAddr, self.serverPort)):
             self.conST = None
             time.sleep(10)
             return
+        self.conST.sendall(data)
         self.conST.socket.settimeout(None)
 
 
