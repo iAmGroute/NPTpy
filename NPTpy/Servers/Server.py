@@ -8,13 +8,13 @@ import os      # for os.urandom
 from Common.Connector       import Connector
 from Common.SecureConnector import SecureServerConnector
 
-log   = logging.getLogger(__name__ + '   ')
-logRT = logging.getLogger(__name__ + ':RT')
-# logRU = logging.getLogger(__name__ + ':RU')
+log  = logging.getLogger(__name__ + '  ')
+logP = logging.getLogger(__name__ + ':P')
+logR = logging.getLogger(__name__ + ':R')
 
 class PortalConn(Connector):
     def __init__(self, portalID, addr, mySocket):
-        Connector.__init__(self, log, mySocket)
+        Connector.__init__(self, logP, mySocket)
         self.portalID    = portalID
         self.addr        = addr
         self.portalIndex = -1
@@ -22,8 +22,8 @@ class PortalConn(Connector):
 class Server:
 
     def __init__(self, port, address, internalPort, internalAddr, relayPort, relayAddr, relayInternalPort, relayInternalAddr):
-        self.con   = SecureServerConnector(log,   Connector.new(socket.SOCK_STREAM, None,         port,      address))
-        self.conRT =             Connector(logRT, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr))
+        self.con   = SecureServerConnector(log,  Connector.new(socket.SOCK_STREAM, None,         port,      address))
+        self.conRT =             Connector(logR, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr))
         self.con.secure(certFilename='server.cer', keyFilename='server.key')
         self.con.listen()
         self.conRT.connect((relayInternalAddr, relayInternalPort))
@@ -51,6 +51,7 @@ class Server:
             try:
                 otherIndex = self.portalIndexer[otherID]
             except KeyError:
+                log.info('    not in table')
                 return b'Bad ID', False
             else:
                 log.info('    found')
