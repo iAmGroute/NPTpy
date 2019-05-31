@@ -6,13 +6,26 @@ from .Prefixes import prefixIEC
 from .SmartTabs import t
 from .this_OS import OS, this_OS
 
+# Log levels:
+#  - 25: Info concerning state changes (Started, Stopped)
+#  - 23: Connections initiated by us, outgoing (Connecting to)
+#  - 22: Negative result for 23
+#  - 21: Positive result for 23
+#  - 20: Connections accepted, incoming (Connection from)
+#  - 17: Exception in tryClose()
+#  - 15: UDP send and receive
+#  - 12: Exception in TCP tryRecv()
+#  - 10: TCP send and receive
+#  -  7: UDP content
+#  -  5: TCP content
+
 class Connector:
 
     def __init__(self, log, mySocket):
         self.log = log or logging.getLogger('dummy')
         self.socket = mySocket
         address, port = mySocket.getsockname()
-        self.log.info(t('Started on\t [{0}]:{1}'.format(address, port)))
+        self.log.log(25, t('Started on\t [{0}]:{1}'.format(address, port)))
 
     @staticmethod
     def new(socketType=socket.SOCK_DGRAM, timeout=None, port=0, address='0.0.0.0'):
@@ -33,9 +46,10 @@ class Connector:
     def tryClose(self):
         try:
             self.socket.close()
-        except OSError:
+        except OSError as e:
+            self.log.log(17, t.over('Could not close: {0}'.format(e)))
             return False
-        self.log.info(t('Stopped'))
+        self.log.log(25, t('Stopped'))
         return True
 
     # Needed for select()
@@ -44,58 +58,60 @@ class Connector:
 
     # Mainly UDP
 
-    def recvfrom(self, bufferSize):
-        data, addr = self.socket.recvfrom(bufferSize)
-        self.log.info(t('Received {0} Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
-        self.log.debug(t.over('    content: {0}'.format(data)))
-        return data, addr
-
     def sendto(self, data, endpoint):
         sentSize = self.socket.sendto(data, endpoint)
-        self.log.info(t('Sent     {0} Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
+        self.log.log(15, t('Sent     {0} Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
+        self.log.log( 7, t.over('    content: {0}'.format(data)))
         return sentSize
+
+    def recvfrom(self, bufferSize):
+        data, addr = self.socket.recvfrom(bufferSize)
+        self.log.log(15, t('Received {0} Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
+        self.log.log( 7, t.over('    content: {0}'.format(data)))
+        return data, addr
 
     # Mainly TCP
 
     def listen(self):
         self.socket.listen()
-        self.log.info(t('Listening'))
+        self.log.log(25, t('Listening'))
 
     def accept(self):
         conn, addr = self.socket.accept()
-        self.log.info(t('Connection from\t [{0}]:{1}'.format(*addr)))
+        self.log.log(20, t('Connection from\t [{0}]:{1}'.format(*addr)))
         return conn, addr
 
     def connect(self, endpoint):
-        self.log.info(t('Connecting to\t [{0}]:{1}'.format(*endpoint)))
+        self.log.log(23, t('Connecting to\t [{0}]:{1}'.format(*endpoint)))
         self.socket.connect(endpoint)
-        self.log.info(t('    connected'))
+        self.log.log(22, t('    connected'))
 
     def tryConnect(self, endpoint, data=b''):
         try:
             self.connect(endpoint)
             if data: self.sendall(data)
         except OSError as e:
-            self.log.warn(t.over('    could not connect: {0}'.format(e)))
+            self.log.log(21, t.over('    could not connect: {0}'.format(e)))
             self.tryClose()
             return False
         return True
 
     def sendall(self, data):
         self.socket.sendall(data)
-        self.log.info(t('Sent    \t {0} Bytes'.format(prefixIEC(len(data)))))
-        self.log.debug(t.over('    content: {0}'.format(data)))
+        self.log.log(10, t('Sent    \t {0} Bytes'.format(prefixIEC(len(data)))))
+        self.log.log(5, t.over('    content: {0}'.format(data)))
 
     def recv(self, bufferSize):
         data = self.socket.recv(bufferSize)
-        self.log.info(t('Received\t {0} Bytes'.format(prefixIEC(len(data)))))
-        self.log.debug(t.over('    content: {0}'.format(data)))
+        self.log.log(10, t('Received\t {0} Bytes'.format(prefixIEC(len(data)))))
+        self.log.log(5, t.over('    content: {0}'.format(data)))
         return data
 
     def tryRecv(self, bufferSize):
         try:
             return self.recv(bufferSize)
-        except OSError:
+        except OSError as e:
+            self.log.log(12, t.over('Could not receive: {0}'.format(e)))
             return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
