@@ -9,14 +9,14 @@ import select
 
 from Common.Connector import Connector
 
-log   = logging.getLogger(__name__ + '   ')
-logST = logging.getLogger(__name__ + ':ST')
-# logSU = logging.getLogger(__name__ + ':SU')
+log  = logging.getLogger(__name__ + '  ')
+logP = logging.getLogger(__name__ + ':P')
+logS = logging.getLogger(__name__ + ':S')
 
 class RelayConn(Connector):
 
     def __init__(self, mySocket):
-        Connector.__init__(self, log, mySocket)
+        Connector.__init__(self, logP, mySocket)
         self.token = b''
         self.other = None
 
@@ -38,8 +38,8 @@ class MapRecord:
 class Relay:
 
     def __init__(self, port, address, internalPort, internalAddr):
-        self.con   = Connector(log,   Connector.new(socket.SOCK_STREAM, None,         port,      address)) # for portals/clients
-        self.conST = Connector(logST, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr)) # for server
+        self.con   = Connector(log,  Connector.new(socket.SOCK_STREAM, None,         port,      address)) # for portals/clients
+        self.conST = Connector(logS, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr)) # for server
         self.con.listen()
         self.conST.listen()
         self.connST = None
@@ -63,7 +63,7 @@ class Relay:
         # connSocket.setblocking(False)
         if self.connST:
             self.removeManage()
-        self.connST = Connector(logST, connSocket)
+        self.connST = Connector(logS, connSocket)
 
 
     def removeManage(self):
