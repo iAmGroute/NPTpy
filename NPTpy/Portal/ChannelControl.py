@@ -5,6 +5,8 @@
 
 import logging
 
+from Common.SmartTabs import t
+
 from .ChannelEndpoint import ChannelEndpoint
 
 log = logging.getLogger(__name__)
@@ -43,9 +45,9 @@ class ChannelControl(ChannelEndpoint):
 
     def logResult(self, channelID, resultOK, whatHappened):
         if resultOK:
-            log.info('Channel [{0:5d}] {1}'.format(channelID, whatHappened))
+            log.info(t('Channel\t [{0:5d}] {1}'.format(channelID, whatHappened)))
         else:
-            log.warn('Channel [{0:5d}] was NOT {1}'.format(channelID, whatHappened))
+            log.warn(t('Channel\t [{0:5d}] was NOT {1}'.format(channelID, whatHappened)))
 
 
     def requestNewChannel(self, channelID, devicePort, deviceAddr):
@@ -92,11 +94,11 @@ class ChannelControl(ChannelEndpoint):
         self.logResult(channelID, ok, 'ready to accept')
 
         if ok:
-            ok = self.myLink.acceptChannel(channelID)
             self.logResult(channelID, ok, 'accepted')
+            ok = self.myLink.acceptChannel(channelID)
         else:
-            ok = self.myLink.declineChannel(channelID)
             self.logResult(channelID, ok, 'declined')
+            ok = self.myLink.declineChannel(channelID)
 
 
     def requestDeleteChannel(self, channelID):
