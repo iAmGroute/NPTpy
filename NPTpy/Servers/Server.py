@@ -85,9 +85,8 @@ class Server:
             else:               self.process(s) # s is in self.portalTable
 
     def task(self):
-        try:
-            connSocket, addr = self.con.accept()
-        except OSError:
+        connSocket, addr = self.con.tryAccept()
+        if not connSocket:
             return
         connSocket.settimeout(0.2)
         try:
