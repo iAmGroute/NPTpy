@@ -105,7 +105,7 @@ class Link:
 
     # Called after select()
     def task(self):
-        if   self.state == self.States.Disconnected: self.taskConnect() # should not ever be called
+        if   self.state == self.States.Disconnected: assert False # self.taskConnect() # should not ever be called
         elif self.state == self.States.WaitReady:    self.taskReady()
         elif self.state == self.States.Forwarding:   self.taskForward()
 
