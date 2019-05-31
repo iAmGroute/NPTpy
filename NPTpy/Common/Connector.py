@@ -9,9 +9,7 @@ from .this_OS import OS, this_OS
 # Log levels:
 #  - 25: Info concerning state changes (Started, Stopped)
 #  - 23: Connections initiated by us, outgoing (Connecting to)
-#  - 22: Negative result for 23
-#  - 21: Positive result for 23
-#  - 20: Connections accepted, incoming (Connection from)
+#  - 21: Connections accepted, incoming (Connection from)
 #  - 17: Exception in tryClose()
 #  - 15: UDP send and receive
 #  - 12: Exception in TCP tryRecv()
@@ -77,21 +75,30 @@ class Connector:
         self.log.log(25, t('Listening'))
 
     def accept(self):
+        self.log.log(21, t('Accepting incoming'))
         conn, addr = self.socket.accept()
-        self.log.log(20, t('Connection from\t [{0}]:{1}'.format(*addr)))
+        self.log.log(21, t('Connection from\t [{0}]:{1}'.format(*addr)))
+        return conn, addr
+
+    def tryAccept(self):
+        try:
+            conn, addr = self.accept()
+        except OSError as e:
+            conn, addr = None, None
+            self.log.log(21, t.over('    accept error: {0}'.format(e)))
         return conn, addr
 
     def connect(self, endpoint):
         self.log.log(23, t('Connecting to\t [{0}]:{1}'.format(*endpoint)))
         self.socket.connect(endpoint)
-        self.log.log(22, t('    connected'))
+        self.log.log(23, t('    connected'))
 
     def tryConnect(self, endpoint, data=b''):
         try:
             self.connect(endpoint)
             if data: self.sendall(data)
         except OSError as e:
-            self.log.log(21, t.over('    could not connect: {0}'.format(e)))
+            self.log.log(23, t.over('    could not connect: {0}'.format(e)))
             self.tryClose()
             return False
         return True
