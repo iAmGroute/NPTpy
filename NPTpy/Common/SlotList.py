@@ -86,14 +86,10 @@ class SlotList:
         if index < 0:
             raise IndexError('ID does not exist or has been superseded')
 
-        self.slots[index] = val
+        self.slots[index].val = value
 
 
-    def __delitem__(self, ID):
-
-        index = self.getIndex(ID)
-        if index < 0:
-            return
+    def deleteByIndex(self, index):
 
         slot = self.slots[index]
         slot.gen += 1
@@ -105,4 +101,11 @@ class SlotList:
             self.firstFree = index
 
         self.lastFree = index
+
+
+    def __delitem__(self, ID):
+        index = self.getIndex(ID)
+        if index < 0:
+            return
+        self.deleteByIndex(index)
 

@@ -2,11 +2,11 @@
 
 class ChannelEndpoint:
 
-    def __init__(self, myID, myIDF, myLink, myListener=None):
-        self.myID       = myID       # Local ID
-        self.myIDF      = myIDF      # Foreign ID
-        self.myLink     = myLink
-        self.myListener = myListener
+    def __init__(self, myID, myIDF, myLink):
+        self.myID   = myID       # Local ID
+        self.myIDF  = myIDF      # Foreign ID
+        self.myLink = myLink
+        self.allowSelect = False # Temporary
 
     def sendMessage(self, data):
         header  = b''
@@ -22,6 +22,8 @@ class ChannelEndpoint:
 
 
 class ChannelPlaceholder(ChannelEndpoint):
+
+    myListener = None
 
     def acceptMessage(self, data):
         pass

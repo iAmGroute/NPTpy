@@ -39,7 +39,7 @@ class Link:
         self.listeners   = []
 
         self.epControl   = ChannelControl(0, 0, self)
-        self.eps         = SlotList(1024, [self.epControl])
+        self.eps         = SlotList(4, [self.epControl])
         assert self.eps[0] is self.epControl
 
         self.buffer      = b''
@@ -57,11 +57,11 @@ class Link:
         self.conRT.tryClose()
         self.conRT       = None
         self.allowSelect = False
-        for i in range(len(self.eps)):
-            ep = self.eps[i]
+        for i in range(len(self.eps.slots)):
+            ep = self.eps.slots[i].val
             if ep:
                 ep.close()
-            del self.eps[i]
+            self.eps.deleteByIndex(i)
         for i in range(len(self.listeners)):
             listener = self.listeners[i]
             if listener:
@@ -82,11 +82,15 @@ class Link:
 
 
     def secureForward(self):
-        if self.isClient:
-            self.conRT.secure(serverHostname='portal', caFilename='portal.cer')
-        else:
-            self.conRT.secure(certFilename='portal.cer', keyFilename='portal.key')
-        self.state = self.States.Forwarding
+        try:
+            if self.isClient:
+                self.conRT.secure(serverHostname='portal', caFilename='portal.cer')
+            else:
+                self.conRT.secure(certFilename='portal.cer', keyFilename='portal.key')
+            self.state = self.States.Forwarding
+        except OSError as e:
+            log.error(error)
+            self.reconnect()
 
 
     def reconnect(self):
@@ -182,16 +186,17 @@ class Link:
         try:
             self.conRT.sendall(packet)
         except OSError as e:
-            log.exception(e)
+            log.error(e)
             self.reconnect()
 
 
     # Functions called by control channel and listeners
 
     def reserveChannel(self, listener):
-        channel      = ChannelPlaceholder(-1, -1, self, listener)
-        channelID    = self.eps.append(channel)
-        channel.myID = channelID
+        channel            = ChannelPlaceholder(-1, -1, self)
+        channel.myListener = listener
+        channelID          = self.eps.append(channel)
+        channel.myID       = channelID
         return channelID
 
 
@@ -226,7 +231,7 @@ class Link:
         conn = Connector(logEP, channelSocket)
 
         ep = self.eps[channelID]
-        if not isinstance(self.eps[channelID], ChannelPlaceholder)
+        if not isinstance(self.eps[channelID], ChannelPlaceholder):
             return False
 
         #self.eps[channelID].close()

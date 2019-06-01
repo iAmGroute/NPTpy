@@ -41,12 +41,14 @@ class Portal:
                 if link:
                     link.maintenance()
 
+            # Temorary
+            # TODO: add a SlotMap to which all selectables will be registred
             socketList = [self]
             for link in self.links:
                 if link:
                     socketList.append(link)
                     socketList.extend(link.listeners)
-                    socketList.extend(link.eps[1:])
+                    socketList.extend([ep.val for ep in link.eps])
             socketList = [s for s in socketList if s and s.allowSelect]
 
             readable, writable, exceptional = select.select(socketList, [], [])

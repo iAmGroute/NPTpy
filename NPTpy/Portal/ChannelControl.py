@@ -66,7 +66,9 @@ class ChannelControl(ChannelEndpoint):
 
         channelID = self.myLink.newChannel(channelIDF, devicePort, deviceAddr)
 
-        self.logResult(channelID, (channelID > 0), 'created')
+        ok = channelIDF > 0
+
+        self.logResult(channelID, ok, 'created')
         log.info(t.over('    requested for remote [{0:5d}]'.format(channelIDF)))
 
         reply  = b'N'
@@ -84,8 +86,10 @@ class ChannelControl(ChannelEndpoint):
         channelID  = int.from_bytes(data[0:2], 'little')
         channelIDF = int.from_bytes(data[2:4], 'little')
 
-        self.logResult(channelID, (channelIDF > 0), 'ready to accept')
-        if channelIDF > 0:
+        ok = channelIDF > 0
+
+        self.logResult(channelID, ok, 'ready to accept')
+        if ok:
             log.info(t.over('    mapped to remote [{0:5d}]'.format(channelIDF)))
 
         if ok:
