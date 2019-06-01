@@ -5,6 +5,7 @@ import socket
 from Common.Connector       import Connector
 from Common.SecureConnector import SecureClientConnector
 from Common.SecureConnector import SecureServerConnector
+from Common.SlotList        import SlotList
 
 from .ChannelEndpoint import ChannelEndpoint, ChannelPlaceholder
 from .ChannelControl  import ChannelControl
@@ -23,6 +24,7 @@ class Link:
 
 
     def __init__(self, isClient, myID, myPortal, myToken, relayPort, relayAddr, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
+
         self.isClient    = isClient
         self.myID        = myID
         self.myPortal    = myPortal
@@ -33,9 +35,13 @@ class Link:
         self.rtAddr      = rtAddr
         self.ltPort      = ltPort
         self.ltAddr      = ltAddr
+
         self.listeners   = []
-        self.epControl   = ChannelControl(0, self)
-        self.eps         = [self.epControl] # TODO: convert to slotList
+
+        self.epControl   = ChannelControl(0, 0, self)
+        self.eps         = SlotList(1024, [self.epControl])
+        assert self.eps[0] is self.epControl
+
         self.buffer      = b''
         self.state       = self.States.Disconnected
         self.conRT       = None
@@ -55,17 +61,19 @@ class Link:
             ep = self.eps[i]
             if ep:
                 ep.close()
-            self.eps[i]  = None
+            del self.eps[i]
         for i in range(len(self.listeners)):
             listener = self.listeners[i]
             if listener:
                 listener.close()
-            listener = None
+            self.listeners[i] = None
 
 
     def removeEP(self, channelID):
-        self.eps[channelID] = None
-        self.epControl.requestDeleteChannel(channelID)
+        ep = self.eps[channelID]
+        if ep:
+            del self.eps[channelID]
+            self.epControl.requestDeleteChannel(channelID, ep.myIDF)
 
 
     def maintenance(self):
@@ -159,7 +167,7 @@ class Link:
             if totalLen > len(self.buffer):
                 break
 
-            ep = self.eps[epID] if epID < len(self.eps) else None
+            ep = self.eps[epID]
             if ep:
                 ep.acceptMessage(self.buffer[4:totalLen])
             else:
@@ -173,36 +181,33 @@ class Link:
     def sendPacket(self, packet):
         try:
             self.conRT.sendall(packet)
-        except OSError:
-            log.exception(logEP)
+        except OSError as e:
+            log.exception(e)
             self.reconnect()
 
 
     # Functions called by control channel and listeners
 
     def reserveChannel(self, listener):
-        channelID = len(self.eps)
-        self.eps.append(ChannelPlaceholder(channelID, self, listener))
+        channel      = ChannelPlaceholder(-1, -1, self, listener)
+        channelID    = self.eps.append(channel)
+        channel.myID = channelID
         return channelID
 
 
-    def addChannel(self, channelID, conn):
+    def addChannel(self, channelIDF, conn):
 
-        if channelID <= 0 or not conn:
-            return False
+        if not conn:
+            return -1
 
-        while channelID >= len(self.eps):
-            self.eps.append(None)
+        channel      = ChannelData(-1, channelIDF, self, conn)
+        channelID    = self.eps.append(channel)
+        channel.myID = channelID
 
-        if self.eps[channelID]:
-            self.deleteChannel(channelID)
-
-        self.eps[channelID] = ChannelData(channelID, self, conn)
-
-        return True
+        return channelID
 
 
-    def newChannel(self, channelID, devicePort, deviceAddr):
+    def newChannel(self, channelIDF, devicePort, deviceAddr):
 
         for i in range(3):
             conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
@@ -213,21 +218,30 @@ class Link:
                 conn.tryClose()
                 conn = None
 
-        return self.addChannel(channelID, conn)
+        return self.addChannel(channelIDF, conn)
 
 
-    def newChannelFromSocket(self, channelID, channelSocket):
+    def upgradeChannel(self, channelID, channelIDF, channelSocket):
+
         conn = Connector(logEP, channelSocket)
-        return self.addChannel(channelID, conn)
+
+        ep = self.eps[channelID]
+        if not isinstance(self.eps[channelID], ChannelPlaceholder)
+            return False
+
+        #self.eps[channelID].close()
+        self.eps[channelID] = ChannelData(channelID, channelIDF, self, conn)
+
+        return True
 
 
     # Accept local connection
     # by calling accept() on the listener (= socket accept)
     # that corresponds to the channelID
-    def acceptChannel(self, channelID):
+    def acceptChannel(self, channelID, channelIDF):
         try:
             listener = self.eps[channelID].myListener
-            return listener.accept(channelID)
+            return listener.accept(channelID, channelIDF)
         except (IndexError, AttributeError):
             return False
 
@@ -235,10 +249,10 @@ class Link:
     # Accept local connection
     # by calling decline() on the listener (= socket accept and close immediately)
     # that corresponds to the channelID
-    def declineChannel(self, channelID):
+    def declineChannel(self, channelID, channelIDF):
         try:
             listener = self.eps[channelID].myListener
-            return listener.decline(channelID)
+            return listener.decline(channelID, channelIDF)
         except (IndexError, AttributeError):
             return False
 

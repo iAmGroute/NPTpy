@@ -60,60 +60,62 @@ class ChannelControl(ChannelEndpoint):
             self.corrupted()
             return
 
-        channelID  = int.from_bytes(data[0:2], 'little')
+        channelIDF = int.from_bytes(data[0:2], 'little')
         devicePort = int.from_bytes(data[2:4], 'little')
         deviceAddr = str(data[4:], 'utf-8')
 
-        ok = self.myLink.newChannel(channelID, devicePort, deviceAddr)
+        channelID = self.myLink.newChannel(channelIDF, devicePort, deviceAddr)
 
-        self.logResult(channelID, ok, 'created')
+        self.logResult(channelID, (channelID > 0), 'created')
+        log.info(t.over('    requested for remote [{0:5d}]'.format(channelIDF)))
 
         reply  = b'N'
-        reply += data[0:2] # channelID
-        reply += b'\x01' if ok else b'\x00'
+        reply += data[0:2] # channelIDF
+        reply += channelID.to_bytes(2, 'little')
         self.sendMessage(reply)
 
 
     def actionNewChannelReply(self, data):
 
-        if len(data) != 3:
+        if len(data) != 4:
             self.corrupted()
             return
 
         channelID  = int.from_bytes(data[0:2], 'little')
-        if   data[2:3] == b'\x00': ok = False
-        elif data[2:3] == b'\x01': ok = True
-        else:
-            self.corrupted()
-            return
+        channelIDF = int.from_bytes(data[2:4], 'little')
 
-        self.logResult(channelID, ok, 'ready to accept')
+        self.logResult(channelID, (channelIDF > 0), 'ready to accept')
+        if channelIDF > 0:
+            log.info(t.over('    mapped to remote [{0:5d}]'.format(channelIDF)))
 
         if ok:
-            ok = self.myLink.acceptChannel(channelID)
+            ok = self.myLink.acceptChannel(channelID, channelIDF)
             self.logResult(channelID, ok, 'accepted')
         else:
-            ok = self.myLink.declineChannel(channelID)
+            ok = self.myLink.declineChannel(channelID, channelIDF)
             self.logResult(channelID, ok, 'declined')
 
 
-    def requestDeleteChannel(self, channelID):
+    def requestDeleteChannel(self, channelID, channelIDF):
         request  = b'd'
+        request += channelIDF.to_bytes(2, 'little')
         request += channelID.to_bytes(2, 'little')
         self.sendMessage(request)
 
+
     def actionDeleteChannel(self, data):
 
-        if len(data) != 2:
+        if len(data) != 4:
             self.corrupted()
             return
 
         channelID  = int.from_bytes(data[0:2], 'little')
+        channelIDF = int.from_bytes(data[2:4], 'little')
 
         ok = self.myLink.deleteChannel(channelID)
 
         reply  = b'D'
-        reply += data[0:2] # channelID
+        reply += data[2:4] # channelIDF
         reply += b'\x01' if ok else b'\x00'
         self.sendMessage(reply)
 
@@ -124,7 +126,7 @@ class ChannelControl(ChannelEndpoint):
             self.corrupted()
             return
 
-        channelID  = int.from_bytes(data[0:2], 'little')
+        channelID = int.from_bytes(data[0:2], 'little')
         if   data[2:3] == b'\x00': ok = False
         elif data[2:3] == b'\x01': ok = True
         else:

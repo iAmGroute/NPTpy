@@ -29,12 +29,13 @@ class Listener:
 
     # Called after select()
     def task(self):
-        self.allowSelect = False
         channelID = self.myLink.reserveChannel(self)
-        self.myLink.epControl.requestNewChannel(channelID, self.devicePort, self.deviceAddr)
+        if channelID > 0:
+            self.allowSelect = False
+            self.myLink.epControl.requestNewChannel(channelID, self.devicePort, self.deviceAddr)
 
 
-    def accept(self, channelID):
+    def accept(self, channelID, channelIDF):
 
         if self.allowSelect:
             return False
@@ -44,12 +45,12 @@ class Listener:
         connSocket, addr = self.con.accept()
         # connSocket.setblocking(False)
 
-        self.myLink.newChannelFromSocket(channelID, connSocket)
+        self.myLink.upgradeChannel(channelID, channelIDF, connSocket)
 
         return True
 
 
-    def decline(self, channelID):
+    def decline(self, channelID, channelIDF):
 
         if self.allowSelect:
             return False

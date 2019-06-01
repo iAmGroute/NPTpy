@@ -2,16 +2,17 @@
 
 class ChannelEndpoint:
 
-    def __init__(self, myID, myLink, myListener=None):
-        self.myID       = myID
+    def __init__(self, myID, myIDF, myLink, myListener=None):
+        self.myID       = myID       # Local ID
+        self.myIDF      = myIDF      # Foreign ID
         self.myLink     = myLink
         self.myListener = myListener
 
     def sendMessage(self, data):
         header  = b''
-        header += len(data).to_bytes(2, 'little') # 2B
-        header += self.myID.to_bytes(2, 'little') # 2B
-        self.myLink.sendPacket(header + data)     # 4B
+        header += len(data).to_bytes(2, 'little')  # 2B
+        header += self.myIDF.to_bytes(2, 'little') # 2B
+        self.myLink.sendPacket(header + data)      # 4B
 
     def acceptMessage(self, data):
         raise NotImplementedError()
