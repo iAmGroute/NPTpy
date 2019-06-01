@@ -2,9 +2,10 @@
 
 class ChannelEndpoint:
 
-    def __init__(self, myID, myLink):
-        self.myID   = myID
-        self.myLink = myLink
+    def __init__(self, myID, myLink, myListener=None):
+        self.myID       = myID
+        self.myLink     = myLink
+        self.myListener = myListener
 
     def sendMessage(self, data):
         header  = b''
@@ -17,3 +18,12 @@ class ChannelEndpoint:
 
     def close(self):
         raise NotImplementedError()
+
+
+class ChannelPlaceholder(ChannelEndpoint):
+
+    def acceptMessage(self, data):
+        pass
+
+    def close(self):
+        pass

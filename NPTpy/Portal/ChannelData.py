@@ -6,8 +6,8 @@ from .ChannelEndpoint import ChannelEndpoint
 
 class ChannelData(ChannelEndpoint):
 
-    def __init__(self, myID, myLink, myCon):
-        ChannelEndpoint.__init__(self, myID, myLink)
+    def __init__(self, myID, myLink, myListener, myCon):
+        ChannelEndpoint.__init__(self, myID, myLink, myListener)
         self.myCon = myCon
         self.allowSelect = True
 

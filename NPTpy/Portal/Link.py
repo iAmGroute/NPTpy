@@ -6,7 +6,7 @@ from Common.Connector       import Connector
 from Common.SecureConnector import SecureClientConnector
 from Common.SecureConnector import SecureServerConnector
 
-from .ChannelEndpoint import ChannelEndpoint
+from .ChannelEndpoint import ChannelEndpoint, ChannelPlaceholder
 from .ChannelControl  import ChannelControl
 from .ChannelData     import ChannelData
 from .Listener        import Listener
@@ -36,7 +36,6 @@ class Link:
         self.listeners   = []
         self.epControl   = ChannelControl(0, self)
         self.eps         = [self.epControl] # TODO: convert to slotList
-        self.epls        = [None]           # The listeners that corespond to the above endpoints
         self.buffer      = b''
         self.state       = self.States.Disconnected
         self.conRT       = None
@@ -57,7 +56,6 @@ class Link:
             if ep:
                 ep.close()
             self.eps[i]  = None
-            self.epls[i] = None
         for i in range(len(self.listeners)):
             listener = self.listeners[i]
             if listener:
@@ -66,8 +64,7 @@ class Link:
 
 
     def removeEP(self, channelID):
-        self.eps[channelID]  = None
-        self.epls[channelID] = None
+        self.eps[channelID] = None
         self.epControl.requestDeleteChannel(channelID)
 
 
@@ -185,8 +182,7 @@ class Link:
 
     def reserveChannel(self, listener):
         channelID = len(self.eps)
-        self.eps.append(None)
-        self.epls.append(listener)
+        self.eps.append(ChannelPlaceholder(channelID, self, listener))
         return channelID
 
 
@@ -197,7 +193,6 @@ class Link:
 
         while channelID >= len(self.eps):
             self.eps.append(None)
-            self.epls.append(None)
 
         if self.eps[channelID]:
             self.deleteChannel(channelID)
@@ -231,7 +226,7 @@ class Link:
     # that corresponds to the channelID
     def acceptChannel(self, channelID):
         try:
-            listener = self.epls[channelID]
+            listener = self.eps[channelID].myListener
             return listener.accept(channelID)
         except (IndexError, AttributeError):
             return False
@@ -242,7 +237,7 @@ class Link:
     # that corresponds to the channelID
     def declineChannel(self, channelID):
         try:
-            listener = self.epls[channelID]
+            listener = self.eps[channelID].myListener
             return listener.decline(channelID)
         except (IndexError, AttributeError):
             return False
@@ -251,8 +246,7 @@ class Link:
     def deleteChannel(self, channelID):
         try:
             self.eps[channelID].close()
-            self.eps[channelID]  = None
-            self.epls[channelID] = None
+            self.eps[channelID] = None
             return True
         except (IndexError, AttributeError):
             return False
