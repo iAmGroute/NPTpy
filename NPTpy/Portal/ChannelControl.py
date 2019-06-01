@@ -13,10 +13,6 @@ log = logging.getLogger(__name__)
 
 class ChannelControl(ChannelEndpoint):
 
-    def __init__(self, myID, myLink):
-        ChannelEndpoint.__init__(self, myID, myLink)
-
-
     def acceptMessage(self, data):
         action = data[0:1]
         if   action == b'\x00' \
