@@ -22,12 +22,15 @@ class Slot:
 
 class SlotList:
 
-    def __init__(self, capacityLog2):
+    def __init__(self, capacityLog2, values=None):
         self.capacityLog2 = capacityLog2
         self.capacity     = 1 << capacityLog2
         self.slots        = [Slot(0, i+1, None) for i in range(self.capacity - 1)] + [Slot(0, -1, None)]
         self.firstFree    = 0
         self.lastFree     = self.capacity - 1
+        if values:
+            for value in values:
+                self.append(value)
 
 
     def __iter__(self):
