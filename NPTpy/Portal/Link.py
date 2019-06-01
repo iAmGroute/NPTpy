@@ -2,10 +2,12 @@
 import logging
 import socket
 
+from Common.SmartTabs import t
+from Common.SlotList  import SlotList
+
 from Common.Connector       import Connector
 from Common.SecureConnector import SecureClientConnector
 from Common.SecureConnector import SecureServerConnector
-from Common.SlotList        import SlotList
 
 from .ChannelEndpoint import ChannelEndpoint, ChannelPlaceholder
 from .ChannelControl  import ChannelControl
@@ -73,6 +75,7 @@ class Link:
         ep = self.eps[channelID]
         if ep:
             del self.eps[channelID]
+            log.info(t('Channel\t [{0:5d}] closed locally'.format(channelID)))
             self.epControl.requestDeleteChannel(channelID, ep.myIDF)
 
 
@@ -175,7 +178,7 @@ class Link:
             if ep:
                 ep.acceptMessage(self.buffer[4:totalLen])
             else:
-                log.warn('    epID not found')
+                log.info(t('Channel\t [{0:5d}] not found'.format(epID)))
 
             self.buffer = self.buffer[totalLen:]
 

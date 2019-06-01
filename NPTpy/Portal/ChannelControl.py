@@ -69,7 +69,7 @@ class ChannelControl(ChannelEndpoint):
         ok = channelIDF > 0
 
         self.logResult(channelID, ok, 'created')
-        log.info(t.over('    requested for remote [{0:5d}]'.format(channelIDF)))
+        log.info(t('    remote ID\t [{0:5d}]'.format(channelIDF)))
 
         reply  = b'N'
         reply += data[0:2] # channelIDF
@@ -90,7 +90,7 @@ class ChannelControl(ChannelEndpoint):
 
         self.logResult(channelID, ok, 'ready to accept')
         if ok:
-            log.info(t.over('    mapped to remote [{0:5d}]'.format(channelIDF)))
+            log.info(t('    remote ID\t [{0:5d}]'.format(channelIDF)))
 
         if ok:
             ok = self.myLink.acceptChannel(channelID, channelIDF)
@@ -117,6 +117,7 @@ class ChannelControl(ChannelEndpoint):
         channelIDF = int.from_bytes(data[2:4], 'little')
 
         ok = self.myLink.deleteChannel(channelID)
+        self.logResult(channelID, ok, 'deleted by other')
 
         reply  = b'D'
         reply += data[2:4] # channelIDF
@@ -137,5 +138,5 @@ class ChannelControl(ChannelEndpoint):
             self.corrupted()
             return
 
-        self.logResult(channelID, ok, 'deleted')
+        self.logResult(channelID, ok, 'deleted by us')
 
