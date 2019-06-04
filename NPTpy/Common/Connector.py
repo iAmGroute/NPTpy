@@ -12,7 +12,7 @@ from .this_OS import OS, this_OS
 #  - 21: Connections accepted, incoming (Connection from)
 #  - 17: Exception in tryClose()
 #  - 15: UDP send and receive
-#  - 12: Exception in TCP tryRecv()
+#  - 12: Exception in TCP try send and receive
 #  - 10: TCP send and receive
 #  -  7: UDP content
 #  -  5: TCP content
@@ -106,6 +106,14 @@ class Connector:
         self.socket.sendall(data)
         self.log.log(10, t('Sent    \t {0} Bytes'.format(prefixIEC(len(data)))))
         self.log.log(5, t.over('    content: {0}'.format(data)))
+
+    def trySendall(self, data):
+        try:
+            self.sendall(data)
+            return True
+        except OSError as e:
+            self.log.log(12, t.over('Could not send: {0}'.format(e)))
+            return False
 
     def recv(self, bufferSize):
         data = self.socket.recv(bufferSize)

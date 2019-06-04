@@ -153,7 +153,8 @@ class Server:
 
         reply, close = methodTable[methodID](self, record, data)
         if reply:
-            conn.sendall(reply)
+            if not conn.trySendall(reply):
+                close = True
         if close:
             self.removeConn(conn)
 
