@@ -47,7 +47,7 @@ class Server:
         # Request to connect to portal
         def ConnectToPortal(self, record, message):
             otherID = message[4:8]
-            log.info('    wants to connect to: x{0}'.format(otherID.hex()))
+            log.info('    wants to connect to: x{0}'.format(otherID.hex().upper()))
             try:
                 otherIndex = self.portalIndexer[otherID]
             except KeyError:
@@ -102,7 +102,7 @@ class Server:
 
             portalID = data[0:4]
 
-            log.info('    with portalID: x{0}'.format(portalID.hex()))
+            log.info('    with portalID: x{0}'.format(portalID.hex().upper()))
 
             # TODO: authenticate
             # connSocket.sendall(b'\x00')
@@ -131,7 +131,7 @@ class Server:
         del self.portalIndexer[portalID]
 
     def process(self, conn):
-        log.info('Portal: x{0}'.format(conn.portalID.hex()))
+        log.info('Portal: x{0}'.format(conn.portalID.hex().upper()))
         try:
             record = self.portalTable[conn.portalIndex]
         except KeyError:

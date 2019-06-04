@@ -84,8 +84,8 @@ class Relay:
         callerID = data[16:20]
         otherID  = data[20:24]
         logS.info('New command:')
-        logS.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex()))
-        logS.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex(), otherID.hex()))
+        logS.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex().upper()))
+        logS.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex().upper(), otherID.hex().upper()))
 
         # We don't store the IDs, although we should, for validation/security check
         if verb == b'ADD.':
@@ -112,7 +112,7 @@ class Relay:
             return
 
         conn.token = data[0:8]
-        logP.info('    with token: x{0}'.format(conn.token.hex()))
+        logP.info('    with token: x{0}'.format(conn.token.hex().upper()))
 
         try:
             rec = self.tokenMap[conn.token]
