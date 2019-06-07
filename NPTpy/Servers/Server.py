@@ -3,6 +3,7 @@
 import logging
 import socket
 import select
+import time
 import os      # for os.urandom
 
 from Common.Connector       import Connector
@@ -19,17 +20,26 @@ class PortalConn(Connector):
         self.addr        = addr
         self.portalIndex = -1
 
+
 class Server:
 
+
     def __init__(self, port, address, internalPort, internalAddr, relayPort, relayAddr, relayInternalPort, relayInternalAddr):
-        self.con   = SecureServerConnector(log,  Connector.new(socket.SOCK_STREAM, None,         port,      address))
-        self.conRT =             Connector(logR, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr))
+
+        self.internalPort      = internalPort
+        self.internalAddr      = internalAddr
+        self.relayInternalPort = relayInternalPort
+        self.relayInternalAddr = relayInternalAddr
+
+        self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
+
+        self.con = SecureServerConnector(log,  Connector.new(socket.SOCK_STREAM, None, port, address))
         self.con.secure(certFilename='server.cer', keyFilename='server.key')
         self.con.listen()
-        self.conRT.connect((relayInternalAddr, relayInternalPort))
-        self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
-        self.portalTable      = [] # TODO: convert to pool allocator
-        self.portalIndexer    = {} # Dictionary (hash table)
+
+        self.portalTable   = [] # TODO: convert to pool allocator
+        self.portalIndexer = {} # Dictionary (hash table)
+
 
     class Methods:
         # A method returns <(reply, close)>,
@@ -40,9 +50,11 @@ class Server:
         #   - True, if the connection should be closed right after sending the reply
         #   - False, if it should be kept open
 
+
         # Catch-all for all method codes which are not valid
         def InvalidMethod(self, record, message):
             return b'Invalid Mathod', True
+
 
         # Request to connect to portal
         def ConnectToPortal(self, record, message):
@@ -59,10 +71,11 @@ class Server:
                 self.notifyRelay(token, record.portalID, otherID)
                 # TODO: add the following to a task queue and wait for positive reply from relay
                 # before notifying the portal
-                otherRecord = self.portalTable[otherIndex]
-                self.notifyPortal(token, otherRecord, record)
+                otherConn = self.portalTable[otherIndex]
+                self.notifyPortal(otherConn, record, token)
                 msg = token + self.relayInfoMessage
                 return msg, False
+
 
     def notifyRelay(self, token, callerID, otherID):
         msg =  b'v0.1'  # 4B
@@ -72,18 +85,43 @@ class Server:
         msg += otherID  # 4B
         self.conRT.sendall(msg) # 24B
 
-    def notifyPortal(self, token, conn, callerRecord):
+
+    def notifyPortal(self, portalConn, callerRecord, token):
         # TODO: also send caller's info from callerRecord
-        msg = token + self.relayInfoMessage
-        conn.sendall(msg)
+        msg =  b'v0.1'               # 4B
+        msg += callerRecord.portalID # 4B
+        msg += token                 # 8B
+        msg += self.relayInfoMessage # 2B + var
+        portalConn.sendall(msg)      # 18B + var
+
 
     def main(self):
-        socketList = [self.con] + self.portalTable
-        socketList = filter(None, socketList)
-        readable, writable, exceptional = select.select(socketList, [], [])
-        for s in readable:
-            if   s is self.con: self.task()
-            else:               self.process(s) # s is in self.portalTable
+        if not self.conRT:
+            self.connectRT()
+        else:
+            socketList = [self.con, self.conRT] + self.portalTable
+            socketList = filter(None, socketList)
+            readable, writable, exceptional = select.select(socketList, [], [])
+            for s in readable:
+                if   s is self.con:   self.task()
+                elif s is self.conRT: self.taskRelay()
+                else:                 self.process(s) # s is in self.portalTable
+
+
+    def connectRT(self):
+        self.conRT = Connector(logR, Connector.new(socket.SOCK_STREAM, 2, self.internalPort, self.internalAddr))
+        if not self.conRT.tryConnect((self.relayInternalAddr, self.relayInternalPort)):
+            self.conRT = None
+            time.sleep(10)
+            return
+        self.conRT.setKeepAlive()
+
+
+    def taskRelay(self):
+        data = self.conRT.tryRecv(1024)
+        if len(data) < 1:
+            self.conRT = None
+
 
     def task(self):
         connSocket, addr = self.con.tryAccept()
@@ -124,11 +162,13 @@ class Server:
 
             conn.portalIndex = portalIndex
 
+
     def removeConn(self, conn):
         conn.tryClose()
         portalID = self.portalTable[conn.portalIndex].portalID
         self.portalTable[conn.portalIndex] = None
         del self.portalIndexer[portalID]
+
 
     def process(self, conn):
         log.info('Portal: x{0}'.format(conn.portalID.hex().upper()))
