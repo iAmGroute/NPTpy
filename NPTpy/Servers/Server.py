@@ -30,6 +30,7 @@ class Server:
         self.internalAddr      = internalAddr
         self.relayInternalPort = relayInternalPort
         self.relayInternalAddr = relayInternalAddr
+        self.conRT = None
 
         self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
 
