@@ -84,7 +84,7 @@ class Connector:
     # Accept and close immediately
     def decline(self):
         self.log.log(20, t('Declining incoming'))
-        conn, addr = self.con.accept()
+        conn, addr = self.socket.accept()
         self.log.log(20, t('Connection from\t [{0}]:{1}'.format(*addr)))
         try:
             conn.setblocking(False)
