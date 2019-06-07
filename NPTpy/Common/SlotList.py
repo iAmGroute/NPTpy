@@ -17,7 +17,7 @@ class Slot:
     # Note: python containers call repr() on the items they contain,
     #       even when str() or format() is called on them
     def __repr__(self):
-        return '(gen: {0}, next: {1}, val: {2})'.format(self.gen, self.next, repr(self.val))
+        return '({0}|{1}|{2})'.format(self.gen, self.next, repr(self.val))
 
 
 class SlotList_Iterator:
