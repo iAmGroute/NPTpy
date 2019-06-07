@@ -32,6 +32,7 @@ class Listener:
     def task(self):
 
         if not self.myLink.isConnected():
+            self.con.decline()
             return
 
         self.reserveID = self.myLink.reserveChannel(self)
@@ -64,11 +65,6 @@ class Listener:
 
         self.myLink.deleteChannel(self.reserveID)
 
-        connSocket, addr = self.con.accept()
-        connSocket.setblocking(False)
-        try:
-            connSocket.close()
-        except OSError:
-            pass
+        self.con.decline()
 
         return True
