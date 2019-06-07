@@ -29,6 +29,10 @@ class Listener:
 
     # Called after select()
     def task(self):
+
+        if not self.myLink.isConnected():
+            return
+
         channelID = self.myLink.reserveChannel(self)
         if channelID > 0:
             self.allowSelect = False
