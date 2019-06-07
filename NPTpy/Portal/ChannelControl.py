@@ -66,7 +66,7 @@ class ChannelControl(ChannelEndpoint):
 
         channelID = self.myLink.newChannel(channelIDF, devicePort, deviceAddr)
 
-        ok = channelIDF > 0
+        ok = channelID > 0
 
         self.logResult(channelID, ok, 'created')
         log.info(t('    remote ID\t [{0:5d}]'.format(channelIDF)))
