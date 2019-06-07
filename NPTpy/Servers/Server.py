@@ -74,8 +74,8 @@ class Server:
                 # before notifying the portal
                 otherConn = self.portalTable[otherIndex]
                 self.notifyPortal(otherConn, record, token)
-                msg = token + self.relayInfoMessage
-                return msg, False
+                self.notifyPortal(record, otherConn, token)
+                return None, False
 
 
     def notifyRelay(self, token, callerID, otherID):
