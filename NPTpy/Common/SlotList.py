@@ -17,7 +17,19 @@ class Slot:
     # Note: python containers call repr() on the items they contain,
     #       even when str() or format() is called on them
     def __repr__(self):
-        return '(gen: {0}, next: {1}, val: {2})'.format(self.gen, self.next, self.val)
+        return '(gen: {0}, next: {1}, val: {2})'.format(self.gen, self.next, repr(self.val))
+
+
+class SlotList_Iterator:
+
+    def __init__(self, mySlotList):
+        self.subiter = iter(mySlotList.slots)
+
+    def __next__(self):
+        while True:
+            slot = next(self.subiter)
+            if slot.val:
+                return slot.val
 
 
 class SlotList:
@@ -34,16 +46,26 @@ class SlotList:
 
 
     def __iter__(self):
-        return self.slots.__iter__()
+        return SlotList_Iterator(self)
+
+    def prettyPrint(self, f):
+        result = '['
+        for val in self:
+            result += f(val)
+            result += ', '
+        if len(result) > 2:
+            result = result[:-2]
+        result += ']'
+        return result
 
     def __str__(self):
-        return self.slots.__str__()
+        return self.prettyPrint(repr)
 
     def __repr__(self):
-        return self.slots.__repr__()
+        return 'SlotList' + repr(self.slots)
 
-    def __format__(self):
-        return self.slots.__format__()
+    def __format__(self, formatstr):
+        return self.prettyPrint(lambda x: format(x, formatstr))
 
 
     def append(self, value):
@@ -60,7 +82,7 @@ class SlotList:
 
     def getIndex(self, ID):
 
-        index = ID & ((1 << self.capacityLog2) - 1)
+        index = ID & (self.capacity - 1)
         gen   = ID >> self.capacityLog2
 
         slot = self.slots[index]
