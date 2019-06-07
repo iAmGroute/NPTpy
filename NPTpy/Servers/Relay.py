@@ -79,6 +79,8 @@ class Relay:
             return
 
         magic    = data[0:4]
+        if magic != b'v0.1':
+            return
         verb     = data[4:8]
         token    = data[8:16]
         callerID = data[16:20]
