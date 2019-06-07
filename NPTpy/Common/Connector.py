@@ -10,6 +10,7 @@ from .this_OS import OS, this_OS
 #  - 25: Info concerning state changes (Started, Stopped)
 #  - 23: Connections initiated by us, outgoing (Connecting to)
 #  - 21: Connections accepted, incoming (Connection from)
+#  - 20: Connections declined, incoming (Connection from)
 #  - 17: Exception in tryClose()
 #  - 15: UDP send and receive
 #  - 12: Exception in TCP try send and receive
@@ -79,6 +80,18 @@ class Connector:
         conn, addr = self.socket.accept()
         self.log.log(21, t('Connection from\t [{0}]:{1}'.format(*addr)))
         return conn, addr
+
+    # Accept and close immediately
+    def decline(self):
+        self.log.log(20, t('Declining incoming'))
+        conn, addr = self.con.accept()
+        self.log.log(20, t('Connection from\t [{0}]:{1}'.format(*addr)))
+        try:
+            conn.setblocking(False)
+            conn.close()
+        except OSError:
+            pass
+        return addr
 
     def tryAccept(self):
         try:
