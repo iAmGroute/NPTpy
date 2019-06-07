@@ -4,27 +4,19 @@ python
 
 import time
 import logging
-logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=logging.INFO)
+logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=20)
 
 from Portal.Portal import Portal
 
 ServerAddr = '192.168.11.1'
 ServerPort = 4020
 
-c = Portal(True, b'ABCF', ServerPort, ServerAddr)
+c = Portal(b'ABCF', ServerPort, ServerAddr)
 
-c.main()
-
-c.connectToPortal(b'ABCE')
-
-c.main()
-
-
-c.main()
-
-c.links[0].addListener(5201, '192.168.11.11', 1234, '0.0.0.0')
+link = c.createLink(True, b'ABCE')
+link.addListener(8080, '192.168.11.11', 1234, '0.0.0.0')
 
 while True:
-    # print(c.links[0].eps)
+    # print(c.links)
     c.main()
 

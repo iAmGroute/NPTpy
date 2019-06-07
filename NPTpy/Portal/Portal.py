@@ -4,6 +4,9 @@ import socket
 import select
 import time
 
+from Common.Generic  import find
+from Common.SlotList import SlotList
+
 from Common.Connector       import Connector
 from Common.SecureConnector import SecureClientConnector
 
@@ -13,14 +16,13 @@ log = logging.getLogger(__name__ + '  ')
 
 class Portal:
 
-    def __init__(self, isClient, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
-        self.isClient    = isClient
+    def __init__(self, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
         self.portalID    = portalID
         self.serverPort  = serverPort
         self.serverAddr  = serverAddr
         self.port        = port
         self.address     = address
-        self.links       = []
+        self.links       = SlotList(4)
         self.conST       = None
         self.allowSelect = True
 
@@ -37,23 +39,20 @@ class Portal:
 
         else:
 
-            for link in self.links:
-                if link:
-                    link.maintenance()
-
             # Temorary
             # TODO: add a SlotMap to which all selectables will be registred
             socketList = [self]
             for link in self.links:
-                if link:
-                    socketList.append(link)
-                    socketList.extend(link.listeners)
-                    socketList.extend([ep.val for ep in link.eps])
-            socketList = [s for s in socketList if s and s.allowSelect]
+                socketList.append(link)
+                socketList.extend(link.listeners)
+                socketList.extend(link.eps)
+            socketList = [s for s in socketList if s.allowSelect]
 
             readable, writable, exceptional = select.select(socketList, [], [])
             for s in readable:
-                s.task()
+                # Avoid race conditions by re-checking allowSelect
+                if s.allowSelect:
+                    s.task()
 
 
     def connectKA(self):
@@ -72,24 +71,37 @@ class Portal:
 
     def task(self):
 
-        relayInfo = self.conST.tryRecv(1024)
-        l = len(relayInfo)
-        if l < 11:
+        data = self.conST.tryRecv(1024)
+        l = len(data)
+        if l < 19:
             if l == 0: self.conST = None
             return
 
-        token     = relayInfo[0:8]
-        relayPort = int.from_bytes(relayInfo[8:10], 'little')
-        relayAddr = str(relayInfo[10:], 'utf-8')
+        magic     = data[0:4]
+        if magic != b'v0.1':
+            return
+        otherID   = data[4:8]
+        token     = data[8:16]
+        relayPort = int.from_bytes(data[16:18], 'little')
+        relayAddr = str(data[18:], 'utf-8')
 
+        link =  find(self.links, lambda lk: lk.otherPortalID == otherID) \
+             or self.createLink(False, otherID)
+        link.connectToRelay(token, relayPort, relayAddr)
+
+
+    def createLink(self, isClient, otherID):
         # TODO: allow for different binding port & address than self.port, self.address
-        # and provide the remote portal's ID instead of the token/relay info
-        link = Link(self.isClient, len(self.links), self, token, relayPort, relayAddr, self.port, self.address)
-        self.links.append(link)
+        link      = Link(isClient, -1, self, otherID, self.port, self.address)
+        linkID    = self.links.append(link)
+        link.myID = linkID
+        return link
 
 
     def removeLink(self, linkID):
-        self.links[linkID] = None
+        if self.links[linkID]:
+            self.links[linkID].close()
+            del self.links[linkID]
 
 
     # 'Client' mode
@@ -98,12 +110,15 @@ class Portal:
     # so sending a request will trigger the same response to both sides.
     # Therefore, we can simply 'inject' a connect message
     # and the remaining will be handled automatically.
+    # Called by Link.requestConnect()
     def connectToPortal(self, otherID):
         if not self.conST:
+            self.connectKA()
             return
         methodID = 1
         data =  methodID.to_bytes(4, 'little')
         data += otherID
         data += b'0' * 56
         self.conST.sendall(data)
+        time.sleep(2)
 

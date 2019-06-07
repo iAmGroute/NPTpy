@@ -25,50 +25,46 @@ class Link:
         Forwarding   = 2
 
 
-    def __init__(self, isClient, myID, myPortal, myToken, relayPort, relayAddr, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
+    def __init__(self, isClient, myID, myPortal, otherPortalID, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
 
-        self.isClient    = isClient
-        self.myID        = myID
-        self.myPortal    = myPortal
-        self.myToken     = myToken
-        self.relayPort   = relayPort
-        self.relayAddr   = relayAddr
-        self.rtPort      = rtPort
-        self.rtAddr      = rtAddr
-        self.ltPort      = ltPort
-        self.ltAddr      = ltAddr
+        self.isClient      = isClient
+        self.myID          = myID
+        self.myPortal      = myPortal
+        self.otherPortalID = otherPortalID
+        self.rtPort        = rtPort
+        self.rtAddr        = rtAddr
+        self.ltPort        = ltPort
+        self.ltAddr        = ltAddr
 
-        self.listeners   = []
+        self.listeners     = SlotList(6)
 
-        self.epControl   = ChannelControl(0, 0, self)
-        self.eps         = SlotList(4, [self.epControl])
+        self.epControl     = ChannelControl(0, 0, self)
+        self.eps           = SlotList(10, [self.epControl])
         assert self.eps[0] is self.epControl
 
-        self.buffer      = b''
-        self.state       = self.States.Disconnected
-        self.conRT       = None
-        self.allowSelect = False
-
-
-    def addListener(self, devicePort, deviceAddr, port, address):
-        listener = Listener(len(self.listeners), self, devicePort, deviceAddr, port, address)
-        self.listeners.append(listener)
+        self.buffer        = b''
+        self.state         = self.States.Disconnected
+        self.conRT         = None
+        self.allowSelect   = False
 
 
     def close(self):
         self.conRT.tryClose()
         self.conRT       = None
         self.allowSelect = False
-        for i in range(len(self.eps.slots)):
-            ep = self.eps.slots[i].val
-            if ep:
-                ep.close()
-            self.eps.deleteByIndex(i)
-        for i in range(len(self.listeners)):
-            listener = self.listeners[i]
-            if listener:
-                listener.close()
-            self.listeners[i] = None
+        for ep in self.eps:
+            ep.close()
+            del self.eps[ep.myID]
+        for listener in self.listeners:
+            listener.close()
+            del self.listeners[listener.myID]
+
+
+    def addListener(self, devicePort, deviceAddr, port, address):
+        listener      = Listener(-1, self, devicePort, deviceAddr, port, address)
+        listenerID    = self.listeners.append(listener)
+        listener.myID = listenerID
+        return listener
 
 
     def removeEP(self, channelID):
@@ -77,11 +73,6 @@ class Link:
             del self.eps[channelID]
             log.info(t('Channel\t [{0:5d}] closed locally'.format(channelID)))
             self.epControl.requestDeleteChannel(channelID, ep.myIDF)
-
-
-    def maintenance(self):
-        if not self.conRT:
-            self.taskConnect()
 
 
     def secureForward(self):
@@ -96,37 +87,40 @@ class Link:
             self.reconnect()
 
 
-    def reconnect(self):
+    def disconnect(self):
         self.conRT.tryClose()
         self.conRT       = None
         self.allowSelect = False
+        for ep in self.eps:
+            ep.allowSelect = False
+        for listener in self.listeners:
+            if not listener.allowSelect:
+                listener.decline()
+            listener.allowSelect = True
         self.state = self.States.Disconnected
-        self.taskConnect()
 
 
-    def disconnect(self):
-        self.state = self.States.Disconnected
-        self.close()
-        self.myPortal.removeLink(self.myID)
+    def reconnect(self):
+        self.disconnect()
+        self.requestConnect()
 
 
-    # Needed for select()
-    def fileno(self):
-        return self.conRT.fileno()
+    def requestConnect(self):
+        self.myPortal.connectToPortal(self.otherPortalID)
 
 
-    # Called after select()
-    def task(self):
-        if   self.state == self.States.Disconnected: assert False # self.taskConnect() # should not ever be called
-        elif self.state == self.States.WaitReady:    self.taskReady()
-        elif self.state == self.States.Forwarding:   self.taskForward()
+    def isConnected(self):
+        if self.isClient and self.state == self.States.Disconnected:
+            self.requestConnect()
+        return self.state == self.States.Forwarding
 
 
-    def taskConnect(self):
+    def connectToRelay(self, token, relayPort, relayAddr):
 
-        assert not self.conRT
+        if self.conRT:
+            self.disconnect()
 
-        data = self.myToken + b'0' * 56
+        data = token + b'0' * 56
 
         for i in range(3):
 
@@ -135,7 +129,7 @@ class Link:
             else:
                 conRT = SecureServerConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
 
-            if conRT.tryConnect((self.relayAddr, self.relayPort)):
+            if conRT.tryConnect((relayAddr, relayPort)):
                 conRT.sendall(data)
                 conRT.setKeepAlive()
                 break
@@ -145,7 +139,22 @@ class Link:
         if conRT:
             self.conRT       = conRT
             self.allowSelect = True
+            for ep in self.eps:
+                if ep is not self.epControl:
+                    ep.allowSelect = True
             self.state = self.States.WaitReady
+
+
+    # Needed for select()
+    def fileno(self):
+        return self.conRT.fileno()
+
+
+    # Called after select()
+    def task(self):
+        if   self.state == self.States.Disconnected: assert False # should not ever be called
+        elif self.state == self.States.WaitReady:    self.taskReady()
+        elif self.state == self.States.Forwarding:   self.taskForward()
 
 
     def taskReady(self):
@@ -206,7 +215,7 @@ class Link:
     def addChannel(self, channelIDF, conn):
 
         if not conn:
-            return -1
+            return 0
 
         channel      = ChannelData(-1, channelIDF, self, conn)
         channelID    = self.eps.append(channel)
@@ -221,12 +230,9 @@ class Link:
             conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
             if conn.tryConnect((deviceAddr, devicePort)):
                 conn.socket.settimeout(None)
-                break
-            else:
-                conn.tryClose()
-                conn = None
+                return self.addChannel(channelIDF, conn)
 
-        return self.addChannel(channelIDF, conn)
+        return 0
 
 
     def upgradeChannel(self, channelID, channelIDF, channelSocket):
@@ -260,7 +266,7 @@ class Link:
     def declineChannel(self, channelID, channelIDF):
         try:
             listener = self.eps[channelID].myListener
-            return listener.decline(channelID, channelIDF)
+            return listener.decline()
         except (IndexError, AttributeError):
             return False
 
@@ -268,7 +274,7 @@ class Link:
     def deleteChannel(self, channelID):
         try:
             self.eps[channelID].close()
-            self.eps[channelID] = None
+            del self.eps[channelID]
             return True
         except (IndexError, AttributeError):
             return False
