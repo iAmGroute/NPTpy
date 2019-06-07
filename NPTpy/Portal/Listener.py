@@ -14,6 +14,7 @@ class Listener:
         self.devicePort  = devicePort
         self.deviceAddr  = deviceAddr
         self.allowSelect = True
+        self.reserveID   = -1
         self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, None, myPort, myAddress))
         self.con.listen()
 
@@ -33,10 +34,10 @@ class Listener:
         if not self.myLink.isConnected():
             return
 
-        channelID = self.myLink.reserveChannel(self)
-        if channelID > 0:
+        self.reserveID = self.myLink.reserveChannel(self)
+        if self.reserveID > 0:
             self.allowSelect = False
-            self.myLink.epControl.requestNewChannel(channelID, self.devicePort, self.deviceAddr)
+            self.myLink.epControl.requestNewChannel(self.reserveID, self.devicePort, self.deviceAddr)
 
 
     def accept(self, channelID, channelIDF):
@@ -54,12 +55,14 @@ class Listener:
         return True
 
 
-    def decline(self, channelID, channelIDF):
+    def decline(self):
 
         if self.allowSelect:
             return False
 
         self.allowSelect = True
+
+        self.myLink.deleteChannel(self.reserveID)
 
         connSocket, addr = self.con.accept()
         connSocket.setblocking(False)
