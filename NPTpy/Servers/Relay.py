@@ -7,6 +7,7 @@ import logging
 import socket
 import select
 
+from Common.SlotList  import SlotList
 from Common.Connector import Connector
 
 log  = logging.getLogger(__name__ + '  ')
@@ -39,16 +40,17 @@ class Relay:
 
     def __init__(self, port, address, internalPort, internalAddr):
         self.con   = Connector(log,  Connector.new(socket.SOCK_STREAM, None,         port,      address)) # for portals/clients
-        self.conST = Connector(logS, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr)) # for server
         self.con.listen()
+        self.conST = Connector(logS, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr)) # for server
         self.conST.listen()
         self.connST = None
-        self.connSockets = [] # TODO: convert to pool allocator / slot map
+        self.connSockets = SlotList(16)
         self.tokenMap    = {} # Dictionary (hash table)
 
 
     def main(self):
-        socketList = [self.con, self.conST, self.connST] + self.connSockets
+        socketList = [self.con, self.conST, self.connST]
+        socketList.extend(self.connSockets)
         socketList = filter(None, socketList)
         readable, writable, exceptional = select.select(socketList, [], [])
         for s in readable:
@@ -100,6 +102,7 @@ class Relay:
 
 
     def task(self):
+
         connSocket, addr = self.con.accept()
         # connSocket.settimeout(0.2)
 
@@ -118,27 +121,35 @@ class Relay:
 
         try:
             rec = self.tokenMap[conn.token]
+
         except KeyError:
             logP.info('    INVALID')
             conn.sendall(b'Bad T !\n')
             conn.tryClose()
             return
+
         else:
+
             if rec.indexA == -1:
                 # First one to connect
 
-                rec.indexA = len(self.connSockets)
-                self.connSockets.append(conn)
+                rec.indexA = self.connSockets.append(conn)
+                if rec.indexA < 0:
+                    logP.warn('    registration failed, connSockets is full !')
+                    return
 
                 logP.info('    indexA: {0:3d}'.format(rec.indexA))
 
             elif rec.indexB == -1:
                 # Second one to connect
+
                 other = self.connSockets[rec.indexA]
 
                 conn.other = other
-                rec.indexB = len(self.connSockets)
-                self.connSockets.append(conn)
+                rec.indexB = self.connSockets.append(conn)
+                if rec.indexB < 0:
+                    logP.warn('    registration failed, connSockets is full !')
+                    return
 
                 # we can now forward between the 2
                 other.other = conn
@@ -157,7 +168,7 @@ class Relay:
 
     def removeIndex(self, index):
         try:
-            self.connSockets[index] = None
+            del self.connSockets[index]
         except IndexError:
             return False
         return True
@@ -166,10 +177,9 @@ class Relay:
     def closeByIndex(self, index):
         try:
             conn = self.connSockets[index]
-            self.connSockets[index] = None
+            del self.connSockets[index]
         except IndexError:
             conn = None
-
         return conn.tryClose() if conn else False
 
 
