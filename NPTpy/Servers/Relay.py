@@ -1,7 +1,7 @@
 # Relay server
 
-# TODO:
-# use different token for A and B (?) to prevent hijacking
+# TODO: use different token for A and B (?) to prevent hijacking
+# TODO: implement a timeout for the active tokens which do not have both ends connected
 
 import logging
 import socket
@@ -209,14 +209,17 @@ class Relay:
 
 
     def process(self, conn):
-        # TODO: avoid reading data if other is not connected,
-        # but check to see if this one has disconnected
-        data = conn.tryRecv(32768)
-        if len(data) < 1:
-            # Connection closed, remove both
-            self.removeConn(conn)
 
+        # Note: even if this one disconnect without the other ever having connected
+        #       we still want to wait for the other to connect, and then close both
         if conn.other:
+
+            data = conn.tryRecv(32768)
+            if len(data) < 1:
+                # Connection closed, remove both
+                self.removeConn(conn)
+                return
+
             try:
                 conn.other.sendall(data)
             except OSError:
