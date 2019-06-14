@@ -4,9 +4,8 @@ import socket
 import select
 import time
 
-from Common.Generic  import find
-from Common.SlotList import SlotList
-
+from Common.Generic         import find
+from Common.SlotList        import SlotList
 from Common.Connector       import Connector
 from Common.SecureConnector import SecureClientConnector
 
@@ -120,5 +119,5 @@ class Portal:
         data += otherID
         data += b'0' * 56
         self.conST.sendall(data)
-        time.sleep(2)
+        # time.sleep(2)
 
