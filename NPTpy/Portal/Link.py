@@ -83,7 +83,7 @@ class Link:
                 self.conRT.secure(certFilename='portal.cer', keyFilename='portal.key')
             self.state = self.States.Forwarding
         except OSError as e:
-            log.error(error)
+            log.error(e)
             self.reconnect()
 
 
