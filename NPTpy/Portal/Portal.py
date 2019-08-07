@@ -66,18 +66,22 @@ class Portal:
             return
         self.conST.sendall(data)
         self.conST.setKeepAlive()
+        self.conST.socket.settimeout(None)
 
 
     def task(self):
 
         data = self.conST.tryRecv(1024)
         l = len(data)
-        if l < 19:
-            if l == 0: self.conST = None
+        if l != 19:
+            log.warn('Received {0} Bytes but expected 19'.format(l))
+            self.conST = None
             return
 
         magic     = data[0:4]
         if magic != b'v0.1':
+            log.warn('Server version mismatch, we: {0}, server: {1}'.format('v0.1', magic))
+            self.conST = None
             return
         otherID   = data[4:8]
         token     = data[8:16]

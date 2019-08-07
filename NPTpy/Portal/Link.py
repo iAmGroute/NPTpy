@@ -132,6 +132,7 @@ class Link:
             if conRT.tryConnect((relayAddr, relayPort)):
                 conRT.sendall(data)
                 conRT.setKeepAlive()
+                conRT.socket.settimeout(None)
                 break
             else:
                 conRT = None
