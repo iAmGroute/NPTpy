@@ -87,7 +87,7 @@ class Connector:
         conn, addr = self.socket.accept()
         self.log.log(20, t('Connection from\t [{0}]:{1}'.format(*addr)))
         try:
-            conn.setblocking(False)
+            conn.settimeout(0)
             conn.close()
         except OSError:
             pass
