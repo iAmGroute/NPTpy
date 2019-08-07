@@ -213,12 +213,10 @@ class Relay:
         #       So, we can't wait for the other to connect and instead we disconnect both endpoints.
         data = conn.tryRecv(32768)
         if len(data) < 1 or not conn.other:
-            log.info('Closing, because received {0}, conn {1}'.format(len(data), conn.socket))
             # Connection closed or other is not connected, remove both
             self.removeConn(conn)
             return
         try:
-            log.info('Sending {0} from conn {1} to other {2}'.format(len(data), conn.socket, conn.other.socket))
             conn.other.sendall(data)
         except OSError:
             log.error('OSError')
