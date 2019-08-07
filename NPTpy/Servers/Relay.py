@@ -209,20 +209,19 @@ class Relay:
 
 
     def process(self, conn):
-
-        # Note: even if this one disconnect without the other ever having connected
-        #       we still want to wait for the other to connect, and then close both
-        if conn.other:
-
-            data = conn.tryRecv(32768)
-            if len(data) < 1:
-                # Connection closed, remove both
-                self.removeConn(conn)
-                return
-
-            try:
-                conn.other.sendall(data)
-            except OSError:
-                # Connection closed (?), remove both
-                self.removeConn(conn)
+        # Note: we need to drop the incoming data to prevent this conn from being picked again on select().
+        #       So, we can't wait for the other to connect and instead we disconnect both endpoints.
+        data = conn.tryRecv(32768)
+        if len(data) < 1 or not conn.other:
+            log.info('Closing, because received {0}, conn {1}'.format(len(data), conn.socket))
+            # Connection closed or other is not connected, remove both
+            self.removeConn(conn)
+            return
+        try:
+            log.info('Sending {0} from conn {1} to other {2}'.format(len(data), conn.socket, conn.other.socket))
+            conn.other.sendall(data)
+        except OSError:
+            log.error('OSError')
+            # Connection closed (?), remove both
+            self.removeConn(conn)
 
