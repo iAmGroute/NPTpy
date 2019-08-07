@@ -73,8 +73,8 @@ class Portal:
 
         data = self.conST.tryRecv(1024)
         l = len(data)
-        if l != 19:
-            log.warn('Received {0} Bytes but expected 19'.format(l))
+        if l < 19:
+            log.warn('Received {0} Bytes but expected at least 19'.format(l))
             self.conST = None
             return
 
