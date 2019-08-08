@@ -12,8 +12,8 @@ from .this_OS import OS, this_OS
 #  - 21: Connections accepted, incoming (Connection from)
 #  - 20: Connections declined, incoming (Connection from)
 #  - 17: Exception in tryClose()
-#  - 15: UDP send and receive
-#  - 12: Exception in TCP try send and receive
+#  - 15: Exception in TCP try send and receive
+#  - 12: UDP send and receive
 #  - 10: TCP send and receive
 #  -  7: UDP content
 #  -  5: TCP content
@@ -59,13 +59,13 @@ class Connector:
 
     def sendto(self, data, endpoint):
         sentSize = self.socket.sendto(data, endpoint)
-        self.log.log(15, t('Sent     {0} Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
+        self.log.log(12, t('Sent     {0} Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
         self.log.log( 7, t.over('    content: {0}'.format(data)))
         return sentSize
 
     def recvfrom(self, bufferSize):
         data, addr = self.socket.recvfrom(bufferSize)
-        self.log.log(15, t('Received {0} Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
+        self.log.log(12, t('Received {0} Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
         self.log.log( 7, t.over('    content: {0}'.format(data)))
         return data, addr
 
@@ -125,7 +125,7 @@ class Connector:
             self.sendall(data)
             return True
         except OSError as e:
-            self.log.log(12, t.over('Could not send: {0}'.format(e)))
+            self.log.log(15, t.over('Could not send: {0}'.format(e)))
             return False
 
     def recv(self, bufferSize):
@@ -138,7 +138,7 @@ class Connector:
         try:
             return self.recv(bufferSize)
         except OSError as e:
-            self.log.log(12, t.over('Could not receive: {0}'.format(e)))
+            self.log.log(15, t.over('Could not receive: {0}'.format(e)))
             return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
