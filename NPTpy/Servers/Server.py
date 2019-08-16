@@ -6,8 +6,7 @@ import select
 import time
 import os      # for os.urandom
 
-from Common.Connector       import Connector
-from Common.SecureConnector import SecureServerConnector
+from Common.Connector import Connector
 
 log  = logging.getLogger(__name__ + '  ')
 logP = logging.getLogger(__name__ + ':P')
@@ -34,8 +33,8 @@ class Server:
 
         self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
 
-        self.con = SecureServerConnector(log,  Connector.new(socket.SOCK_STREAM, None, port, address))
-        self.con.secure(certFilename='server.cer', keyFilename='server.key')
+        self.con = Connector(log,  Connector.new(socket.SOCK_STREAM, None, port, address))
+        self.con.secureServer(certFilename='server.cer', keyFilename='server.key')
         self.con.listen()
 
         self.portalTable   = [] # TODO: convert to pool allocator

@@ -4,10 +4,9 @@ import socket
 import select
 import time
 
-from Common.Generic         import find
-from Common.SlotList        import SlotList
-from Common.Connector       import Connector
-from Common.SecureConnector import SecureClientConnector
+from Common.Generic   import find
+from Common.SlotList  import SlotList
+from Common.Connector import Connector
 
 from .Link import Link
 
@@ -55,8 +54,8 @@ class Portal:
 
 
     def connectKA(self):
-        self.conST = SecureClientConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
-        self.conST.secure(serverHostname='server', caFilename='server.cer')
+        self.conST = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        self.conST.secureClient(serverHostname='server', caFilename='server.cer')
         data = b''
         data += self.portalID
         data += b'0' * 60

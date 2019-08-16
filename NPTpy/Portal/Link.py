@@ -5,9 +5,7 @@ import socket
 from Common.SmartTabs import t
 from Common.SlotList  import SlotList
 
-from Common.Connector       import Connector
-from Common.SecureConnector import SecureClientConnector
-from Common.SecureConnector import SecureServerConnector
+from Common.Connector import Connector
 
 from .ChannelEndpoint import ChannelEndpoint, ChannelPlaceholder
 from .ChannelControl  import ChannelControl
@@ -78,9 +76,9 @@ class Link:
     def secureForward(self):
         try:
             if self.isClient:
-                self.conRT.secure(serverHostname='portal', caFilename='portal.cer')
+                self.conRT.secureClient(serverHostname='portal', caFilename='portal.cer')
             else:
-                self.conRT.secure(certFilename='portal.cer', keyFilename='portal.key')
+                self.conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
             self.state = self.States.Forwarding
         except OSError as e:
             log.error(e)
@@ -123,12 +121,7 @@ class Link:
         data = token + b'0' * 56
 
         for i in range(3):
-
-            if self.isClient:
-                conRT = SecureClientConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
-            else:
-                conRT = SecureServerConnector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
-
+            conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
             if conRT.tryConnect((relayAddr, relayPort)):
                 conRT.sendall(data)
                 conRT.setKeepAlive()
