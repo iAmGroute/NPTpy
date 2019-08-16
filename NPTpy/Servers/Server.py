@@ -119,6 +119,8 @@ class Server:
 
     def taskRelay(self):
         data = self.conRT.tryRecv(1024)
+        if data is None:
+            return
         if len(data) < 1:
             self.conRT = None
 
@@ -181,6 +183,8 @@ class Server:
             return
 
         data = conn.tryRecv(64)
+        if data is None:
+            return
         if len(data) != 64:
             # Remove the connection
             log.info('    disconnect' if len(data) == 0 else '    bad request')

@@ -27,6 +27,8 @@ class ChannelData(ChannelEndpoint):
     # Called after select()
     def task(self):
         data = self.myCon.tryRecv(32768)
+        if data is None:
+            return
         if len(data) < 1:
             self.myLink.removeEP(self.myID)
             return

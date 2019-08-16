@@ -76,6 +76,8 @@ class Relay:
     def taskManage(self):
 
         data = self.connST.tryRecv(24)
+        if data is None:
+            return
         if len(data) != 24:
             self.removeManage()
             return
@@ -104,17 +106,16 @@ class Relay:
     def task(self):
 
         connSocket, addr = self.con.accept()
-        # connSocket.settimeout(0.2)
+        connSocket.settimeout(1)
 
         conn = RelayConn(connSocket)
 
         data = conn.tryRecv(64)
-        # TODO: states + select instead of non-block,
-        # since sendall() must be able block
-        # conn.socket.setblocking(False)
-        if len(data) != 64:
+        if not data or len(data) != 64:
             conn.tryClose()
             return
+
+        connSocket.settimeout(0)
 
         conn.token = data[0:8]
         logP.info('    with token: x{0}'.format(conn.token.hex().upper()))
@@ -212,6 +213,8 @@ class Relay:
         # Note: we need to drop the incoming data to prevent this conn from being picked again on select().
         #       So, we can't wait for the other to connect and instead we disconnect both endpoints.
         data = conn.tryRecv(32768)
+        if data is None:
+            return
         if len(data) < 1 or not conn.other:
             # Connection closed or other is not connected, remove both
             self.removeConn(conn)

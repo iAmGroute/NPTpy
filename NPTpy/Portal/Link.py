@@ -153,6 +153,8 @@ class Link:
 
     def taskReady(self):
         data = self.conRT.tryRecv(8)
+        if data is None:
+            return
         if   data == b'Ready !\n': self.secureForward()
         elif data == b'Bad T !\n': self.disconnect()
         else:                      self.reconnect()
@@ -161,6 +163,8 @@ class Link:
     def taskForward(self):
 
         data = self.conRT.tryRecv(32768)
+        if data is None:
+            return
         if len(data) < 1:
             self.reconnect()
             return

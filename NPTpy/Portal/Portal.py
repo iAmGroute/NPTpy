@@ -71,6 +71,8 @@ class Portal:
     def task(self):
 
         data = self.conST.tryRecv(1024)
+        if data is None:
+            return
         l = len(data)
         if l < 19:
             log.warn('Received {0} Bytes but expected at least 19'.format(l))

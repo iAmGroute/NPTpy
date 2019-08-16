@@ -139,8 +139,13 @@ class Connector:
         try:
             return self.recv(bufferSize)
         except OSError as e:
-            self.log.log(15, t.over('Could not receive: {0}'.format(e)))
-            return b''
+            if isinstance(e, ssl.SSLError) and e.errno == ssl.SSL_ERROR_WANT_READ:
+                # Partial or empty ssl record received and saved internally.
+                # No data is available but the connection is still OK.
+                return None
+            else:
+                self.log.log(15, t.over('Could not receive: {0}'.format(e)))
+                return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
         try:
