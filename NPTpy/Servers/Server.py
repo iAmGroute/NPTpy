@@ -132,7 +132,7 @@ class Server:
         connSocket.settimeout(0.2)
         try:
             data = connSocket.recv(64)
-            connSocket.setblocking(False)
+            connSocket.settimeout(0)
         except OSError:
             log.info('    dropped')
         else:

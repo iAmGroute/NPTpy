@@ -62,7 +62,6 @@ class Relay:
 
     def taskManageAccept(self):
         connSocket, addr = self.conST.accept()
-        # connSocket.setblocking(False)
         if self.connST:
             self.removeManage()
         self.connST = Connector(logS, connSocket)
@@ -106,7 +105,7 @@ class Relay:
     def task(self):
 
         connSocket, addr = self.con.accept()
-        connSocket.settimeout(1)
+        connSocket.settimeout(2)
 
         conn = RelayConn(connSocket)
 
@@ -114,8 +113,6 @@ class Relay:
         if not data or len(data) != 64:
             conn.tryClose()
             return
-
-        connSocket.settimeout(0)
 
         conn.token = data[0:8]
         logP.info('    with token: x{0}'.format(conn.token.hex().upper()))

@@ -65,7 +65,7 @@ class Portal:
             return
         self.conST.sendall(data)
         self.conST.setKeepAlive()
-        self.conST.socket.settimeout(None)
+        self.conST.socket.settimeout(0)
 
 
     def task(self):

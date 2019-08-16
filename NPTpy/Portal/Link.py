@@ -79,6 +79,7 @@ class Link:
                 self.conRT.secureClient(serverHostname='portal', caFilename='portal.cer')
             else:
                 self.conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
+            self.conRT.socket.settimeout(0)
             self.state = self.States.Forwarding
         except OSError as e:
             log.error(e)
@@ -125,7 +126,6 @@ class Link:
             if conRT.tryConnect((relayAddr, relayPort)):
                 conRT.sendall(data)
                 conRT.setKeepAlive()
-                conRT.socket.settimeout(None)
                 break
             else:
                 conRT = None
@@ -194,7 +194,9 @@ class Link:
     # sends <packet> through the link to the remote portal.
     def sendPacket(self, packet):
         try:
+            self.conRT.socket.settimeout(2)
             self.conRT.sendall(packet)
+            self.conRT.socket.settimeout(0)
         except OSError as e:
             log.error(e)
             self.reconnect()
@@ -227,7 +229,6 @@ class Link:
         for i in range(3):
             conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
             if conn.tryConnect((deviceAddr, devicePort)):
-                conn.socket.settimeout(None)
                 return self.addChannel(channelIDF, conn)
 
         return 0
