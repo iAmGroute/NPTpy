@@ -5,6 +5,7 @@ import socket
 import select
 import time
 
+from Common.SlotList  import SlotList
 from Common.Connector import Connector
 
 log  = logging.getLogger(__name__ + '  ')
@@ -130,13 +131,13 @@ class Server:
             return
         if len(packet) < 8:
             self.conRT = None
-        ref  = packet[0:8]
+        ref  = int.from_bytes(packet[0:8], 'little')
         data = packet[8:]
         callback = self.callbacksRT[ref]
         if callback:
             del self.callbacksRT[ref]
             method, params = callback
-            ok = self.method(params, data)
+            ok = method(params, data)
             if not ok:
                 self.conRT = None
 
