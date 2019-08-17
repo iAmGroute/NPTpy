@@ -6,6 +6,7 @@
 import logging
 import socket
 import select
+import os      # for os.urandom
 
 from Common.SlotList  import SlotList
 from Common.Connector import Connector
@@ -81,13 +82,14 @@ class Relay:
             self.removeManage()
             return
 
-        magic    = data[0:4]
+        ref      = data[0:8]
+        magic    = data[8:12]
         if magic != b'v0.1':
             return
-        verb     = data[4:8]
-        token    = data[8:16]
+        verb     = data[12:16]
         callerID = data[16:20]
         otherID  = data[20:24]
+        token = os.urandom(8)
         logS.info('New command:')
         logS.info('    verb:     {0}   | token:   x{1}'.format(verb, token.hex().upper()))
         logS.info('    callerID: x{0} | otherID: x{1}'.format(callerID.hex().upper(), otherID.hex().upper()))
@@ -99,7 +101,9 @@ class Relay:
         elif verb == b'DEL.':
             self.removeByToken(token)
 
-        self.connST.sendall(b'OK')
+        reply =  ref               # 8B
+        reply += token             # 8B
+        self.connST.sendall(reply) # 16B
 
 
     def task(self):

@@ -4,7 +4,6 @@ import logging
 import socket
 import select
 import time
-import os      # for os.urandom
 
 from Common.Connector import Connector
 
@@ -31,6 +30,8 @@ class Server:
         self.relayInternalAddr = relayInternalAddr
         self.conRT = None
 
+        self.callbacksRT = SlotList(10)
+
         self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
 
         self.con = Connector(log,  Connector.new(socket.SOCK_STREAM, None, port, address))
@@ -52,12 +53,12 @@ class Server:
 
 
         # Catch-all for all method codes which are not valid
-        def InvalidMethod(self, record, message):
+        def InvalidMethod(self, portal, message):
             return b'Invalid Mathod', True
 
 
         # Request to connect to portal
-        def ConnectToPortal(self, record, message):
+        def ConnectToPortal(self, portal, message):
             otherID = message[4:8]
             log.info('    wants to connect to: x{0}'.format(otherID.hex().upper()))
             try:
@@ -67,32 +68,38 @@ class Server:
                 return b'Bad ID', False
             else:
                 log.info('    found')
-                token = os.urandom(8)
-                self.notifyRelay(token, record.portalID, otherID)
-                # TODO: add the following to a task queue and wait for positive reply from relay
-                # before notifying the portal
-                otherConn = self.portalTable[otherIndex]
-                self.notifyPortal(otherConn, record, token)
-                self.notifyPortal(record, otherConn, token)
+                other = self.portalTable[otherIndex]
+                ref = self.callbacksRT.append((self.handleRelayReady, (portal, other)))
+                self.notifyRelay(ref, portal.portalID, otherID)
                 return None, False
 
 
-    def notifyRelay(self, token, callerID, otherID):
-        msg =  b'v0.1'  # 4B
-        msg += b'ADD.'  # 4B
-        msg += token    # 8B
-        msg += callerID # 4B
-        msg += otherID  # 4B
-        self.conRT.sendall(msg) # 24B
+    def handleRelayReady(self, params, data):
+        if len(data) < 8:
+            return False
+        token = data[0:8]
+        portalA, portalB = params
+        self.notifyPortal(portalA, portalB, token)
+        self.notifyPortal(portalB, portalA, token)
+        return True
 
 
-    def notifyPortal(self, portalConn, callerRecord, token):
-        # TODO: also send caller's info from callerRecord
+    def notifyRelay(self, ref, callerID, otherID):
+        msg =  ref.to_bytes(8, 'little') # 8B
+        msg += b'v0.1'                   # 4B
+        msg += b'ADD.'                   # 4B
+        msg += callerID                  # 4B
+        msg += otherID                   # 4B
+        self.conRT.sendall(msg)          # 24B
+
+
+    def notifyPortal(self, portal, caller, token):
+        # TODO: also send caller's info
         msg =  b'v0.1'               # 4B
-        msg += callerRecord.portalID # 4B
+        msg += caller.portalID       # 4B
         msg += token                 # 8B
         msg += self.relayInfoMessage # 2B + var
-        portalConn.sendall(msg)      # 18B + var
+        portal.sendall(msg)          # 18B + var
 
 
     def main(self):
@@ -118,11 +125,20 @@ class Server:
 
 
     def taskRelay(self):
-        data = self.conRT.tryRecv(1024)
-        if data is None:
+        packet = self.conRT.tryRecv(1024)
+        if packet is None:
             return
-        if len(data) < 1:
+        if len(packet) < 8:
             self.conRT = None
+        ref  = packet[0:8]
+        data = packet[8:]
+        callback = self.callbacksRT[ref]
+        if callback:
+            del self.callbacksRT[ref]
+            method, params = callback
+            ok = self.method(params, data)
+            if not ok:
+                self.conRT = None
 
 
     def task(self):
@@ -175,7 +191,7 @@ class Server:
     def process(self, conn):
         log.info('Portal: x{0}'.format(conn.portalID.hex().upper()))
         try:
-            record = self.portalTable[conn.portalIndex]
+            portal = self.portalTable[conn.portalIndex]
         except KeyError:
             # Connection is not registered, this shouldn't happen
             log.error('    NOT IN TABLE')
@@ -195,7 +211,7 @@ class Server:
         if methodID >= len(methodTable):
             methodID = 0 # Invalid method
 
-        reply, close = methodTable[methodID](self, record, data)
+        reply, close = methodTable[methodID](self, portal, data)
         if reply:
             if not conn.trySendall(reply):
                 close = True
