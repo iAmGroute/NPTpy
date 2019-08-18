@@ -152,8 +152,11 @@ class Link:
 
 
     def taskReady(self):
-        data = self.conRT.tryRecv(8)
+        data = self.conRT.tryRecv(64)
         if data is None:
+            return
+        if len(data) == 64:
+            # Confirmation
             return
         if   data == b'Ready !\n': self.secureForward()
         elif data == b'Bad T !\n': self.disconnect()

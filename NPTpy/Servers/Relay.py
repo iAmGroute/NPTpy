@@ -132,6 +132,9 @@ class Relay:
 
         else:
 
+            # Send back for early confirmation
+            conn.sendall(data)
+
             if rec.indexA == -1:
                 # First one to connect
 
