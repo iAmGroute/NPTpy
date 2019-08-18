@@ -28,8 +28,8 @@ class Connector:
         self.log.log(25, t('Started on\t [{0}]:{1}'.format(address, port)))
 
     @staticmethod
-    def new(socketType=socket.SOCK_DGRAM, timeout=None, port=0, address='0.0.0.0'):
-        s = socket.socket(socket.AF_INET, socketType)
+    def new(socketType=socket.SOCK_DGRAM, timeout=None, port=0, address='0.0.0.0', proto=0):
+        s = socket.socket(socket.AF_INET, socketType, proto)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.settimeout(timeout)
         s.bind((address, port))
