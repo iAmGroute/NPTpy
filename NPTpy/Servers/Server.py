@@ -69,8 +69,7 @@ class Server:
                 return b'Bad ID', False
             else:
                 log.info('    found')
-                other = self.portalTable[otherIndex]
-                ref = self.callbacksRT.append((self.handleRelayReady, (portal, other)))
+                ref = self.callbacksRT.append((self.handleRelayReady, (portal.portalID, otherID)))
                 self.notifyRelay(ref, portal.portalID, otherID)
                 return None, False
 
@@ -79,7 +78,12 @@ class Server:
         if len(data) < 8:
             return False
         token = data[0:8]
-        portalA, portalB = params
+        portalIdA, portalIdB = params
+        try:
+            portalA = self.portalTable[self.portalIndexer[portalIdA]]
+            portalB = self.portalTable[self.portalIndexer[portalIdB]]
+        except KeyError:
+            return True
         self.notifyPortal(portalA, portalB, token)
         self.notifyPortal(portalB, portalA, token)
         return True
