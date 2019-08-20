@@ -141,7 +141,7 @@ class Connector:
         try:
             return self.recv(bufferSize)
         except OSError as e:
-            if isinstance(e, ssl.SSLError) and e.errno == ssl.SSL_ERROR_WANT_READ:
+            if e.errno == 11 or isinstance(e, ssl.SSLError) and e.errno == ssl.SSL_ERROR_WANT_READ:
                 # Partial or empty ssl record received and saved internally.
                 # No data is available but the connection is still OK.
                 return None
