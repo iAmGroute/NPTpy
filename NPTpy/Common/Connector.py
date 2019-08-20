@@ -63,13 +63,13 @@ class Connector:
     def sendto(self, data, endpoint):
         sentSize = self.socket.sendto(data, endpoint)
         self.log.log(12, t('Sent     {0} Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
-        self.log.log( 7, t.over('    content: {0}'.format(data)))
+        self.log.log( 7, t.over('    content: {0}'.format(data.hex().upper())))
         return sentSize
 
     def recvfrom(self, bufferSize):
         data, addr = self.socket.recvfrom(bufferSize)
         self.log.log(12, t('Received {0} Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
-        self.log.log( 7, t.over('    content: {0}'.format(data)))
+        self.log.log( 7, t.over('    content: {0}'.format(data.hex().upper())))
         return data, addr
 
     # Mainly TCP
@@ -121,7 +121,7 @@ class Connector:
     def sendall(self, data):
         self.socket.sendall(data)
         self.log.log(10, t('Sent    \t {0} Bytes'.format(prefixIEC(len(data)))))
-        self.log.log(5, t.over('    content: {0}'.format(data)))
+        self.log.log(5, t.over('    content: {0}'.format(data.hex().upper())))
 
     def trySendall(self, data):
         try:
@@ -134,7 +134,7 @@ class Connector:
     def recv(self, bufferSize):
         data = self.socket.recv(bufferSize)
         self.log.log(10, t('Received\t {0} Bytes'.format(prefixIEC(len(data)))))
-        self.log.log(5, t.over('    content: {0}'.format(data)))
+        self.log.log(5, t.over('    content: {0}'.format(data.hex().upper())))
         return data
 
     def tryRecv(self, bufferSize):
