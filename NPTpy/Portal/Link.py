@@ -101,7 +101,8 @@ class Link:
 
     def reconnect(self):
         self.disconnect()
-        self.requestConnect()
+        if self.isClient:
+            self.requestConnect()
 
 
     def requestConnect(self):
