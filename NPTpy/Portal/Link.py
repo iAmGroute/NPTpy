@@ -101,16 +101,16 @@ class Link:
 
     def reconnect(self):
         self.disconnect()
-        if self.isClient:
-            self.requestConnect()
+        self.requestConnect()
 
 
     def requestConnect(self):
-        self.myPortal.connectToPortal(self.otherPortalID)
+        if self.isClient:
+            self.myPortal.connectToPortal(self.otherPortalID)
 
 
     def isConnected(self):
-        if self.isClient and self.state == self.States.Disconnected:
+        if self.state == self.States.Disconnected:
             self.requestConnect()
         return self.state == self.States.Forwarding
 
