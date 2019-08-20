@@ -1,6 +1,7 @@
 
 import logging
 import socket
+import time
 
 from Common.SmartTabs import t
 from Common.SlotList  import SlotList
@@ -44,6 +45,8 @@ class Link:
         self.state         = self.States.Disconnected
         self.conRT         = None
         self.allowSelect   = False
+
+        self.waitingSince  = 0
 
 
     def close(self):
@@ -106,13 +109,18 @@ class Link:
 
     def requestConnect(self):
         if self.isClient:
-            self.myPortal.connectToPortal(self.otherPortalID)
+            now = time.time()
+            if now > self.waitingSince + 2:
+                self.waitingSince = now
+                self.myPortal.connectToPortal(self.otherPortalID)
 
 
     def isConnected(self):
-        if self.state == self.States.Disconnected:
+        if self.state == self.States.Forwarding:
+            return True
+        else:
             self.requestConnect()
-        return self.state == self.States.Forwarding
+            return False
 
 
     def connectToRelay(self, token, relayPort, relayAddr):
