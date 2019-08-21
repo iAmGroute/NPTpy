@@ -1,0 +1,29 @@
+
+{
+    "Note": [
+        "This is the configuration for the NetPort Portal.",
+        "You can read more about it here: https://netport.io/portal"
+    ],
+    "PortalID": "",
+    "Links": [
+    ],
+    "Logs": {
+        "stateChanges":        true,
+        "outgoingConnections": true,
+        "acceptIncoming":      true,
+        "declineIncoming":     true,
+        "closeExceptions":     true,
+        "TCPsendExceptions":   true,
+        "TCPrecvExceptions":   true,
+        "UDPsendExceptions":   true,
+        "UDPrecvExceptions":   true,
+        "TCPcontent":          false,
+        "UDPcontent":          false
+    },
+    "Servers": [
+        "k0.servers.netport.io",
+        "k1.servers.netport.io"
+    ],
+    "PortsToTry": [80, 443, 22, 23, 20, 21]
+}
+

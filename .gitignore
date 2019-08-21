@@ -110,3 +110,6 @@ venv.bak/
 
 # logfiles
 *.log
+
+# configuration files
+*.config.json
