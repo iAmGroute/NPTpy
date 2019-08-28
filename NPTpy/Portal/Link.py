@@ -24,12 +24,12 @@ class Link:
         Forwarding   = 2
 
 
-    def __init__(self, isClient, myID, myPortal, otherPortalID, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
+    def __init__(self, isClient, myID, myPortal, otherID, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
 
         self.isClient      = isClient
         self.myID          = myID
         self.myPortal      = myPortal
-        self.otherPortalID = otherPortalID
+        self.otherID       = otherID
         self.rtPort        = rtPort
         self.rtAddr        = rtAddr
         self.ltPort        = ltPort
@@ -61,8 +61,8 @@ class Link:
             del self.listeners[listener.myID]
 
 
-    def addListener(self, devicePort, deviceAddr, port, address):
-        listener      = Listener(-1, self, devicePort, deviceAddr, port, address)
+    def addListener(self, remotePort, remoteAddr, localPort, localAddr):
+        listener      = Listener(-1, self, remotePort, remoteAddr, localPort, localAddr)
         listenerID    = self.listeners.append(listener)
         listener.myID = listenerID
         return listener
@@ -112,7 +112,7 @@ class Link:
             now = time.time()
             if now > self.waitingSince + 2:
                 self.waitingSince = now
-                self.myPortal.connectToPortal(self.otherPortalID)
+                self.myPortal.connectToPortal(self.otherID)
 
 
     def isConnected(self):
