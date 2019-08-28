@@ -89,7 +89,7 @@ class Portal:
         relayPort = int.from_bytes(data[16:18], 'little')
         relayAddr = str(data[18:], 'utf-8')
 
-        link =  find(self.links, lambda lk: lk.otherPortalID == otherID) \
+        link =  find(self.links, lambda lk: lk.otherID == otherID) \
              or self.createLink(False, otherID)
         link.connectToRelay(token, relayPort, relayAddr)
 
@@ -124,5 +124,4 @@ class Portal:
         data += otherID
         data += b'0' * 56
         self.conST.sendall(data)
-        # time.sleep(2)
 
