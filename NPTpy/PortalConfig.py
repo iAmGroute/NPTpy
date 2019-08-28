@@ -5,6 +5,8 @@ import time
 import ConfigFields          as CF
 import Common.ConfigVerifier as CV
 
+from Portal.Portal import Portal
+
 configTemplate = {
     'Note': [
         'This is the configuration for the NetPort Portal.',
@@ -28,8 +30,8 @@ configTemplate = {
         'TCPcontent':          CF.Log(False),
         'UDPcontent':          CF.Log(False)
     },
-    'Servers': [CF.Address('')],
-    'PortsToTry': [CF.Port(0)]
+    'PortsToTry': [CF.Port(0)],
+    'Servers': [CF.Address('')]
 }
 verifier = CV.getVerifier(configTemplate)
 
@@ -40,18 +42,69 @@ class PortalConfig:
         self.config   = None
         self.read()
 
+
     def read(self):
+
         with open(self.fileName, 'r') as f:
             data = f.read()
+
         try:
             self.config = verifier.apply(json.loads(data))
+
         except json.decoder.JSONDecodeError:
+
             bakName = self.fileName[:self.fileName.rfind('.')] + str(int(time.time())) + '.json'
+
             print('Error: configuration file was not valid will be renamed to ' + bakName)
             with open(bakName, 'w') as f2:
                 f2.write(data)
 
+
     def save(self):
         with open(self.fileName, 'w') as f:
             f.write(json.dumps(self.config, indent=4, sort_keys=False) + '\n')
+
+
+    def build(self):
+
+        config = self.config
+
+        portalID   = bytes.fromhex(config['PortalID'])
+        serverPort = config['PortsToTry'][0]
+        serverAddr = config['Servers'][0]
+
+        p = Portal(portalID, serverPort, serverAddr)
+
+        for linkConf in config['Links']:
+
+            otherID = bytes.fromhex(linkConf['OtherID'])
+
+            link = p.createLink(True, otherID)
+
+            for listenerConf in linkConf['Listeners']:
+                link.addListener(listenerConf['RP'], listenerConf['RA'], listenerConf['LP'], listenerConf['LA'])
+
+        return p
+
+
+    def scan(self, portal):
+
+        config = verifier.apply({})
+
+        config['PortalID']   = portal.portalID.hex().upper()
+        config['PortsToTry'] = [portal.serverPort]
+        config['Servers']    = [portal.serverAddr]
+
+        config['Links'] = [
+            {
+                'OtherID': link.otherID.hex().upper(),
+                'Listeners': [
+                    { 'RP': listener.remotePort, 'RA': listener.remoteAddr, 'LP': listener.localPort, 'LA': listener.localAddr }
+                    for listener in link.listeners
+                ]
+            }
+            for link in portal.links if link.isClient
+        ]
+
+        self.config = config
 
