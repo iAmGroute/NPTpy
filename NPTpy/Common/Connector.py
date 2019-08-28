@@ -24,6 +24,8 @@ class Connector:
     def __init__(self, log, mySocket):
         self.log = log or logging.getLogger('dummy')
         self.socket = mySocket
+        if mySocket.type == socket.SOCK_STREAM:
+            mySocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         sname = mySocket.getsockname()
         address, port = sname[0], sname[1]
         self.log.log(25, t('Started on\t [{0}]:{1}'.format(address, port)))
