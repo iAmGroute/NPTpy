@@ -35,7 +35,7 @@ class Server:
 
         self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
 
-        self.con = Connector(log,  Connector.new(socket.SOCK_STREAM, None, port, address))
+        self.con = Connector(log,  Connector.new(socket.SOCK_STREAM, 2, port, address))
         self.con.secureServer(certFilename='server.cer', keyFilename='server.key')
         self.con.listen()
 
