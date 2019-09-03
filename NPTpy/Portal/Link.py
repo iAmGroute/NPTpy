@@ -205,13 +205,14 @@ class Link:
     # Called by ChannelEndpoint,
     # sends <packet> through the link to the remote portal.
     def sendPacket(self, packet):
-        try:
-            self.conRT.socket.settimeout(2)
-            self.conRT.sendall(packet)
-            self.conRT.socket.settimeout(0)
-        except OSError as e:
-            log.error(e)
-            self.reconnect()
+        if self.state == self.States.Forwarding:
+            try:
+                self.conRT.socket.settimeout(2)
+                self.conRT.sendall(packet)
+                self.conRT.socket.settimeout(0)
+            except OSError as e:
+                log.error(e)
+                self.reconnect()
 
 
     # Functions called by control channel and listeners
