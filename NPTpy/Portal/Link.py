@@ -2,6 +2,7 @@
 import logging
 import socket
 import time
+import enum
 
 from Common.SmartTabs import t
 from Common.SlotList  import SlotList
@@ -18,7 +19,7 @@ logEP = logging.getLogger(__name__ + ' :EP')
 
 class Link:
 
-    class States:
+    class States(enum.Enum):
         Disconnected = 0
         WaitReady    = 1
         Forwarding   = 2
@@ -84,6 +85,7 @@ class Link:
                 self.conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
             self.conRT.socket.settimeout(0)
             self.state = self.States.Forwarding
+            self.waitingSince = 0
         except OSError as e:
             log.error(e)
             self.reconnect()
