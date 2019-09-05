@@ -1,44 +1,53 @@
 
 from Common.ConfigVerifier import Field
 
+
+class Bool(Field):
+
+    def verifier(self, val):
+        assert val is True or False
+        return val
+
+
+class Int(Field):
+
+    def verify(self, val):
+        assert type(val) is int
+        return val
+
+
 class PortalID(Field):
-    def __init__(self, default):
-        self.default = default
-    def apply(self, val):
-        try:
-            assert type(val) is str
-            portalID = bytes.fromhex(val)
-            assert len(portalID) == 4
-            return portalID.hex().upper()
-        except:
-            return self.default
+
+    def decode(self, val):
+        return bytes.fromhex(val)
+
+    def verify(self, val):
+        assert type(val) is bytes
+        assert len(val) == 4
+        return val
+
+    def encode(self, val):
+        return val.hex().upper()
+
 
 class Port(Field):
-    def __init__(self, default):
-        self.default = default
-    def apply(self, val):
-        try:
-            assert type(val) is int
-            assert 0 <= val < 65536
-            return val
-        except:
-            return self.default
+
+    def verify(self, val):
+        assert type(val) is int
+        assert 0 <= val < 65536
+        return val
+
 
 class Address(Field):
-    def __init__(self, default):
-        self.default = default
-    def apply(self, val):
-        try:
-            assert type(val) is str
-            return val
-        except:
-            return self.default
+
+    def verify(self, val):
+        assert type(val) is str
+        return val
+
 
 class Log(Field):
-    def __init__(self, default):
-        self.default = default
-    def apply(self, val):
-        if val is True:
-            return True
-        else:
-            return self.default
+
+    def verifier(self, val):
+        assert val is True or False
+        return val
+

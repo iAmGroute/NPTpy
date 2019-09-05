@@ -2,21 +2,45 @@
 
 class Field:
 
-    def __init__(self):
-        self.keyName = ''
+    def __init__(self, default=None, keyName=''):
+        self.default = default
+        self.keyName = keyName
+
+    def decode(self, val):
+        return val
+
+    def verify(self, val):
+        return val
+
+    def encode(self, val):
+        return val
+
+    def read(self, val):
+        return self.verify(self.decode(val))
+
+    def write(self, val):
+        return self.encode(self.verify(val))
 
     def apply(self, val):
-        return None
+        return self.encode(self.verify(self.decode(val)))
 
 
 class ConstantField(Field):
 
     def __init__(self, keyName, val):
-        self.keyName = keyName
-        self.val     = val
+        Field.__init__(self, val, keyName)
+
+    def decode(self, val):
+        return self.default
+
+    def verify(self, val):
+        return self.default
+
+    def encode(self, val):
+        return self.default
 
     def apply(self, val):
-        return self.val
+        return self.default
 
 
 class ContainerArray:
