@@ -19,7 +19,7 @@ while True:
 
         p = portalConfig.build()
 
-        api = PortalAPI(p)
+        api = PortalAPI(p, portalConfig)
         server = SimpleServer(None, api)
         threading.Thread(target=server.run, args=(8000,), daemon=True).start()
 
