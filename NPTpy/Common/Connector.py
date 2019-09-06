@@ -39,6 +39,12 @@ class Connector:
         s.bind((address, port))
         return s
 
+    def __del__(self):
+        try:
+            self.socket.close()
+        except OSError:
+            pass
+
     def __enter__(self):
         return self
 
