@@ -1,4 +1,6 @@
 import os
+import sys
+import traceback
 import json
 import mimetypes
 from http import HTTPStatus
@@ -117,7 +119,7 @@ class SimpleServerHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.api:
-            if 'application/json' in self.headers['Content-Type']:
+            try:
                 size    = int(self.headers['Content-Length'])
                 request = self.rfile.read(size)
                 data    = json.loads(request)
@@ -125,8 +127,12 @@ class SimpleServerHandler(BaseHTTPRequestHandler):
                 content = bytes(json.dumps(reply), 'utf-8')
                 page    = LoadedPage('application/json; charset=utf-8', content)
                 self.sendPage(page)
-            else:
-                self.send415()
+            except Exception as e:
+                _, _, tb = sys.exc_info()
+                traceback.print_tb(tb)
+                filename, line, func, text = traceback.extract_tb(tb)[-1]
+                info = '{} | {} | @{}() {}:{}'.format(repr(e), text, func, filename, line)
+                self.send400(info)
         else:
             self.sendNotImplemented()
 
@@ -136,6 +142,13 @@ class SimpleServerHandler(BaseHTTPRequestHandler):
         self.send_header('access-control-allow-headers', 'content-type')
         self.send_header('allow', 'POST, OPTIONS, GET')
         self.end_headers()
+
+    def send400(self, info=''):
+        content = bytes(info, 'utf-8')
+        self.send_response(HTTPStatus.BAD_REQUEST)
+        self.send_header('Content-Length', len(content))
+        self.end_headers()
+        self.wfile.write(content)
 
     def send404(self):
         self.send_error(HTTPStatus.NOT_FOUND)
