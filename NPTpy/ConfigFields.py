@@ -14,16 +14,8 @@ def serialize(thing):
 def update(thing, data):
     for fname, ftype, writable in thing.fields:
         if fname in data:
-            try:
-                assert writable, 'Not writable: ' + fname
-                ftype.update(thing, fname, data[fname])
-            except Exception as e:
-                _, _, tb = sys.exc_info()
-                traceback.print_tb(tb)
-                tb_info = traceback.extract_tb(tb)
-                filename, line, func, text = tb_info[-1]
-
-                print('{} {}:{} [{}]'.format(repr(e), filename, line, text))
+            assert writable, 'Not writable: ' + fname
+            ftype.update(thing, fname, data[fname])
 
 
 class Field:
