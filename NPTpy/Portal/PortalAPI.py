@@ -5,26 +5,37 @@ import ConfigFields as CF
 
 class PortalAPI:
 
-    def __init__(self, myPortal):
-        self.myPortal = myPortal
-        self.bootID   = time.time()
+    def __init__(self, myPortal, portalConfig):
+        self.myPortal     = myPortal
+        self.portalConfig = portalConfig
+        self.bootID       = time.time()
 
     def get(self):
-        result           = serializePortal(self.myPortal)
-        # result['bootID'] = self.bootID
-        result['time']   = time.time()
-        return result
+        r = {}
+        r['bootID'] = self.bootID
+        r['time']   = time.time()
+        r['store']  = serializePortal(self.myPortal)
+        return r
 
     def update(self, data):
-        updatePortal(self.myPortal, data)
+        bootID   = data.get('bootID')
+        prevTime = data.get('time')
+        store    = data.get('store')
+        save     = data.get('save')
+        assert bootID == self.bootID,           'There must not be a reboot since last refresh'
+        assert 0 < time.time() - prevTime < 10, 'Update must be based on recent data (<10seconds old)'
+        updatePortal(self.myPortal, store)
+        if save is True:
+            self.portalConfig.scanAndSave(self.myPortal)
 
     def process(self, context, data):
-        if data and isinstance(data, dict):
+        if isinstance(data, dict) and data:
             self.update(data)
         return self.get()
 
-def updatePortal(portal, data):
-    CF.update(portal, data)
+def updatePortal(portal, store):
+    if isinstance(store, dict):
+        CF.update(portal, store)
 
 def serializePortal(portal):
     return CF.serialize(portal)
