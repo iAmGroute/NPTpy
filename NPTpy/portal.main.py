@@ -20,7 +20,7 @@ while True:
         p = portalConfig.build()
 
         api = PortalAPI(p, portalConfig)
-        server = SimpleServer(None, api)
+        server = SimpleServer('webui', api)
         threading.Thread(target=server.run, args=(8000,), daemon=True).start()
 
         while True:

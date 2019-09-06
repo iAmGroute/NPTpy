@@ -24,10 +24,10 @@ fileExtMap.update({
 })
 
 def scanDir(path, maxDepth=4):
-    result = [];
     maxDepth -= 1
     if maxDepth < 0:
-        return result
+        return []
+    result = [];
     for name in os.listdir(path):
         if name.startswith('.'):
             continue
@@ -78,7 +78,7 @@ def consumeDir(dirName):
         files = scanDir(dirName)
     except OSError as e:
         print('Can\'t scan directory "{0}":\n\t{1}'.format(dirName, e))
-        return None
+        return {}
     result = {}
     for file in files:
         print(file)
