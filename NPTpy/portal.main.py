@@ -3,6 +3,7 @@ import time
 import logging
 import threading
 import gc
+import sys
 
 from Portal.PortalConfig import PortalConfig
 from Portal.PortalAPI    import PortalAPI
@@ -11,7 +12,7 @@ from Common.SimpleServer import SimpleServer
 portalConfig = PortalConfig('portal.config.json')
 portalConfig.save()
 
-logging.basicConfig(format='%(created).3f [%(name)s]\t%(message)s', level=20)
+logging.basicConfig(stream=sys.stdout, format='%(created).3f [%(name)s]\t%(message)s', level=20)
 
 while True:
 
