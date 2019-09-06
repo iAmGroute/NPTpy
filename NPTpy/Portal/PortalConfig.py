@@ -42,6 +42,13 @@ class PortalConfig:
         self.config   = None
         self.read()
 
+    def readAndBuild(self):
+        self.read()
+        return self.build()
+
+    def scanAndSave(self, portal):
+        self.scan(portal)
+        return self.save()
 
     def read(self):
 
@@ -50,12 +57,13 @@ class PortalConfig:
 
         try:
             self.config = verifier.apply(json.loads(data))
+            print(self.config)
 
         except json.decoder.JSONDecodeError:
 
             bakName = self.fileName[:self.fileName.rfind('.')] + str(int(time.time())) + '.json'
 
-            print('Error: configuration file was not valid will be renamed to ' + bakName)
+            print('Error: configuration file was not valid and will be renamed to ' + bakName)
             with open(bakName, 'w') as f2:
                 f2.write(data)
 
@@ -89,7 +97,7 @@ class PortalConfig:
 
     def scan(self, portal):
 
-        config = verifier.apply({})
+        config = {}
 
         config['PortalID']   = portal.portalID.hex().upper()
         config['PortsToTry'] = [portal.serverPort]
