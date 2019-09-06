@@ -115,12 +115,6 @@ class Portal:
         return link
 
 
-    def removeLink(self, linkID):
-        if self.links[linkID]:
-            self.links[linkID].close()
-            del self.links[linkID]
-
-
     # 'Client' mode
     # Notice that the behaviour of the server is symmetric
     # with respect to who is the client and who the portal,

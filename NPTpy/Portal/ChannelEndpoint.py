@@ -26,9 +26,6 @@ class ChannelEndpoint:
     def acceptMessage(self, data):
         raise NotImplementedError()
 
-    def close(self):
-        raise NotImplementedError()
-
 
 class ChannelPlaceholder(ChannelEndpoint):
 
@@ -37,5 +34,3 @@ class ChannelPlaceholder(ChannelEndpoint):
     def acceptMessage(self, data):
         pass
 
-    def close(self):
-        pass

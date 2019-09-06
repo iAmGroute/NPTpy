@@ -24,10 +24,6 @@ class ChannelControl(ChannelEndpoint):
         else                   : self.corrupted()
 
 
-    def close(self):
-        pass
-
-
     def corrupted(self):
         log.error('Link or control channel is corrupted !')
         # TODO: reset the Link

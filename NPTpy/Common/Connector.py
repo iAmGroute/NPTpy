@@ -8,7 +8,7 @@ from .SmartTabs import t
 from .this_OS import OS, this_OS
 
 # Log levels:
-#  - 25: Info concerning state changes (Started, Stopped)
+#  - 25: State changes (Started, Stopped)
 #  - 23: Connections initiated by us, outgoing (Connecting to)
 #  - 21: Connections accepted, incoming (Connection from)
 #  - 20: Connections declined, incoming (Connection from)
@@ -18,12 +18,14 @@ from .this_OS import OS, this_OS
 #  - 10: TCP send and receive
 #  -  7: UDP content
 #  -  5: TCP content
+#  -  3: State change progress (Starting, Stopping)
 
 class Connector:
 
     def __init__(self, log, mySocket):
         self.log = log or logging.getLogger('dummy')
         self.socket = mySocket
+        self.log.log(3, t('Starting'))
         if mySocket.type == socket.SOCK_STREAM:
             mySocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         sname = mySocket.getsockname()
@@ -41,7 +43,7 @@ class Connector:
 
     def __del__(self):
         try:
-            self.socket.close()
+            self.close()
         except OSError:
             pass
 
@@ -53,13 +55,17 @@ class Connector:
         #     self.socket.shutdown(socket.SHUT_RDWR)
         self.tryClose()
 
+    def close(self):
+        self.log.log(3, t('Stopping'))
+        self.socket.close()
+        self.log.log(25, t('Stopped'))
+
     def tryClose(self):
         try:
-            self.socket.close()
+            self.close()
         except OSError as e:
             self.log.log(17, t.over('Could not close: {0}'.format(e)))
             return False
-        self.log.log(25, t('Stopped'))
         return True
 
     # Needed for select()

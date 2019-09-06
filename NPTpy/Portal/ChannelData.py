@@ -17,9 +17,6 @@ class ChannelData(ChannelEndpoint):
         except OSError:
             self.myLink.removeEP(self.myID)
 
-    def close(self):
-        self.myCon.tryClose()
-
     # Needed for select()
     def fileno(self):
         return self.myCon.fileno()

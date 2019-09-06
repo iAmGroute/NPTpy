@@ -2,6 +2,7 @@
 import time
 import logging
 import threading
+import gc
 
 from Portal.PortalConfig import PortalConfig
 from Portal.PortalAPI    import PortalAPI
@@ -24,6 +25,10 @@ while True:
 
         while True:
             p.main()
+            # For some reason gc doesn't handle deletions
+            # initiated by the other (API) thread,
+            # so we'll periodically check here, to gc deleted sockets.
+            gc.collect()
 
     except KeyboardInterrupt:
         break

@@ -34,10 +34,6 @@ class Listener:
         self.con.listen()
 
 
-    def close(self):
-        self.con.tryClose()
-
-
     # Needed for select()
     def fileno(self):
         return self.con.fileno()

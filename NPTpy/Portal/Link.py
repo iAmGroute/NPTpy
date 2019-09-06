@@ -67,18 +67,6 @@ class Link:
         self.waitingSince  = 0
 
 
-    def close(self):
-        self.conRT.tryClose()
-        self.conRT       = None
-        self.allowSelect = False
-        for ep in self.eps:
-            ep.close()
-            del self.eps[ep.myID]
-        for listener in self.listeners:
-            listener.close()
-            del self.listeners[listener.myID]
-
-
     def addListener(self, remotePort, remoteAddr, localPort, localAddr):
         listener      = Listener(-1, self, remotePort, remoteAddr, localPort, localAddr)
         listenerID    = self.listeners.append(listener)
@@ -274,7 +262,6 @@ class Link:
         if not isinstance(self.eps[channelID], ChannelPlaceholder):
             return False
 
-        #self.eps[channelID].close()
         self.eps[channelID] = ChannelData(channelID, channelIDF, self, conn)
 
         return True
@@ -304,7 +291,6 @@ class Link:
 
     def deleteChannel(self, channelID):
         try:
-            self.eps[channelID].close()
             del self.eps[channelID]
             return True
         except (IndexError, AttributeError):
