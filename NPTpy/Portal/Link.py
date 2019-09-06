@@ -4,9 +4,10 @@ import socket
 import time
 import enum
 
+import ConfigFields as CF
+
 from Common.SmartTabs import t
 from Common.SlotList  import SlotList
-
 from Common.Connector import Connector
 
 from .ChannelEndpoint import ChannelEndpoint, ChannelPlaceholder
@@ -24,6 +25,22 @@ class Link:
         WaitReady    = 1
         Forwarding   = 2
 
+    fields = [
+        # Name,          Type,            Writable
+        # ('myID',         CF.Int(),        False),
+        ('isClient',     CF.Bool(),       True),
+        ('otherID',      CF.PortalID(),   True),
+        ('rtPort',       CF.Port(),       True),
+        ('rtAddr',       CF.Address(),    True),
+        ('ltPort',       CF.Port(),       True),
+        ('ltAddr',       CF.Address(),    True),
+        ('state',        CF.Enum(States), True),
+        ('waitingSince', CF.Float(),      True),
+        ('allowSelect',  CF.Bool(),       True),
+        ('buffer',       CF.Hex(),        True),
+        ('listeners',    CF.SlotList(),   True),
+        ('eps',          CF.SlotList(),   True)
+    ]
 
     def __init__(self, isClient, myID, myPortal, otherID, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
 

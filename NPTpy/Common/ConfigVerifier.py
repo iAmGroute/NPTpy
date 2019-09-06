@@ -1,47 +1,6 @@
 # A simple way to validate and repair configurations after loading.
 
-class Field:
-
-    def __init__(self, default=None, keyName=''):
-        self.default = default
-        self.keyName = keyName
-
-    def decode(self, val):
-        return val
-
-    def verify(self, val):
-        return val
-
-    def encode(self, val):
-        return val
-
-    def read(self, val):
-        return self.verify(self.decode(val))
-
-    def write(self, val):
-        return self.encode(self.verify(val))
-
-    def apply(self, val):
-        return self.encode(self.verify(self.decode(val)))
-
-
-class ConstantField(Field):
-
-    def __init__(self, keyName, val):
-        Field.__init__(self, val, keyName)
-
-    def decode(self, val):
-        return self.default
-
-    def verify(self, val):
-        return self.default
-
-    def encode(self, val):
-        return self.default
-
-    def apply(self, val):
-        return self.default
-
+from ConfigFields import Field, Constant
 
 class ContainerArray:
 
@@ -86,7 +45,7 @@ def getContainerArray(keyName, array):
     if field:
         return ContainerArray(keyName, field)
     else:
-        return ConstantField(keyName, array)
+        return Constant(keyName, array)
 
 
 def getContainerObject(keyName, obj):
@@ -96,7 +55,7 @@ def getContainerObject(keyName, obj):
         if   isinstance(val,    Field): val.keyName = key
         elif       type(val) is list:   val = getContainerArray(key, val)
         elif       type(val) is dict:   val = getContainerObject(key, val)
-        else:                           val = ConstantField(key, val)
+        else:                           val = Constant(key, val)
         fields.append(val)
     return ContainerObject(keyName, fields)
 

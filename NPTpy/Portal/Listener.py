@@ -2,11 +2,24 @@
 import logging
 import socket
 
+import ConfigFields as CF
+
 from Common.Connector import Connector
 
 log = logging.getLogger(__name__)
 
 class Listener:
+
+    fields = [
+        # Name,         Type,         Writable
+        # ('myID',        CF.Int(),     False),
+        ('remotePort',  CF.Port(),    True),
+        ('remoteAddr',  CF.Address(), True),
+        ('localPort',   CF.Port(),    True),
+        ('localAddr',   CF.Address(), True),
+        ('allowSelect', CF.Bool(),    True),
+        ('reserveID',   CF.Int(),     True)
+    ]
 
     def __init__(self, myID, myLink, remotePort, remoteAddr, localPort, localAddr):
         self.myID        = myID

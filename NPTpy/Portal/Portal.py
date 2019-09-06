@@ -4,6 +4,8 @@ import socket
 import select
 import time
 
+import ConfigFields as CF
+
 from Common.Generic   import find
 from Common.SlotList  import SlotList
 from Common.Connector import Connector
@@ -13,6 +15,17 @@ from .Link import Link
 log = logging.getLogger(__name__ + '  ')
 
 class Portal:
+
+    fields = [
+        # Name,         Type,          Writable
+        ('portalID',    CF.PortalID(), False),
+        ('serverPort',  CF.Port(),     True),
+        ('serverAddr',  CF.Address(),  True),
+        ('port',        CF.Port(),     True),
+        ('address',     CF.Address(),  True),
+        ('allowSelect', CF.Bool(),     True),
+        ('links',       CF.SlotList(), True)
+    ]
 
     def __init__(self, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
         self.portalID    = portalID
@@ -46,7 +59,7 @@ class Portal:
                 socketList.extend(link.eps)
             socketList = [s for s in socketList if s.allowSelect]
 
-            readable, writable, exceptional = select.select(socketList, [], [])
+            readable, writable, exceptional = select.select(socketList, [], [], 1)
             for s in readable:
                 # Avoid race conditions by re-checking allowSelect
                 if s.allowSelect:
