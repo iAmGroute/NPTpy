@@ -3,16 +3,18 @@ import traceback
 
 def serialize(thing):
     r = {}
-    for fname, ftype, _ in thing.fields:
-        try:
-            r[fname] = ftype.serialize(thing, fname)
-        except Exception as e:
-            print(repr(e))
+    for fname, ftype, readable, _ in thing.fields:
+        if readable:
+            try:
+                r[fname] = ftype.serialize(thing, fname)
+            except Exception as e:
+                print(repr(e), fname, ftype, thing)
+                raise
     return r
 
 
 def update(thing, data):
-    for fname, ftype, writable in thing.fields:
+    for fname, ftype, _, writable in thing.fields:
         if fname in data:
             assert writable, 'Not writable: ' + fname
             ftype.update(thing, fname, data[fname])
@@ -20,9 +22,11 @@ def update(thing, data):
 
 class Field:
 
-    def __init__(self, default=None, keyName=''):
+    def __init__(self, default=None, keyName='', getter=None, setter=None):
         self.default = default
         self.keyName = keyName
+        self.getter  = getter if getter else getattr
+        self.setter  = setter if setter else setattr
 
     def decode(self, val):
         return val
@@ -34,10 +38,10 @@ class Field:
         return val
 
     def get(self, obj, attr):
-        return getattr(obj, attr)
+        return self.getter(obj, attr)
 
     def set(self, obj, attr, val):
-        setattr(obj, attr, val)
+        self.setter(obj, attr, val)
 
     def read(self, val):
         return self.verify(self.decode(val))
@@ -57,13 +61,29 @@ class Field:
 
 class SlotList(Field):
 
+    def __init__(self, createFunc=None, removeFunc=None):
+        Field.__init__(self)
+        self.createFunc = createFunc
+        self.removeFunc = removeFunc
+
+    def createNew(self, obj, v):
+        if self.createFunc:
+            self.createFunc(obj, v)
+        else:
+            raise ValueError('Creation of new items not available')
+
+    def remove(self, obj, k):
+        if self.removeFunc:
+            self.removeFunc(obj, k)
+        else:
+            raise ValueError('Removal of items not available')
+
     def verify(self, val):
         assert type(val) is list
         for kv in val:
             k = kv['k']
             v = kv['v']
-            assert type(k) is int
-            assert k >= 0
+            assert k is None or type(k) is int and k >= 0
             assert v is None or type(v) is dict
         return val
 
@@ -78,10 +98,16 @@ class SlotList(Field):
             k = kv['k']
             v = kv['v']
             try:
-                if v is None:
-                    del sl[k]
+                if k is None:
+                    if v is None:
+                        pass # TODO
+                    else:
+                        self.createNew(obj, v)
                 else:
-                    update(sl[k], v)
+                    if v is None:
+                        self.remove(obj, k)
+                    else:
+                        update(sl[k], v)
             except Exception as e:
                 print(repr(e))
 
@@ -131,6 +157,7 @@ class Float(Field):
 class Enum(Field):
 
     def __init__(self, cls):
+        Field.__init__(self)
         self.cls = cls
 
     def decode(self, val):

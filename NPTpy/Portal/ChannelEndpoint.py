@@ -5,10 +5,10 @@ import ConfigFields as CF
 class ChannelEndpoint:
 
     fields = [
-        # Name,         Type,      Writable
-        # ('myID',        CF.Int(),  False),
-        ('myIDF',       CF.Int(),  True),
-        ('allowSelect', CF.Bool(), True)
+        # Name,         Type,      Readable, Writable
+        # ('myID',        CF.Int(),  True,     False),
+        ('myIDF',       CF.Int(),  True,     True),
+        ('allowSelect', CF.Bool(), True,     True)
     ]
 
     def __init__(self, myID, myIDF, myLink):

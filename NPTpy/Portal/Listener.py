@@ -11,14 +11,14 @@ log = logging.getLogger(__name__)
 class Listener:
 
     fields = [
-        # Name,         Type,         Writable
-        # ('myID',        CF.Int(),     False),
-        ('remotePort',  CF.Port(),    True),
-        ('remoteAddr',  CF.Address(), True),
-        ('localPort',   CF.Port(),    True),
-        ('localAddr',   CF.Address(), True),
-        ('allowSelect', CF.Bool(),    True),
-        ('reserveID',   CF.Int(),     True)
+        # Name,         Type,         Readable, Writable
+        # ('myID',        CF.Int(),     True,     False),
+        ('remotePort',  CF.Port(),    True,     True),
+        ('remoteAddr',  CF.Address(), True,     True),
+        ('localPort',   CF.Port(),    True,     True),
+        ('localAddr',   CF.Address(), True,     True),
+        ('allowSelect', CF.Bool(),    True,     True),
+        ('reserveID',   CF.Int(),     True,     True)
     ]
 
     def __init__(self, myID, myLink, remotePort, remoteAddr, localPort, localAddr):

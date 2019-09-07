@@ -26,20 +26,20 @@ class Link:
         Forwarding   = 2
 
     fields = [
-        # Name,          Type,            Writable
-        # ('myID',         CF.Int(),        False),
-        ('isClient',     CF.Bool(),       True),
-        ('otherID',      CF.PortalID(),   True),
-        ('rtPort',       CF.Port(),       True),
-        ('rtAddr',       CF.Address(),    True),
-        ('ltPort',       CF.Port(),       True),
-        ('ltAddr',       CF.Address(),    True),
-        ('state',        CF.Enum(States), True),
-        ('waitingSince', CF.Float(),      True),
-        ('allowSelect',  CF.Bool(),       True),
-        ('buffer',       CF.Hex(),        True),
-        ('listeners',    CF.SlotList(),   True),
-        ('eps',          CF.SlotList(),   True)
+        # Name,          Type,            Readable, Writable
+        # ('myID',         CF.Int(),        True,     False),
+        ('isClient',     CF.Bool(),       True,     True),
+        ('otherID',      CF.PortalID(),   True,     True),
+        ('rtPort',       CF.Port(),       True,     True),
+        ('rtAddr',       CF.Address(),    True,     True),
+        ('ltPort',       CF.Port(),       True,     True),
+        ('ltAddr',       CF.Address(),    True,     True),
+        ('state',        CF.Enum(States), True,     True),
+        ('waitingSince', CF.Float(),      True,     True),
+        ('allowSelect',  CF.Bool(),       True,     True),
+        ('buffer',       CF.Hex(),        True,     True),
+        ('listeners',    CF.SlotList(),   True,     True),
+        ('eps',          CF.SlotList(),   True,     True)
     ]
 
     def __init__(self, isClient, myID, myPortal, otherID, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):

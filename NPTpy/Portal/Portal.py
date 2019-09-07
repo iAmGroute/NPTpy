@@ -17,14 +17,14 @@ log = logging.getLogger(__name__ + '  ')
 class Portal:
 
     fields = [
-        # Name,         Type,          Writable
-        ('portalID',    CF.PortalID(), False),
-        ('serverPort',  CF.Port(),     True),
-        ('serverAddr',  CF.Address(),  True),
-        ('port',        CF.Port(),     True),
-        ('address',     CF.Address(),  True),
-        ('allowSelect', CF.Bool(),     True),
-        ('links',       CF.SlotList(), True)
+        # Name,         Type,          Readable, Writable
+        ('portalID',    CF.PortalID(), True,     False),
+        ('serverPort',  CF.Port(),     True,     True),
+        ('serverAddr',  CF.Address(),  True,     True),
+        ('port',        CF.Port(),     True,     True),
+        ('address',     CF.Address(),  True,     True),
+        ('allowSelect', CF.Bool(),     True,     True),
+        ('links',       CF.SlotList(), True,     True)
     ]
 
     def __init__(self, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
