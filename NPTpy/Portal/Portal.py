@@ -102,17 +102,21 @@ class Portal:
         relayPort = int.from_bytes(data[16:18], 'little')
         relayAddr = str(data[18:], 'utf-8')
 
-        link =  find(self.links, lambda lk: lk.otherID == otherID) \
-             or self.createLink(False, otherID)
+        link = self.createLink(False, otherID)
         link.connectToRelay(token, relayPort, relayAddr)
 
 
     def createLink(self, isClient, otherID):
-        # TODO: allow for different binding port & address than self.port, self.address
-        link      = Link(isClient, -1, self, otherID, self.port, self.address)
-        linkID    = self.links.append(link)
-        link.myID = linkID
+        link = find(self.links, lambda lk: lk.otherID == otherID)
+        if not link:
+            # TODO: allow for different binding port & address than self.port, self.address
+            link      = Link(isClient, -1, self, otherID, self.port, self.address)
+            linkID    = self.links.append(link)
+            link.myID = linkID
         return link
+
+    def removeLink(self, linkID):
+        del self.links[linkID]
 
 
     # 'Client' mode
@@ -131,4 +135,15 @@ class Portal:
         data += otherID
         data += b'0' * 56
         self.conST.sendall(data)
+
+
+    fields.extend([
+        ('createLink', CF.Call(createLink, [
+            ('isClient', CF.Bool(),     False, False),
+            ('otherID',  CF.PortalID(), False, False)
+        ]), False, True),
+        ('removeLink', CF.Call(removeLink, [
+            ('linkID', CF.Int(), False, False),
+        ]), False, True)
+    ])
 

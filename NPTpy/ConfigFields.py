@@ -59,6 +59,56 @@ class Field:
         return self.set(obj, attr, self.read(val))
 
 
+def operationDecode(ftype, val):
+    return ftype.decode(val)
+
+def operationVerify(ftype, val):
+    return ftype.verify(val)
+
+def operationEncode(ftype, val):
+    return ftype.encode(val)
+
+
+class Obj(Field):
+
+    def __init__(self, fields):
+        Field.__init__(self)
+        self.fields = fields
+
+    def map(self, val, operation):
+        r = {}
+        for fname, ftype, _, _ in self.fields:
+            if fname in val:
+                try:
+                    r[fname] = operation(ftype, val[fname])
+                except Exception as e:
+                    print(repr(e), fname, ftype)
+                    raise
+        return r
+
+    def decode(self, val):
+        return self.map(val, operationDecode)
+
+    def verify(self, val):
+        return self.map(val, operationVerify)
+
+    def encode(self, val):
+        return self.map(val, operationEncode)
+
+
+class Call(Obj):
+
+    def __init__(self, func, paramFields):
+        Obj.__init__(self, paramFields)
+        self.func = func
+
+    def get(self, obj, attr):
+        raise ValueError('Function call is not readable')
+
+    def set(self, obj, attr, val):
+        self.func(obj, **val)
+
+
 class SlotList(Field):
 
     def __init__(self, createFunc=None, removeFunc=None):
@@ -126,17 +176,17 @@ class Constant(Field):
     def encode(self, val):
         return self.default
 
-    def get(self, object, attribute):
+    def get(self, obj, attr):
         return self.default
 
-    def set(self, object, attribute, val):
-        setattr(object, attribute, self.default)
+    def set(self, obj, attr, val):
+        setattr(obj, attr, self.default)
 
 
 class Bool(Field):
 
-    def verifier(self, val):
-        assert val is True or False
+    def verify(self, val):
+        assert val is True or val is False
         return val
 
 

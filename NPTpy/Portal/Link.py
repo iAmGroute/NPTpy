@@ -73,6 +73,9 @@ class Link:
         listener.myID = listenerID
         return listener
 
+    def removeListener(self, listenerID):
+        del self.listeners[listenerID]
+
 
     def removeEP(self, channelID):
         ep = self.eps[channelID]
@@ -290,9 +293,26 @@ class Link:
 
 
     def deleteChannel(self, channelID):
-        try:
-            del self.eps[channelID]
-            return True
-        except (IndexError, AttributeError):
-            return False
+        if channelID > 0:
+            try:
+                del self.eps[channelID]
+                return True
+            except (IndexError, AttributeError):
+                return False
+
+
+    fields.extend([
+        ('addListener', CF.Call(addListener, [
+            ('remotePort', Port(),    False, False),
+            ('remoteAddr', Address(), False, False),
+            ('localPort',  Port(),    False, False),
+            ('localAddr',  Address(), False, False)
+        ]), False, True),
+        ('removeListener', CF.Call(removeListener, [
+            ('listenerID', CF.Int(), False, False),
+        ]), False, True)
+        ('deleteChannel', CF.Call(deleteChannel, [
+            ('channelID', CF.Int(), False, False),
+        ]), False, True)
+    ])
 
