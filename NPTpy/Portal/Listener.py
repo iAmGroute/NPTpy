@@ -47,7 +47,7 @@ class Listener:
 
         self.reserveID = self.myLink.reserveChannel(self)
         if self.reserveID > 0:
-            self.allowSelect = False
+            # self.allowSelect = False
             self.myLink.epControl.requestNewChannel(self.reserveID, self.remotePort, self.remoteAddr)
         else:
             self.con.decline()
