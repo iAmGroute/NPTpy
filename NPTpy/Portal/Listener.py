@@ -47,7 +47,7 @@ class Listener:
 
         self.reserveID = self.myLink.reserveChannel(self)
         if self.reserveID > 0:
-            # self.allowSelect = False
+            self.allowSelect = False
             self.myLink.epControl.requestNewChannel(self.reserveID, self.remotePort, self.remoteAddr)
         else:
             self.con.decline()
@@ -55,10 +55,10 @@ class Listener:
 
     def accept(self, channelID, channelIDF):
 
-        # if self.allowSelect:
-        #     return False
+        if self.allowSelect:
+            return False
 
-        # self.allowSelect = True
+        self.allowSelect = True
 
         connSocket, addr = self.con.accept()
 
@@ -69,10 +69,10 @@ class Listener:
 
     def decline(self):
 
-        # if self.allowSelect:
-        #     return False
+        if self.allowSelect:
+            return False
 
-        # self.allowSelect = True
+        self.allowSelect = True
 
         self.myLink.deleteChannel(self.reserveID)
 
