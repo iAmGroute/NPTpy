@@ -303,16 +303,16 @@ class Link:
 
     fields.extend([
         ('addListener', CF.Call(addListener, [
-            ('remotePort', Port(),    False, False),
-            ('remoteAddr', Address(), False, False),
-            ('localPort',  Port(),    False, False),
-            ('localAddr',  Address(), False, False)
+            ('remotePort', CF.Port(),    False, False),
+            ('remoteAddr', CF.Address(), False, False),
+            ('localPort',  CF.Port(),    False, False),
+            ('localAddr',  CF.Address(), False, False)
         ]), False, True),
         ('removeListener', CF.Call(removeListener, [
-            ('listenerID', CF.Int(), False, False),
-        ]), False, True)
+            ('listenerID', CF.Int(), False, False)
+        ]), False, True),
         ('deleteChannel', CF.Call(deleteChannel, [
-            ('channelID', CF.Int(), False, False),
+            ('channelID', CF.Int(), False, False)
         ]), False, True)
     ])
 
