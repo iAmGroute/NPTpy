@@ -114,5 +114,7 @@ class PortalConfig:
             for link in portal.links if link.isClient
         ]
 
+        config['Logs'] = self.config['Logs']
+
         self.config = config
 
