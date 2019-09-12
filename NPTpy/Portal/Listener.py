@@ -43,13 +43,14 @@ class Listener:
     def task(self):
 
         if not self.myLink.isConnected():
-            self.con.decline()
             return
 
         self.reserveID = self.myLink.reserveChannel(self)
         if self.reserveID > 0:
             self.allowSelect = False
             self.myLink.epControl.requestNewChannel(self.reserveID, self.remotePort, self.remoteAddr)
+        else:
+            self.con.decline()
 
 
     def accept(self, channelID, channelIDF):
