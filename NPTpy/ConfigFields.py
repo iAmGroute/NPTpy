@@ -147,19 +147,16 @@ class SlotList(Field):
         for kv in val:
             k = kv['k']
             v = kv['v']
-            try:
-                if k is None:
-                    if v is None:
-                        pass # TODO
-                    else:
-                        self.createNew(obj, v)
+            if k is None:
+                if v is None:
+                    pass # TODO
                 else:
-                    if v is None:
-                        self.remove(obj, k)
-                    else:
-                        update(sl[k], v)
-            except Exception as e:
-                print(repr(e))
+                    self.createNew(obj, v)
+            else:
+                if v is None:
+                    self.remove(obj, k)
+                else:
+                    update(sl[k], v)
 
 
 class Constant(Field):
