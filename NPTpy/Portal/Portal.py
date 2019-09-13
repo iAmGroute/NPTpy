@@ -4,6 +4,7 @@ import socket
 import select
 import time
 
+import Globals
 import ConfigFields as CF
 
 from Common.Generic   import find
@@ -44,6 +45,8 @@ class Portal:
 
 
     def main(self):
+
+        Globals.resetReminder.run()
 
         if not self.conST:
             self.connectKA()

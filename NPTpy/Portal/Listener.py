@@ -2,6 +2,7 @@
 import logging
 import socket
 
+import Globals
 import ConfigFields as CF
 
 from Common.Connector import Connector
@@ -32,6 +33,11 @@ class Listener:
         self.reserveID   = -1
         self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, 0, localPort, localAddr))
         self.con.listen()
+        self.reminder    = Globals.resetReminder.getDelegate(onRun={ self.handleRemind })
+
+
+    def handleRemind(self):
+        self.allowSelect = True
 
 
     # Needed for select()
@@ -41,6 +47,7 @@ class Listener:
 
     # Called after select()
     def task(self):
+        self.reminder.skipNext = True
         self.allowSelect = False
         self.myLink.connectAndCall(self.handleConnected)
 
