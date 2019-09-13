@@ -64,6 +64,7 @@ class Listener:
         self.allowSelect = True
 
         connSocket, addr = self.con.tryAccept()
+        connSocket.settimeout(0)
 
         self.myLink.upgradeChannel(channelID, channelIDF, connSocket)
         self.reserveID = -1

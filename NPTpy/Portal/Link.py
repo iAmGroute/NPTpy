@@ -260,6 +260,7 @@ class Link:
         for i in range(3):
             conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
             if conn.tryConnect((deviceAddr, devicePort)):
+                conn.socket.settimeout(0)
                 return self.addChannel(channelIDF, conn)
 
         return 0
