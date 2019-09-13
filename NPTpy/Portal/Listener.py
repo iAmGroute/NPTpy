@@ -30,7 +30,7 @@ class Listener:
         self.localAddr   = localAddr
         self.allowSelect = True
         self.reserveID   = -1
-        self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, None, localPort, localAddr))
+        self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, 0, localPort, localAddr))
         self.con.listen()
 
 
@@ -41,16 +41,19 @@ class Listener:
 
     # Called after select()
     def task(self):
+        self.allowSelect = False
+        self.myLink.connectAndCall(self.handleConnected)
 
-        if not self.myLink.isConnected():
-            return
 
-        self.reserveID = self.myLink.reserveChannel(self)
-        if self.reserveID > 0:
-            self.allowSelect = False
-            self.myLink.epControl.requestNewChannel(self.reserveID, self.remotePort, self.remoteAddr)
+    def handleConnected(self, ok):
+        if ok:
+            self.reserveID = self.myLink.reserveChannel(self)
+            if self.reserveID > 0:
+                self.myLink.epControl.requestNewChannel(self.reserveID, self.remotePort, self.remoteAddr)
+            else:
+                self.decline()
         else:
-            self.con.decline()
+            self.decline()
 
 
     def accept(self, channelID, channelIDF):
@@ -60,9 +63,10 @@ class Listener:
 
         self.allowSelect = True
 
-        connSocket, addr = self.con.accept()
+        connSocket, addr = self.con.tryAccept()
 
         self.myLink.upgradeChannel(channelID, channelIDF, connSocket)
+        self.reserveID = -1
 
         return True
 
@@ -74,8 +78,9 @@ class Listener:
 
         self.allowSelect = True
 
-        self.myLink.deleteChannel(self.reserveID)
+        self.con.tryDecline()
 
-        self.con.decline()
+        self.myLink.deleteChannel(self.reserveID)
+        self.reserveID = -1
 
         return True

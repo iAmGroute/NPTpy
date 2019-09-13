@@ -62,6 +62,7 @@ class Link:
         self.buffer        = b''
         self.state         = self.States.Disconnected
         self.conRT         = None
+        self.onConnected   = []
         self.allowSelect   = False
 
         self.waitingSince  = 0
@@ -97,6 +98,8 @@ class Link:
         except OSError as e:
             log.error(e)
             self.reconnect()
+        else:
+            self.connected(True)
 
 
     def disconnect(self):
@@ -105,10 +108,6 @@ class Link:
         self.allowSelect = False
         for ep in self.eps:
             ep.allowSelect = False
-        for listener in self.listeners:
-            if not listener.allowSelect:
-                listener.decline()
-            listener.allowSelect = True
         self.state = self.States.Disconnected
 
 
@@ -125,12 +124,19 @@ class Link:
                 self.myPortal.connectToPortal(self.otherID)
 
 
-    def isConnected(self):
+    def connected(self, ok):
+        handlers = self.onConnected
+        self.onConnected = []
+        for handler in handlers:
+            handler(ok)
+
+
+    def connectAndCall(self, f):
         if self.state == self.States.Forwarding:
-            return True
+            f()
         else:
+            self.onConnected.append(f)
             self.requestConnect()
-            return False
 
 
     def connectToRelay(self, token, relayPort, relayAddr):
@@ -156,6 +162,8 @@ class Link:
                 if ep is not self.epControl:
                     ep.allowSelect = True
             self.state = self.States.WaitReady
+        else:
+            self.connected(False)
 
 
     # Needed for select()
