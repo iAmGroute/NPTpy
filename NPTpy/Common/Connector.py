@@ -98,7 +98,6 @@ class Connector:
         self.log.log(21, t('Connection from\t [{0}]:{1}'.format(*addr)))
         return conn, addr
 
-    # Accept and close immediately
     def decline(self):
         self.log.log(20, t('Declining incoming'))
         conn, addr = self.socket.accept()
@@ -117,6 +116,14 @@ class Connector:
             conn, addr = None, None
             self.log.log(21, t.over('    accept error: {0}'.format(e)))
         return conn, addr
+
+    def tryDecline(self):
+        try:
+            addr = self.decline()
+        except OSError as e:
+            addr = None
+            self.log.log(20, t.over('    decline error: {0}'.format(e)))
+        return addr
 
     def connect(self, endpoint):
         self.log.log(23, t('Connecting to\t [{0}]:{1}'.format(*endpoint)))
