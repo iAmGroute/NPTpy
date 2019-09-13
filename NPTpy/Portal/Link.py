@@ -133,7 +133,7 @@ class Link:
 
     def connectAndCall(self, f):
         if self.state == self.States.Forwarding:
-            f()
+            f(True)
         else:
             self.onConnected.append(f)
             self.requestConnect()
