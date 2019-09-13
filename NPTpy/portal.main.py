@@ -4,6 +4,7 @@ import logging
 import threading
 import gc
 import sys
+import webbrowser
 
 from Portal.PortalConfig import PortalConfig
 from Portal.PortalAPI    import PortalAPI
@@ -14,6 +15,8 @@ portalConfig.save()
 
 logging.basicConfig(stream=sys.stdout, format='%(created).3f [%(name)s]\t%(message)s', level=20)
 
+webbrowser.open('http://127.0.0.1:8000')
+
 while True:
 
     try:
@@ -22,7 +25,7 @@ while True:
 
         api = PortalAPI(p, portalConfig)
         server = SimpleServer('webui', api)
-        threading.Thread(target=server.run, args=(8000,), daemon=True).start()
+        threading.Thread(target=server.run, args=(8000, '0.0.0.0'), daemon=True).start()
 
         while True:
             p.main()
