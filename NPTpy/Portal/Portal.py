@@ -53,20 +53,25 @@ class Portal:
 
         else:
 
-            # Temorary
-            # TODO: add a SlotMap to which all selectables will be registred
-            socketList = [self]
+            rlist = [self]
             for link in self.links:
-                socketList.append(link)
-                socketList.extend(link.listeners)
-                socketList.extend(link.eps)
-            socketList = [s for s in socketList if s.allowSelect]
+                rlist.append(link)
+                rlist.extend(link.listeners)
+                rlist.extend(link.eps)
+            rlist = [s for s in rlist if s.allowSelect]
 
-            readable, writable, exceptional = select.select(socketList, [], [], 1)
-            for s in readable:
-                # Avoid race conditions by re-checking allowSelect
-                if s.allowSelect:
-                    s.task()
+            wlist = []
+            for link in self.links:
+                wlist.append(link)
+                # wlist.extend(link.eps)
+            wlist = [s for s in wlist if s.allowSelect]
+
+            readables, _, _         = select.select(rlist, [], [], 1) # Temporary
+            readables, writables, _ = select.select(rlist, wlist, [], 1)
+            for s in writables:
+                s.wtask(readables)
+            for s in readables:
+                s.task()
 
 
     def connectKA(self):

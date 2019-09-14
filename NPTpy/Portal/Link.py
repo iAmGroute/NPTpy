@@ -178,6 +178,13 @@ class Link:
         elif self.state == self.States.Forwarding:   self.taskForward()
 
 
+    def wtask(self, readables):
+        if self.state == self.States.Forwarding:
+            for ep in self.eps:
+                if ep in readables:
+                    ep.rtask()
+
+
     def taskReady(self):
         data = self.conRT.tryRecv(64)
         if data is None:

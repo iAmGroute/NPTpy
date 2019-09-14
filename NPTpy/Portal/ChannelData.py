@@ -23,6 +23,9 @@ class ChannelData(ChannelEndpoint):
 
     # Called after select()
     def task(self):
+        pass
+
+    def rtask(self):
         data = self.myCon.tryRecv(32768)
         if data is None:
             return
@@ -30,3 +33,4 @@ class ChannelData(ChannelEndpoint):
             self.myLink.removeEP(self.myID)
             return
         self.sendMessage(data)
+
