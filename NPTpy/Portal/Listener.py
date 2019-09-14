@@ -37,7 +37,8 @@ class Listener:
 
 
     def handleRemind(self):
-        self.allowSelect = True
+        self.decline()
+        return False
 
 
     # Needed for select()
