@@ -78,9 +78,12 @@ class Link:
 
     def handleRemindRx(self):
         if self.state == self.States.Forwarding:
+            log.warn('RX keepalive timeout')
             if self.isIdle():
+                log.warn('    disconnecting')
                 self.disconnect()
             else:
+                log.warn('    reconnecting')
                 self.reconnect()
         return False
 
