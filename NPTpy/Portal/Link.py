@@ -74,7 +74,7 @@ class Link:
 
 
     def isIdle(self):
-        return self.kaCountIdle > 3 and not self.onConnected
+        return self.kaCountIdle > 3 and not self.onConnected and len(self.SlotList) <= 1
 
     def handleRemindRx(self):
         if self.state != self.States.Disconnected:
