@@ -190,6 +190,7 @@ class Link:
                 if ep is not self.epControl:
                     ep.allowSelect = True
             self.state = self.States.WaitReady
+            self.reminderRX.skipNext = True
         else:
             self.connected(False)
 
