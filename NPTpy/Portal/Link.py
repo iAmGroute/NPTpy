@@ -4,6 +4,7 @@ import socket
 import time
 import enum
 
+import Globals
 import ConfigFields as CF
 
 from Common.SmartTabs import t
@@ -36,6 +37,7 @@ class Link:
         ('ltAddr',       CF.Address(),    True,     True),
         ('state',        CF.Enum(States), True,     True),
         ('waitingSince', CF.Float(),      True,     True),
+        ('kaCountIdle',  CF.Int(),        True,     True),
         ('allowSelect',  CF.Bool(),       True,     True),
         ('buffer',       CF.Hex(),        True,     True),
         ('listeners',    CF.SlotList(),   True,     True),
@@ -63,9 +65,30 @@ class Link:
         self.state         = self.States.Disconnected
         self.conRT         = None
         self.onConnected   = []
+        self.reminderRX    = Globals.kaReminderRX.getDelegate(onRun={ self.handleRemindRx })
+        self.reminderTX    = Globals.kaReminderTX.getDelegate(onRun={ self.handleRemindTx })
+        self.kaCountIdle   = 0
         self.allowSelect   = False
 
         self.waitingSince  = 0
+
+
+    def isIdle(self):
+        return self.kaCountIdle > 3 and not self.onConnected
+
+    def handleRemindRx(self):
+        if self.state == self.States.Forwarding:
+            if self.isIdle():
+                self.disconnect()
+            else:
+                self.reconnect()
+        return False
+
+    def handleRemindTx(self):
+        self.kaCountIdle += 1
+        if self.state == self.States.Forwarding:
+            self.epControl.sendKA()
+        return False
 
 
     def addListener(self, remotePort, remoteAddr, localPort, localAddr):
@@ -199,6 +222,8 @@ class Link:
 
     def taskForward(self):
 
+        self.reminderRX.skipNext = True
+
         data = self.conRT.tryRecv(32768)
         if data is None:
             return
@@ -229,7 +254,10 @@ class Link:
 
     # Called by ChannelEndpoint,
     # sends <packet> through the link to the remote portal.
-    def sendPacket(self, packet):
+    def sendPacket(self, packet, untracked=False):
+        if not untracked:
+            self.reminderTX.skipNext = True
+            self.kaCountIdle = 0
         if self.state == self.States.Forwarding:
             try:
                 self.conRT.socket.settimeout(2)

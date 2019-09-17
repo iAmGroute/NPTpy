@@ -17,11 +17,11 @@ class ChannelEndpoint:
         self.myLink = myLink
         self.allowSelect = False # Temporary
 
-    def sendMessage(self, data):
+    def sendMessage(self, data, untracked=False):
         header  = b''
-        header += len(data).to_bytes(2, 'little')  # 2B
-        header += self.myIDF.to_bytes(2, 'little') # 2B
-        self.myLink.sendPacket(header + data)      # 4B
+        header += len(data).to_bytes(2, 'little')        # 2B
+        header += self.myIDF.to_bytes(2, 'little')       # 2B
+        self.myLink.sendPacket(header + data, untracked) # 4B
 
     def acceptMessage(self, data):
         raise NotImplementedError()

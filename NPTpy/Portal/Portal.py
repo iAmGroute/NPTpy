@@ -46,7 +46,7 @@ class Portal:
 
     def main(self):
 
-        Globals.resetReminder.run()
+        Globals.reminders.run()
 
         if not self.conST:
             self.connectKA()
