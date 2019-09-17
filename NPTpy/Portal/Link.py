@@ -77,7 +77,7 @@ class Link:
         return self.kaCountIdle > 3 and not self.onConnected
 
     def handleRemindRx(self):
-        if self.state == self.States.Forwarding:
+        if self.state != self.States.Disconnected:
             log.warn('RX keepalive timeout')
             if self.isIdle():
                 log.warn('    disconnecting')
@@ -121,6 +121,8 @@ class Link:
             self.conRT.socket.settimeout(0)
             self.state = self.States.Forwarding
             self.waitingSince = 0
+            self.kaCountIdle = 0
+            self.reminderRX.skipNext = True
         except OSError as e:
             log.error(e)
             self.reconnect()
