@@ -44,6 +44,12 @@ class SlotList:
             for value in values:
                 self.append(value)
 
+    def __len__(self):
+        count = 0
+        for i in range(len(self.slots)):
+            if self.slots[i].val:
+                count += 1
+        return count
 
     def __iter__(self):
         return SlotList_Iterator(self)
