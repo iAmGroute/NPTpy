@@ -173,7 +173,7 @@ class Link:
             conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
             if conRT.tryConnect((relayAddr, relayPort)):
                 conRT.sendall(data)
-                conRT.setKeepAlive()
+                # conRT.setKeepAlive()
                 break
             else:
                 conRT = None
