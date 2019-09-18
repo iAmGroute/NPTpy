@@ -78,13 +78,7 @@ class Link:
 
     def handleRemindRx(self):
         if self.state != self.States.Disconnected:
-            log.warn('RX keepalive timeout')
-            if self.isIdle():
-                log.warn('    disconnecting')
-                self.disconnect()
-            else:
-                log.warn('    reconnecting')
-                self.reconnect()
+            self.connectionLost('RX keepalive timeout')
         return False
 
     def handleRemindTx(self):
@@ -92,6 +86,16 @@ class Link:
         if self.state == self.States.Forwarding:
             self.epControl.sendKA()
         return False
+
+
+    def connectionLost(self, reason='N/A'):
+        log.warn('Connection lost, reason: {0}'.fromat(reason))
+        if self.isIdle():
+            log.warn('Disconnecting')
+            self.disconnect()
+        else:
+            log.warn('Reconnecting')
+            self.reconnect()
 
 
     def addListener(self, remotePort, remoteAddr, localPort, localAddr):
@@ -234,7 +238,7 @@ class Link:
         if data is None:
             return
         if len(data) < 1:
-            self.reconnect()
+            self.connectionLost('Closed by other end')
             return
 
         self.buffer += data
