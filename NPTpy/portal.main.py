@@ -25,7 +25,8 @@ while True:
 
         api = PortalAPI(p, portalConfig)
         server = SimpleServer('webui', api)
-        threading.Thread(target=server.run, args=(8000, '0.0.0.0'), daemon=True).start()
+        s = threading.Thread(target=server.run, args=(8000, '0.0.0.0'), daemon=True)
+        s.start()
 
         while True:
             p.main()
@@ -40,5 +41,12 @@ while True:
     except Exception as e:
         logging.exception(e)
 
+    server.stop()
+    s.join()
+    del s
+    del server
+    del api
+    del p
+    gc.collect()
     time.sleep(10)
 

@@ -14,20 +14,23 @@ log = logging.getLogger(__name__)
 class ChannelControl(ChannelEndpoint):
 
     def acceptMessage(self, data):
-        action = data[0:1]
-        if   action == b'\x00' \
-          or action == b'\xFF' : pass
-        elif action == b'n'    : self.actionNewChannel(data[1:])
-        elif action == b'N'    : self.actionNewChannelReply(data[1:])
-        elif action == b'd'    : self.actionDeleteChannel(data[1:])
-        elif action == b'D'    : self.actionDeleteChannelReply(data[1:])
-        else                   : self.corrupted()
+        if data:
+            action = data[0:1]
+            if   action == b'\x00' \
+              or action == b'\xFF' : pass
+            elif action == b'n'    : self.actionNewChannel(data[1:])
+            elif action == b'N'    : self.actionNewChannelReply(data[1:])
+            elif action == b'd'    : self.actionDeleteChannel(data[1:])
+            elif action == b'D'    : self.actionDeleteChannelReply(data[1:])
+            else                   : self.corrupted()
 
 
     def corrupted(self):
         log.error('Link or control channel is corrupted !')
         # TODO: reset the Link
 
+    def sendKA(self):
+        self.sendMessage(b'\x00', True)
 
     # Note:
     #   The prefix 'request' means we send to the other portal,

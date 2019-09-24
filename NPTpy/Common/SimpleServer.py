@@ -182,9 +182,20 @@ class SimpleServer:
         self.handlerClass = SimpleServerHandler
         self.handlerClass.pages = pages
         self.handlerClass.api   = api
+        self.server = None
 
     def run(self, port=0, address='0.0.0.0'):
         with ThreadingHTTPServer((address, port), self.handlerClass) as a:
             print('Listening on ' + str(a.server_address))
+            self.server = a
+            a.allow_reuse_address = True
             a.serve_forever()
+
+    def stop(self):
+        try:
+            self.server.socket.close()
+            self.server.shutdown()
+        except OSError:
+            return False
+        return True
 

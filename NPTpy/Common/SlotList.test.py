@@ -3,11 +3,13 @@ from SlotList import *
 
 sl = SlotList(2)
 
-assert sl.append('Hello')   == 0
-assert sl.append('World')   == 1
-assert sl.append('Hello 2') == 2
-assert sl.append('World 2') == 3
-assert sl.append('World 3') == -1
+assert len(sl) == 0
+
+assert sl.append('Hello')   == 0  and len(sl) == 1
+assert sl.append('World')   == 1  and len(sl) == 2
+assert sl.append('Hello 2') == 2  and len(sl) == 3
+assert sl.append('World 2') == 3  and len(sl) == 4
+assert sl.append('World 3') == -1 and len(sl) == 4
 
 assert sl[0] == 'Hello'
 assert sl[1] == 'World'
