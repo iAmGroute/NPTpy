@@ -89,7 +89,7 @@ class Link:
 
 
     def connectionLost(self, reason='N/A'):
-        log.warn('Connection lost, reason: {0}'.fromat(reason))
+        log.warn('Connection lost, reason: {0}'.format(reason))
         if self.isIdle():
             log.warn('Disconnecting')
             self.disconnect()
