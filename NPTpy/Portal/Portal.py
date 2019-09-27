@@ -80,7 +80,9 @@ class Portal:
         data = b''
         data += self.portalID
         data += b'0' * 60
-        if not self.conST.tryConnect((self.serverAddr, self.serverPort)):
+        ok = self.conST.tryConnect((self.serverAddr, self.serverPort))
+        hs = self.conST.doHandshake()
+        if not ok or hs != Connector.HandshakeStatus.OK:
             self.conST = None
             time.sleep(10)
             return

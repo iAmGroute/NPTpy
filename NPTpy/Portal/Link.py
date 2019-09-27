@@ -122,11 +122,13 @@ class Link:
                 self.conRT.secureClient(serverHostname='portal', caFilename='portal.cer')
             else:
                 self.conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
-            self.conRT.socket.settimeout(0)
-            self.state = self.States.Forwarding
-            self.waitingSince = 0
-            self.kaCountIdle = 0
-            self.reminderRX.skipNext = True
+            hs = self.conRT.doHandshake()
+            if hs == Connector.HandshakeStatus.OK:
+                self.conRT.socket.settimeout(0)
+                self.state = self.States.Forwarding
+                self.waitingSince = 0
+                self.kaCountIdle = 0
+                self.reminderRX.skipNext = True
         except OSError as e:
             log.error(e)
             self.reconnect()

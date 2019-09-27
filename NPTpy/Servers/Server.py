@@ -150,15 +150,15 @@ class Server:
         connSocket, addr = self.con.tryAccept()
         if not connSocket:
             return
-        connSocket.settimeout(0.2)
-        try:
-            data = connSocket.recv(64)
-            connSocket.settimeout(0)
-        except OSError:
-            log.info('    dropped')
+        conn = PortalConn(-1, addr, connSocket)
+        hs = conn.doHandshake()
+        if hs != Connector.HandshakeStatus.OK:
+            return
+        data = conn.tryRecv(64)
+        conn.socket.settimeout(0)
         else:
             if len(data) != 64:
-                connSocket.close()
+                log.info('    dropped')
                 return
 
             portalID = data[0:4]
@@ -168,7 +168,7 @@ class Server:
             # TODO: authenticate
             # connSocket.sendall(b'\x00')
 
-            conn = PortalConn(portalID, addr, connSocket)
+            conn.portalID = portalID
 
             # Add the conn or update the existing one
             try:

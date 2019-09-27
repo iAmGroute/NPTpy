@@ -2,6 +2,7 @@
 import logging
 import socket
 import ssl
+from enum import Enum
 
 from .Prefixes import prefixIEC
 from .SmartTabs import t
@@ -12,12 +13,15 @@ from .this_OS import OS, this_OS
 #  - 23: Connections initiated by us, outgoing (Connecting to)
 #  - 21: Connections accepted, incoming (Connection from)
 #  - 20: Connections declined, incoming (Connection from)
+#  - 19: TLS handshake state changes (Complete, Error)
+#  - 18: TLS handshake update (Start/Resume)
 #  - 17: Exception in tryClose()
 #  - 15: Exception in TCP try send and receive
 #  - 12: UDP send and receive
 #  - 10: TCP send and receive
 #  -  7: UDP content
 #  -  5: TCP content
+#  -  4: TLS handshake state progress (WantRead, WantWrite)
 #  -  3: State change progress (Starting, Stopping)
 
 class Connector:
@@ -187,13 +191,36 @@ class Connector:
 
     def secureClient(self, serverHostname, caFilename=None, caDirpath=None, caData=None):
         self.sslContext = ssl.create_default_context(cafile=caFilename, capath=caDirpath, cadata=caData)
-        self.socket     = self.sslContext.wrap_socket(self.socket, server_hostname=serverHostname)
+        self.socket     = self.sslContext.wrap_socket(self.socket, server_hostname=serverHostname, do_handshake_on_connect=False)
 
     def secureServer(self, certFilename, keyFilename=None, keyPassword=None):
         self.sslContext          = ssl.SSLContext(ssl.PROTOCOL_TLS)
         self.sslContext.options |= ssl.OP_NO_TLSv1
         self.sslContext.options |= ssl.OP_NO_TLSv1_1
         self.sslContext.load_cert_chain(certFilename, keyFilename, keyPassword)
-        self.socket = self.sslContext.wrap_socket(self.socket, server_side=True)
+        self.socket = self.sslContext.wrap_socket(self.socket, server_side=True, do_handshake_on_connect=False)
 
+    class HandshakeStatus(Enum):
+        OK = 0
+        WantRead = 1
+        WantWrite = 2
+        Error = 3
+
+    def doHandshake(self):
+        self.log.log(18, t('Handshake:\t Start/Resume'))
+        try:
+            self.socket.do_handshake()
+            self.log.log(19, t('Handshake:\t Complete'))
+            return Connector.HandshakeStatus.OK
+        except ssl.SSLWantReadError:
+            self.log.log(18, t('Handshake:\t Need to read more'))
+            return Connector.HandshakeStatus.WantRead
+        except ssl.SSLWantWriteError:
+            self.log.log(18, t('Handshake:\t Need to write more'))
+            return Connector.HandshakeStatus.WantWrite
+        # except ssl.SSLError:
+        except OSError as e:
+            self.log.log(19, t('Handshake:\t Error'))
+            self.log.log(19, t.over('\t {0}'.format(e)))
+            return Connector.HandshakeStatus.Error
 
