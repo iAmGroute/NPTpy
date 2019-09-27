@@ -97,6 +97,9 @@ class Portal:
         if data is None:
             return
         l = len(data)
+        if data == b'BAD ID':
+            log.info('Requested portal not found')
+            return
         if l < 19:
             log.warn('Received {0} Bytes but expected at least 19'.format(l))
             self.conST = None
