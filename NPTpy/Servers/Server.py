@@ -156,10 +156,11 @@ class Server:
             return
         data = conn.tryRecv(64)
         conn.socket.settimeout(0)
+
+        if len(data) != 64:
+            log.info('    dropped')
+
         else:
-            if len(data) != 64:
-                log.info('    dropped')
-                return
 
             portalID = data[0:4]
 
