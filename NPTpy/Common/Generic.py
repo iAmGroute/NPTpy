@@ -1,6 +1,6 @@
 
 
-def NOP(*args, **kwargs):
+def noop(*args, **kwargs):
     pass
 
 
