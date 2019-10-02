@@ -15,7 +15,7 @@ portalConfig.save()
 
 logging.basicConfig(stream=sys.stdout, format='%(created).3f [%(name)s]\t%(message)s', level=20)
 
-webbrowser.open('http://127.0.0.1:8000')
+firstIter = True
 
 while True:
 
@@ -27,6 +27,10 @@ while True:
         server = SimpleServer('webui', api)
         s = threading.Thread(target=server.run, args=(8000, '0.0.0.0'), daemon=True)
         s.start()
+
+        if firstIter:
+            firstIter = False
+            webbrowser.open('http://127.0.0.1:8000')
 
         while True:
             p.main()
