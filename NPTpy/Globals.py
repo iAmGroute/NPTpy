@@ -22,3 +22,4 @@ class LogTypes(Enum):
     Link            = 2
     Listener        = 3
     ChannelEndpoint = 4
+    Connector       = 5

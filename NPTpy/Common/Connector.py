@@ -1,11 +1,11 @@
 
-import logging
 import socket
 import ssl
+
 from enum import Enum
 
-from .Prefixes import prefixIEC
-from .SmartTabs import t
+import Globals
+
 from .this_OS import OS, this_OS
 
 # Log levels:
@@ -24,17 +24,41 @@ from .this_OS import OS, this_OS
 #  -  4: TLS handshake state progress (WantRead, WantWrite)
 #  -  3: State change progress (Starting, Stopping)
 
+class Etypes(Enum):
+    Error           = 0
+    Inited          = 1
+    Deleted         = 2
+    Closing         = 3
+    Closed          = 4
+    CloseError      = 5
+    Connecting      = 6
+    Connected       = 7
+    Accepting       = 8
+    Accepted        = 9
+    Declining       = 10
+    Declined        = 11
+    Handshake       = 12
+    HandshakeResult = 13
+    Listen          = 14
+    Sending         = 15
+    SendingTo       = 16
+    Sent            = 17
+    Receiving       = 18
+    Received        = 19
+    ReceivedFrom    = 20
+    Content         = 21
+
+
 class Connector:
 
-    def __init__(self, log, mySocket):
-        self.log = log or logging.getLogger('dummy')
-        self.socket = mySocket
-        self.log.log(3, t('Starting'))
-        if mySocket.type == socket.SOCK_STREAM:
-            mySocket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        sname = mySocket.getsockname()
+    def __init__(self, log, _socket):
+        self.socket = _socket
+        self.log    = Globals.logger.new(Globals.LogTypes.Connector)
+        if _socket.type == socket.SOCK_STREAM:
+            _socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        sname = _socket.getsockname()
         address, port = sname[0], sname[1]
-        self.log.log(25, t('Started on\t [{0}]:{1}'.format(address, port)))
+        self.log(Etypes.Inited, (address, port))
 
     @staticmethod
     def new(socketType=socket.SOCK_DGRAM, timeout=None, port=0, address='0.0.0.0', proto=0):
@@ -50,6 +74,7 @@ class Connector:
             self.close()
         except OSError:
             pass
+        self.log(Etypes.Deleted, ())
 
     def __enter__(self):
         return self
@@ -60,15 +85,15 @@ class Connector:
         self.tryClose()
 
     def close(self):
-        self.log.log(3, t('Stopping'))
+        self.log(Etypes.Closing, ())
         self.socket.close()
-        self.log.log(25, t('Stopped'))
+        self.log(Etypes.Closed, ())
 
     def tryClose(self):
         try:
             self.close()
         except OSError as e:
-            self.log.log(17, t.over('Could not close: {0}'.format(e)))
+            self.log(Etypes.CloseError, (repr(e)))
             return False
         return True
 
@@ -78,34 +103,36 @@ class Connector:
 
     # Mainly UDP
 
-    def sendto(self, data, endpoint):
-        sentSize = self.socket.sendto(data, endpoint)
-        self.log.log(12, t('Sent     {0} Bytes to\t [{1}]:{2}'.format(prefixIEC(sentSize), *endpoint)))
-        self.log.log( 7, t.over('    content: {0}'.format(data.hex().upper())))
+    def sendto(self, data, addr):
+        self.log(Etypes.SendingTo, (len(data), *addr))
+        self.log(Etypes.Content, (data))
+        sentSize = self.socket.sendto(data, addr)
+        self.log(Etypes.Sent, (sentSize))
         return sentSize
 
     def recvfrom(self, bufferSize):
+        self.log(Etypes.Receiving, (bufferSize))
         data, addr = self.socket.recvfrom(bufferSize)
-        self.log.log(12, t('Received {0} Bytes from\t [{1}]:{2}'.format(prefixIEC(len(data)), *addr)))
-        self.log.log( 7, t.over('    content: {0}'.format(data.hex().upper())))
+        self.log(Etypes.ReceivedFrom, (len(data), *addr))
+        self.log(Etypes.Content, (data))
         return data, addr
 
     # Mainly TCP
 
     def listen(self):
         self.socket.listen()
-        self.log.log(25, t('Listening'))
+        self.log(Etypes.Listen, ())
 
     def accept(self):
-        self.log.log(21, t('Accepting incoming'))
+        self.log(Etypes.Accepting, ())
         conn, addr = self.socket.accept()
-        self.log.log(21, t('Connection from\t [{0}]:{1}'.format(*addr)))
+        self.log(Etypes.Accepted, (*addr,))
         return conn, addr
 
     def decline(self):
-        self.log.log(20, t('Declining incoming'))
+        self.log(Etypes.Declining, ())
         conn, addr = self.socket.accept()
-        self.log.log(20, t('Connection from\t [{0}]:{1}'.format(*addr)))
+        self.log(Etypes.Declined, (*addr,))
         try:
             conn.settimeout(0)
             conn.close()
@@ -118,7 +145,7 @@ class Connector:
             conn, addr = self.accept()
         except OSError as e:
             conn, addr = None, None
-            self.log.log(21, t.over('    accept error: {0}'.format(e)))
+            self.log(Etypes.Error, (repr(e)))
         return conn, addr
 
     def tryDecline(self):
@@ -126,40 +153,42 @@ class Connector:
             addr = self.decline()
         except OSError as e:
             addr = None
-            self.log.log(20, t.over('    decline error: {0}'.format(e)))
+            self.log(Etypes.Error, (repr(e)))
         return addr
 
     def connect(self, endpoint):
-        self.log.log(23, t('Connecting to\t [{0}]:{1}'.format(*endpoint)))
+        self.log(Etypes.Connecting, (*endpoint,))
         self.socket.connect(endpoint)
-        self.log.log(23, t('    connected'))
+        self.log(Etypes.Connected, ())
 
     def tryConnect(self, endpoint):
         try:
             self.connect(endpoint)
         except OSError as e:
-            self.log.log(23, t.over('    could not connect: {0}'.format(e)))
+            self.log(Etypes.Error, (repr(e)))
             self.tryClose()
             return False
         return True
 
     def sendall(self, data):
+        self.log(Etypes.Sending, (len(data)))
+        self.log(Etypes.Content, (data))
         self.socket.sendall(data)
-        self.log.log(10, t('Sent    \t {0} Bytes'.format(prefixIEC(len(data)))))
-        self.log.log(5, t.over('    content: {0}'.format(data.hex().upper())))
+        self.log(Etypes.Sent, (len(data)))
 
     def trySendall(self, data):
         try:
             self.sendall(data)
             return True
         except OSError as e:
-            self.log.log(15, t.over('Could not send: {0}'.format(e)))
+            self.log(Etypes.Error, (repr(e)))
             return False
 
     def recv(self, bufferSize):
+        self.log(Etypes.Receiving, (bufferSize))
         data = self.socket.recv(bufferSize)
-        self.log.log(10, t('Received\t {0} Bytes'.format(prefixIEC(len(data)))))
-        self.log.log(5, t.over('    content: {0}'.format(data.hex().upper())))
+        self.log(Etypes.Received, (len(data)))
+        self.log(Etypes.Content, (data))
         return data
 
     def tryRecv(self, bufferSize):
@@ -171,7 +200,7 @@ class Connector:
                 # No data is available but the connection is still OK.
                 return None
             else:
-                self.log.log(15, t.over('Could not receive: {0}'.format(e)))
+                self.log(Etypes.Error, (repr(e)))
                 return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
@@ -207,20 +236,19 @@ class Connector:
         Error = 3
 
     def doHandshake(self):
-        self.log.log(18, t('Handshake:\t Start/Resume'))
+        self.log(Etypes.Handshake, ())
+        result = None
         try:
             self.socket.do_handshake()
-            self.log.log(19, t('Handshake:\t Complete'))
-            return Connector.HandshakeStatus.OK
+            result = Connector.HandshakeStatus.OK
         except ssl.SSLWantReadError:
-            self.log.log(18, t('Handshake:\t Need to read more'))
-            return Connector.HandshakeStatus.WantRead
+            result = Connector.HandshakeStatus.WantRead
         except ssl.SSLWantWriteError:
-            self.log.log(18, t('Handshake:\t Need to write more'))
-            return Connector.HandshakeStatus.WantWrite
+            result = Connector.HandshakeStatus.WantWrite
         # except ssl.SSLError:
         except OSError as e:
-            self.log.log(19, t('Handshake:\t Error'))
-            self.log.log(19, t.over('\t {0}'.format(e)))
-            return Connector.HandshakeStatus.Error
+            self.log(Etypes.Error, (repr(e)))
+            result = Connector.HandshakeStatus.Error
+        self.log(Etypes.Handshake, (result))
+        return result
 
