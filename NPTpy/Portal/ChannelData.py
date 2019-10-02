@@ -2,6 +2,8 @@
 # Transfers data between an actual (local) connection
 # and its channel within the portal-client link.
 
+import Globals
+
 from .ChannelEndpoint import ChannelEndpoint
 
 class ChannelData(ChannelEndpoint):
@@ -9,7 +11,8 @@ class ChannelData(ChannelEndpoint):
     def __init__(self, myID, myIDF, myLink, myCon):
         ChannelEndpoint.__init__(self, myID, myIDF, myLink)
         self.myCon = myCon
-        self.allowSelect = True
+        self.readable = Globals.readables.new(self, isActive=True, canWake=False)
+        self.writable = Globals.writables.new(self, isActive=True, canWake=False)
 
     def acceptMessage(self, data):
         try:
@@ -20,10 +23,6 @@ class ChannelData(ChannelEndpoint):
     # Needed for select()
     def fileno(self):
         return self.myCon.fileno()
-
-    # Called after select()
-    def task(self):
-        pass
 
     def rtask(self):
         data = self.myCon.tryRecv(32768)

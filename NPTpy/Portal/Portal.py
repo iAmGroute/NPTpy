@@ -24,7 +24,6 @@ class Portal:
         ('serverAddr',  CF.Address(),  True,     True),
         ('port',        CF.Port(),     True,     True),
         ('address',     CF.Address(),  True,     True),
-        ('allowSelect', CF.Bool(),     True,     True),
         ('links',       CF.SlotList(), True,     True)
     ]
 
@@ -36,7 +35,8 @@ class Portal:
         self.address     = address
         self.links       = SlotList(4)
         self.conST       = None
-        self.allowSelect = True
+        self.readable    = Globals.readables.new(self, isActive=False, canWake=True)
+        self.writable    = Globals.writables.new(self, isActive=False, canWake=False)
 
 
     # Needed for select()
@@ -53,25 +53,16 @@ class Portal:
 
         else:
 
-            rlist = [self]
-            for link in self.links:
-                rlist.append(link)
-                rlist.extend(link.listeners)
-                rlist.extend(link.eps)
-            rlist = [s for s in rlist if s.allowSelect]
+            activeR, canWakeR = Globals.readables.get()
+            activeW, canWakeW = Globals.writables.get()
 
-            wlist = []
-            for link in self.links:
-                wlist.append(link)
-                # wlist.extend(link.eps)
-            wlist = [s for s in wlist if s.allowSelect]
+            canWakeR, canWakeW, _ = select.select(canWakeR, canWakeW, [])
+            activeR,  activeW,  _ = select.select(activeR,  activeW,  [], 0)
 
-            readables, _, _         = select.select(rlist, [], [], 1) # Temporary
-            readables, writables, _ = select.select(rlist, wlist, [], 1)
-            for s in writables:
-                s.wtask(readables)
-            for s in readables:
-                s.task()
+            for w in canWakeW:
+                w.wtask(activeR, activeW)
+            for r in canWakeR:
+                r.rtask(activeR, activeW)
 
 
     def connectKA(self):
@@ -89,9 +80,10 @@ class Portal:
         self.conST.sendall(data)
         self.conST.setKeepAlive()
         self.conST.socket.settimeout(0)
+        self.readable.on()
 
 
-    def task(self):
+    def rtask(self, readables, writables):
 
         data = self.conST.tryRecv(1024)
         if data is None:
@@ -103,12 +95,14 @@ class Portal:
         if l < 19:
             log.warn('Received {0} Bytes but expected at least 19'.format(l))
             self.conST = None
+            self.readable.off()
             return
 
         magic     = data[0:4]
         if magic != b'v0.1':
             log.warn('Server version mismatch, we: {0}, server: {1}'.format('v0.1', magic))
             self.conST = None
+            self.readable.off()
             return
         otherID   = data[4:8]
         token     = data[8:16]

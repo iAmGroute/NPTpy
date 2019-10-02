@@ -38,7 +38,6 @@ class Link:
         ('state',        CF.Enum(States), True,     True),
         ('waitingSince', CF.Float(),      True,     True),
         ('kaCountIdle',  CF.Int(),        True,     True),
-        ('allowSelect',  CF.Bool(),       True,     True),
         ('buffer',       CF.Hex(),        True,     True),
         ('listeners',    CF.SlotList(),   True,     True),
         ('eps',          CF.SlotList(),   True,     True)
@@ -68,7 +67,8 @@ class Link:
         self.reminderRX    = Globals.kaReminderRX.getDelegate(onRun={ self.handleRemindRx })
         self.reminderTX    = Globals.kaReminderTX.getDelegate(onRun={ self.handleRemindTx })
         self.kaCountIdle   = 0
-        self.allowSelect   = False
+        self.readable      = Globals.readables.new(self, isActive=False, canWake=True)
+        self.writable      = Globals.writables.new(self, isActive=False, canWake=True)
 
         self.waitingSince  = 0
 
@@ -138,10 +138,9 @@ class Link:
 
     def disconnect(self):
         self.conRT.tryClose()
-        self.conRT       = None
-        self.allowSelect = False
-        for ep in self.eps:
-            ep.allowSelect = False
+        self.conRT = None
+        self.readable.off()
+        self.writable.off()
         self.state = self.States.Disconnected
 
 
@@ -190,11 +189,9 @@ class Link:
                 conRT = None
 
         if conRT:
-            self.conRT       = conRT
-            self.allowSelect = True
-            for ep in self.eps:
-                if ep is not self.epControl:
-                    ep.allowSelect = True
+            self.conRT = conRT
+            self.readable.on()
+            self.writable.on()
             self.state = self.States.WaitReady
             self.reminderRX.skipNext = True
         else:
@@ -206,14 +203,13 @@ class Link:
         return self.conRT.fileno()
 
 
-    # Called after select()
-    def task(self):
+    def rtask(self, readables, writables):
         if   self.state == self.States.Disconnected: assert False # should not ever be called
         elif self.state == self.States.WaitReady:    self.taskReady()
         elif self.state == self.States.Forwarding:   self.taskForward()
 
 
-    def wtask(self, readables):
+    def wtask(self, readables, writables):
         if self.state == self.States.Forwarding:
             for ep in self.eps:
                 if ep in readables:

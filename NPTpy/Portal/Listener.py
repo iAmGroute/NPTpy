@@ -18,7 +18,7 @@ class Listener:
         ('remoteAddr',  CF.Address(), True,     True),
         ('localPort',   CF.Port(),    True,     True),
         ('localAddr',   CF.Address(), True,     True),
-        ('allowSelect', CF.Bool(),    True,     True),
+        ('waiting',     CF.Bool(),    True,     True),
         ('reserveID',   CF.Int(),     True,     True)
     ]
 
@@ -29,7 +29,8 @@ class Listener:
         self.remoteAddr  = remoteAddr
         self.localPort   = localPort
         self.localAddr   = localAddr
-        self.allowSelect = True
+        self.readable    = Globals.readables.new(self, isActive=True, canWake=True)
+        self.waiting     = False
         self.reserveID   = -1
         self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, 0, localPort, localAddr))
         self.con.listen()
@@ -37,7 +38,8 @@ class Listener:
 
 
     def handleRemind(self):
-        self.decline()
+        if self.waiting:
+            self.decline()
         return False
 
 
@@ -46,10 +48,10 @@ class Listener:
         return self.con.fileno()
 
 
-    # Called after select()
-    def task(self):
+    def rtask(self, readables, writables):
         self.reminder.skipNext = True
-        self.allowSelect = False
+        self.readable.off()
+        self.waiting = True
         self.myLink.connectAndCall(self.handleConnected)
 
 
@@ -66,12 +68,14 @@ class Listener:
 
     def accept(self, channelID, channelIDF):
 
-        if self.allowSelect:
-            return False
-
-        self.allowSelect = True
+        self.readable.on()
+        self.waiting = False
 
         connSocket, addr = self.con.tryAccept()
+        if not connSocket:
+            self.myLink.deleteChannel(self.reserveID)
+            self.reserveID = -1
+            return False
         connSocket.settimeout(0)
 
         self.myLink.upgradeChannel(channelID, channelIDF, connSocket)
@@ -82,14 +86,13 @@ class Listener:
 
     def decline(self):
 
-        if self.allowSelect:
-            return False
+        self.readable.on()
+        self.waiting = False
 
-        self.allowSelect = True
-
-        self.con.tryDecline()
+        addr = self.con.tryDecline()
 
         self.myLink.deleteChannel(self.reserveID)
         self.reserveID = -1
 
-        return True
+        return bool(addr)
+

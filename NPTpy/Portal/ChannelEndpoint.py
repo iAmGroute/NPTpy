@@ -7,15 +7,13 @@ class ChannelEndpoint:
     fields = [
         # Name,         Type,      Readable, Writable
         # ('myID',        CF.Int(),  True,     False),
-        ('myIDF',       CF.Int(),  True,     True),
-        ('allowSelect', CF.Bool(), True,     True)
+        ('myIDF',       CF.Int(),  True,     True)
     ]
 
     def __init__(self, myID, myIDF, myLink):
-        self.myID   = myID       # Local ID
-        self.myIDF  = myIDF      # Foreign ID
+        self.myID   = myID   # Local ID
+        self.myIDF  = myIDF  # Foreign ID
         self.myLink = myLink
-        self.allowSelect = False # Temporary
 
     def sendMessage(self, data, untracked=False):
         header  = b''
