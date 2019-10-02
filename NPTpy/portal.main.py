@@ -41,12 +41,14 @@ while True:
     except Exception as e:
         logging.exception(e)
 
-    server.stop()
-    s.join()
-    del s
-    del server
-    del api
-    del p
+    try:
+        server.stop()
+    except Exception as e:
+        pass
+    s      = None
+    server = None
+    api    = None
+    p      = None
     gc.collect()
     time.sleep(10)
 
