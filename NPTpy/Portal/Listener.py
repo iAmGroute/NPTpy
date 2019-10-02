@@ -2,12 +2,18 @@
 import logging
 import socket
 
+from enum import Enum
+
 import Globals
 import ConfigFields as CF
 
 from Common.Connector import Connector
 
 log = logging.getLogger(__name__)
+
+class Etypes(Enum):
+    Inited  = 0
+    Deleted = 1
 
 class Listener:
 
@@ -35,6 +41,12 @@ class Listener:
         self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, 0, localPort, localAddr))
         self.con.listen()
         self.reminder    = Globals.resetReminder.getDelegate(onRun={ self.handleRemind })
+        self.log         = Globals.logger.new(Globals.LogTypes.Listener)
+        self.log(Etypes.Inited, (myID, remotePort, remoteAddr, localPort, localAddr))
+
+
+    def __del__(self):
+        self.log(Etypes.Deleted, ())
 
 
     def handleRemind(self):

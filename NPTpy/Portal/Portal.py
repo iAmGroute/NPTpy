@@ -4,6 +4,8 @@ import socket
 import select
 import time
 
+from enum import Enum
+
 import Globals
 import ConfigFields as CF
 
@@ -14,6 +16,10 @@ from Common.Connector import Connector
 from .Link import Link
 
 log = logging.getLogger(__name__ + '  ')
+
+class Etypes(Enum):
+    Inited  = 0
+    Deleted = 1
 
 class Portal:
 
@@ -37,6 +43,12 @@ class Portal:
         self.conST       = None
         self.readable    = Globals.readables.new(self, isActive=False, canWake=True)
         self.writable    = Globals.writables.new(self, isActive=False, canWake=False)
+        self.log         = Globals.logger.new(Globals.LogTypes.Portal)
+        self.log(Etypes.Inited, (portalID, serverPort, serverAddr, port, address))
+
+
+    def __del__(self):
+        self.log(Etypes.Deleted, ())
 
 
     # Needed for select()

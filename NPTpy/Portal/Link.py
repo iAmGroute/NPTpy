@@ -2,7 +2,8 @@
 import logging
 import socket
 import time
-import enum
+
+from enum import Enum
 
 import Globals
 import ConfigFields as CF
@@ -19,9 +20,13 @@ from .Listener        import Listener
 log   = logging.getLogger(__name__ + '    ')
 logEP = logging.getLogger(__name__ + ' :EP')
 
+class Etypes(Enum):
+    Inited  = 0
+    Deleted = 1
+
 class Link:
 
-    class States(enum.Enum):
+    class States(Enum):
         Disconnected = 0
         WaitReady    = 1
         Forwarding   = 2
@@ -71,6 +76,13 @@ class Link:
         self.writable      = Globals.writables.new(self, isActive=False, canWake=True)
 
         self.waitingSince  = 0
+
+        self.log           = Globals.logger.new(Globals.LogTypes.Link)
+        self.log(Etypes.Inited, (isClient, myID, otherID, rtPort, rtAddr, ltPort, ltAddr))
+
+
+    def __del__(self):
+        self.log(Etypes.Deleted, ())
 
 
     def isIdle(self):

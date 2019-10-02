@@ -1,3 +1,6 @@
+from enum import Enum
+
+from Common.Log           import Logger
 from Common.Reminder      import Reminder
 from Common.TimedReminder import TimedReminder
 from Common.Selectables   import Selectables
@@ -11,3 +14,11 @@ reminders  = _reminders.getDelegate(onRun={ resetReminder.run, kaReminderRX.run,
 
 readables = Selectables(10)
 writables = Selectables(10)
+
+logger = Logger()
+
+class LogTypes(Enum):
+    Portal          = 1
+    Link            = 2
+    Listener        = 3
+    ChannelEndpoint = 4

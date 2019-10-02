@@ -1,6 +1,13 @@
 # Abstract class for channel endpoints
 
+from enum import Enum
+
+import Globals
 import ConfigFields as CF
+
+class Etypes(Enum):
+    Inited  = 0
+    Deleted = 1
 
 class ChannelEndpoint:
 
@@ -14,6 +21,11 @@ class ChannelEndpoint:
         self.myID   = myID   # Local ID
         self.myIDF  = myIDF  # Foreign ID
         self.myLink = myLink
+        self.log    = Globals.logger.new(Globals.LogTypes.ChannelEndpoint)
+        self.log(Etypes.Inited, (myID, myIDF))
+
+    def __del__(self):
+        self.log(Etypes.Deleted, ())
 
     def sendMessage(self, data, untracked=False):
         header  = b''
