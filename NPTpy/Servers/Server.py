@@ -35,7 +35,7 @@ class Server:
 
         self.relayInfoMessage = relayPort.to_bytes(2, 'little') + bytes(relayAddr, 'utf-8')
 
-        self.con = Connector(log,  Connector.new(socket.SOCK_STREAM, 2, port, address))
+        self.con = Connector(new=(socket.SOCK_STREAM, 2, port, address))
         self.con.secureServer(certFilename='server.cer', keyFilename='server.key')
         self.con.listen()
 
@@ -121,7 +121,7 @@ class Server:
 
 
     def connectRT(self):
-        self.conRT = Connector(logR, Connector.new(socket.SOCK_STREAM, 2, self.internalPort, self.internalAddr))
+        self.conRT = Connector(new=(socket.SOCK_STREAM, 2, self.internalPort, self.internalAddr))
         if not self.conRT.tryConnect((self.relayInternalAddr, self.relayInternalPort)):
             self.conRT = None
             time.sleep(10)

@@ -40,9 +40,9 @@ class MapRecord:
 class Relay:
 
     def __init__(self, port, address, internalPort, internalAddr):
-        self.con   = Connector(log,  Connector.new(socket.SOCK_STREAM, None,         port,      address)) # for portals/clients
+        self.con   = Connector(new=(socket.SOCK_STREAM, None,         port,      address)) # for portals/clients
         self.con.listen()
-        self.conST = Connector(logS, Connector.new(socket.SOCK_STREAM, None, internalPort, internalAddr)) # for server
+        self.conST = Connector(new=(socket.SOCK_STREAM, None, internalPort, internalAddr)) # for server
         self.conST.listen()
         self.connST = None
         self.connSockets = SlotList(16)
@@ -65,7 +65,7 @@ class Relay:
         connSocket, addr = self.conST.accept()
         if self.connST:
             self.removeManage()
-        self.connST = Connector(logS, connSocket)
+        self.connST = Connector(connSocket)
 
 
     def removeManage(self):

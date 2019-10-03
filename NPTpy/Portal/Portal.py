@@ -78,7 +78,7 @@ class Portal:
 
 
     def connectKA(self):
-        self.conST = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.port, self.address))
+        self.conST = Connector(new=(socket.SOCK_STREAM, 2, self.port, self.address))
         self.conST.secureClient(serverHostname='server', caFilename='server.cer')
         data = b''
         data += self.portalID

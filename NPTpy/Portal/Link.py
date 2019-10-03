@@ -192,7 +192,7 @@ class Link:
         data = token + b'0' * 56
 
         for i in range(3):
-            conRT = Connector(log, Connector.new(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
+            conRT = Connector(new=(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
             if conRT.tryConnect((relayAddr, relayPort)):
                 conRT.sendall(data)
                 # conRT.setKeepAlive()
@@ -313,7 +313,7 @@ class Link:
     def newChannel(self, channelIDF, devicePort, deviceAddr):
 
         for i in range(3):
-            conn = Connector(logEP, Connector.new(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
+            conn = Connector(new=(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
             if conn.tryConnect((deviceAddr, devicePort)):
                 conn.socket.settimeout(0)
                 return self.addChannel(channelIDF, conn)
@@ -323,7 +323,7 @@ class Link:
 
     def upgradeChannel(self, channelID, channelIDF, channelSocket):
 
-        conn = Connector(logEP, channelSocket)
+        conn = Connector(channelSocket)
 
         ep = self.eps[channelID]
         if not isinstance(self.eps[channelID], ChannelPlaceholder):

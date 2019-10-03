@@ -38,7 +38,7 @@ class Listener:
         self.readable    = Globals.readables.new(self, isActive=True, canWake=True)
         self.waiting     = False
         self.reserveID   = -1
-        self.con         = Connector(log, Connector.new(socket.SOCK_STREAM, 0, localPort, localAddr))
+        self.con         = Connector(new=(socket.SOCK_STREAM, 0, localPort, localAddr))
         self.con.listen()
         self.reminder    = Globals.resetReminder.getDelegate(onRun={ self.handleRemind })
         self.log         = Globals.logger.new(Globals.LogTypes.Listener)

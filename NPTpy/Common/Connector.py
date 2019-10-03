@@ -51,13 +51,14 @@ class Etypes(Enum):
 
 class Connector:
 
-    def __init__(self, log, _socket):
-        self.socket = _socket
-        self.log    = Globals.logger.new(Globals.LogTypes.Connector)
-        if _socket.type == socket.SOCK_STREAM:
-            _socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        sname = _socket.getsockname()
+    def __init__(self, fromSocket=None, new=None):
+        s = fromSocket if fromSocket else Connector.new(*new)
+        if s.type == socket.SOCK_STREAM:
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        sname = s.getsockname()
         address, port = sname[0], sname[1]
+        self.socket = s
+        self.log    = Globals.logger.new(Globals.LogTypes.Connector)
         self.log(Etypes.Inited, (address, port))
 
     @staticmethod
