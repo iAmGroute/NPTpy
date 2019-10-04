@@ -25,7 +25,7 @@ class Event:
         return self.registrations.then(callback)
 
     def fire(self, data=None):
-        self.registrations._fire(data)
+        self.registrations.fire(data)
 
     def isOneShot(self):
         return type(self.registrations) is PromiseOneShot
@@ -62,10 +62,10 @@ class Promise:
         if self.isWeak and not self.next:
             self.cancel()
 
-    def _fire(self, data):
+    def fire(self, data):
         self.value = self.callback(data)
         for p in self.next:
-            p._fire(self.value)
+            p.fire(self.value)
 
 
 class PromiseOneShot(Promise):
@@ -77,13 +77,13 @@ class PromiseOneShot(Promise):
     def then(self, callback):
         p = Promise.then(self, callback, PromiseOneShot)
         if self.hasFired:
-            p._fire(self.value)
+            p.fire(self.value)
         return p
 
-    def _fire(self, data):
+    def fire(self, data):
         if not self.hasFired:
             self.hasFired = True
-            Promise._fire(self, data)
+            Promise.fire(self, data)
             self.cancel()
 
 
