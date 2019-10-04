@@ -86,3 +86,11 @@ class PromiseOneShot(Promise):
             Promise._fire(self, data)
             self.cancel()
 
+
+class InstantPromise(PromiseOneShot):
+
+    def __init__(self, value):
+        PromiseOneShot.__init__(self, self, 0, None)
+        self.hasFired = True
+        self.value    = value
+
