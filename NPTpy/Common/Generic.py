@@ -4,6 +4,10 @@ def noop(*args, **kwargs):
     pass
 
 
+def identity(v):
+    return v
+
+
 def find(iterable, f):
     for item in iterable:
         if f(item):
