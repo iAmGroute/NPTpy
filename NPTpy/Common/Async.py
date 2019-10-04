@@ -1,15 +1,14 @@
 import weakref
 
-from Generic   import noop
+from .Generic  import noop, identity
 from .SlotList import SlotList
 
 class Promise:
 
-    def __init__(self, prev, myID, callback, isWeak=False):
+    def __init__(self, prev=None, myID=0, callback=identity):
         self.getPrev  = weakref.ref(prev) if prev else noop
         self.myID     = myID
         self.callback = callback
-        self.isWeak   = isWeak
         self.next     = SlotList()
         self.hasFired = False
         self.value    = None
@@ -18,7 +17,7 @@ class Promise:
         self.hasFired = False
 
     def then(self, callback):
-        p      = Promise(self, -1, callback, isWeak=self.isWeak)
+        p      = Promise(self, -1, callback)
         pID    = self.next.append(p)
         p.myID = pID
         if self.hasFired:
@@ -32,7 +31,7 @@ class Promise:
 
     def _cancel(self, pID):
         del self.next[pID]
-        if self.isWeak and not self.next:
+        if not self.next:
             self.cancel()
 
     def fire(self, data):
@@ -46,7 +45,7 @@ class Promise:
 class InstantPromise(Promise):
 
     def __init__(self, value):
-        Promise.__init__(self, None, 0, None)
+        Promise.__init__(self)
         self.hasFired = True
         self.value    = value
 
