@@ -46,7 +46,7 @@ class Connector:
         self.log(Etypes.Inited, (address, port))
 
     @staticmethod
-    def new(socketType=socket.SOCK_DGRAM, timeout=None, port=0, address='0.0.0.0', proto=0):
+    def new(socketType=socket.SOCK_DGRAM, timeout=0, port=0, address='0.0.0.0', proto=0):
         af = socket.AF_INET if address.count('.') == 3 else socket.AF_INET6
         s = socket.socket(af, socketType, proto)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -111,6 +111,7 @@ class Connector:
     def accept(self):
         self.log(Etypes.Accepting, ())
         conn, addr = self.socket.accept()
+        conn.settimeout(self.socket.gettimeout())
         self.log(Etypes.Accepted, (*addr,))
         return conn, addr
 
