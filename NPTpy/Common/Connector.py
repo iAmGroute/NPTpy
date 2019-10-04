@@ -8,22 +8,6 @@ import Globals
 
 from .this_OS import OS, this_OS
 
-# Log levels:
-#  - 25: State changes (Started, Stopped)
-#  - 23: Connections initiated by us, outgoing (Connecting to)
-#  - 21: Connections accepted, incoming (Connection from)
-#  - 20: Connections declined, incoming (Connection from)
-#  - 19: TLS handshake state changes (Complete, Error)
-#  - 18: TLS handshake update (Start/Resume)
-#  - 17: Exception in tryClose()
-#  - 15: Exception in TCP try send and receive
-#  - 12: UDP send and receive
-#  - 10: TCP send and receive
-#  -  7: UDP content
-#  -  5: TCP content
-#  -  4: TLS handshake state progress (WantRead, WantWrite)
-#  -  3: State change progress (Starting, Stopping)
-
 class Etypes(Enum):
     Error           = 0
     Inited          = 1
