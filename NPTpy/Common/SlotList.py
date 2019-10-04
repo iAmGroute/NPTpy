@@ -34,7 +34,7 @@ class SlotList_Iterator:
 
 class SlotList:
 
-    def __init__(self, capacityLog2, values=None):
+    def __init__(self, capacityLog2=1, values=None):
         self.capacityLog2 = capacityLog2
         self.capacity     = 1 << capacityLog2
         self.slots        = [Slot(0, i+1, None) for i in range(self.capacity - 1)] + [Slot(0, -1, None)]
@@ -46,10 +46,13 @@ class SlotList:
 
     def __len__(self):
         count = 0
-        for i in range(len(self.slots)):
-            if self.slots[i].val:
+        for slot in self.slots:
+            if slot.val:
                 count += 1
         return count
+
+    def __bool__(self):
+        return len(self) > 0
 
     def __iter__(self):
         return SlotList_Iterator(self)
@@ -136,4 +139,9 @@ class SlotList:
         if index < 0:
             return
         self.deleteByIndex(index)
+
+
+    def deleteAll(self):
+        for i in range(self.capacity):
+            self.deleteByIndex(i)
 
