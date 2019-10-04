@@ -5,10 +5,10 @@ from .SlotList import SlotList
 
 class Promise:
 
-    def __init__(self, prev=None, myID=0, callback=identity):
-        self.getPrev  = weakref.ref(prev) if prev else noop
-        self.myID     = myID
+    def __init__(self, callback=identity):
         self.callback = callback
+        self.getPrev  = noop
+        self.myID     = None
         self.next     = SlotList()
         self.hasFired = False
         self.value    = None
@@ -16,13 +16,23 @@ class Promise:
     def reset(self):
         self.hasFired = False
 
-    def then(self, callback):
-        p      = Promise(self, -1, callback)
-        pID    = self.next.append(p)
-        p.myID = pID
+    def attach(self, promise):
+        p         = promise
+        pID       = self.next.append(p)
+        p.getPrev = weakref.ref(self)
+        p.myID    = pID
         if self.hasFired:
             p.fire(self.value)
         return p
+
+    def then(self, callback):
+        return self.attach(Promise(callback))
+
+    def thenWait(self, callback):
+        return self.attach(PromiseWait(callback))
+
+    def tee(self, callback):
+        return self.attach(PromiseTee(callback))
 
     def cancel(self):
         prev = self.getPrev()
@@ -42,10 +52,37 @@ class Promise:
         self.cancel()
 
 
-class InstantPromise(Promise):
+def InstantPromise(value):
+    p = Promise()
+    p.hasFired = True
+    p.value    = value
+    return p
 
-    def __init__(self, value):
-        Promise.__init__(self)
+
+class PromiseWait(Promise):
+
+    def __init__(self, *args, **kwargs):
+        Promise.__init__(self, *args, **kwargs)
+        self.hasJoined = False
+
+    def fire(self, data):
+        if self.hasJoined:
+            Promise.fire(self, data)
+        else:
+            self.hasJoined = True
+            newRoot = self.callback(data)
+            self.callback = identity
+            self.cancel()
+            newRoot.attach(self)
+
+
+class PromiseTee(Promise):
+
+    def fire(self, data):
         self.hasFired = True
-        self.value    = value
+        self.callback(data)
+        self.value = data
+        for p in self.next:
+            p.fire(data)
+        self.cancel()
 
