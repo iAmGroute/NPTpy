@@ -47,7 +47,7 @@ class Promise:
 
     def then(self, callback, pClass=None):
         pClass = pClass if pClass else Promise
-        p = pClass(self, -1, callback)
+        p = pClass(self, -1, callback, isWeak=self.isWeak)
         pID = self.next.append(p)
         p.myID = pID
         return p
