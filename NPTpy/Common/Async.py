@@ -1,11 +1,11 @@
 import weakref
 
-from .Generic  import noop, identity
+from .Generic  import noop, identityMany
 from .SlotList import SlotList
 
 class Promise:
 
-    def __init__(self, callback=identity):
+    def __init__(self, callback=identityMany):
         self.callback = callback
         self.getPrev  = noop
         self.myID     = None
@@ -46,7 +46,7 @@ class Promise:
 
     def fire(self, data):
         self.hasFired = True
-        self.value = self.callback(data)
+        self.value = self.callback(*data)
         for p in self.next:
             p.fire(self.value)
         self.cancel()
@@ -70,8 +70,8 @@ class PromiseWait(Promise):
             Promise.fire(self, data)
         else:
             self.hasJoined = True
-            newRoot = self.callback(data)
-            self.callback = identity
+            newRoot = self.callback(*data)
+            self.callback = identityMany
             self.cancel()
             newRoot.attach(self)
 
@@ -80,7 +80,7 @@ class PromiseTee(Promise):
 
     def fire(self, data):
         self.hasFired = True
-        self.callback(data)
+        self.callback(*data)
         self.value = data
         for p in self.next:
             p.fire(data)
