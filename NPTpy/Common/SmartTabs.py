@@ -12,7 +12,9 @@ class SmartTabs:
         for a in range(0, min(len(cells), len(cols))):
             padding = cols[a] - len(cells[a])
             if padding > 0:
-                cells[a] += ' ' * padding
+                # No padding on the last cell
+                if a != len(cells) - 1:
+                    cells[a] += ' ' * padding
             else:
                 cols[a]  += -padding
 
@@ -27,7 +29,7 @@ class SmartTabs:
         cols  = self.columns
 
         # Pad as needed, but don't update existing columns
-        for a in range(0, min(len(cells), len(cols))):
+        for a in range(0, min(len(cells), len(cols)) - 1):
             padding = cols[a] - len(cells[a])
             if padding > 0:
                 cells[a] += ' ' * padding
