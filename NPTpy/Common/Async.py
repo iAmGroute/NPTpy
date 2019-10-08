@@ -1,7 +1,34 @@
 import weakref
+import asyncio
 
-from .Generic  import noop, identityMany
+from .Generic  import noop, identityMany, toTuple
 from .SlotList import SlotList
+
+# A very simple non-chainable promise with only 1 callback
+class Todo:
+
+    def __init__(self, now=False, action=None, params=()):
+        self.now     = now
+        self.action  = action
+        self.params  = params
+
+    def do(self, action):
+        if self.now:
+            action(*self.params)
+        else:
+            self.action = action
+
+    def fire(self, params=()):
+        self.now    = True
+        self.params = toTuple(params)
+        if self.action:
+            self.action(*self.params)
+            self.action = False
+
+    def reset(self):
+        self.now    = False
+        self.params = ()
+
 
 class Promise:
 
@@ -44,9 +71,9 @@ class Promise:
         if not self.next:
             self.cancel()
 
-    def fire(self, data):
+    def fire(self, params=()):
         self.hasFired = True
-        self.value = self.callback(*data)
+        self.value = self.callback(*toTuple(params))
         for p in self.next:
             p.fire(self.value)
         self.cancel()
@@ -65,12 +92,12 @@ class PromiseWait(Promise):
         Promise.__init__(self, *args, **kwargs)
         self.hasJoined = False
 
-    def fire(self, data):
+    def fire(self, params=()):
         if self.hasJoined:
-            Promise.fire(self, data)
+            Promise.fire(self, params)
         else:
             self.hasJoined = True
-            newRoot = self.callback(*data)
+            newRoot = self.callback(*toTuple(params))
             self.callback = identityMany
             self.cancel()
             newRoot.attach(self)
@@ -78,11 +105,48 @@ class PromiseWait(Promise):
 
 class PromiseTee(Promise):
 
-    def fire(self, data):
+    def fire(self, params=()):
         self.hasFired = True
-        self.callback(*data)
-        self.value = data
+        self.callback(*toTuple(params))
+        self.value = params
         for p in self.next:
-            p.fire(data)
+            p.fire(params)
         self.cancel()
+
+
+class Loop:
+
+    def __init__(self):
+        self.coroutines = {}
+        self.onReady    = Todo(now=True)
+
+    def watch(self, promise):
+        future = asyncio.Future()
+        promise.then(lambda *v: self.cont(future, v))
+        return future
+
+    def cont(self, future, v):
+        future.set_result(v)
+        self.onReady.do(lambda: self._cont(future))
+
+    def _cont(self, future):
+        try:
+            coroutine = self.coroutines[future]
+            del self.coroutines[future]
+            self.run(coroutine)
+        except KeyError:
+            pass
+
+    def run(self, coroutine):
+        self.onReady.reset()
+        try:
+            future = coroutine.send(None)
+            self.coroutines[future] = coroutine
+        except StopIteration:
+            pass
+        finally:
+            self.onReady.fire()
+
+
+loop = Loop()
 
