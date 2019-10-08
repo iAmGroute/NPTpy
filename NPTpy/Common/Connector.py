@@ -2,36 +2,11 @@
 import socket
 import ssl
 
-from enum import Enum
-
 import Globals
 
 from .this_OS import OS, this_OS
 
-class Etypes(Enum):
-    Error           = 0
-    Inited          = 1
-    Deleted         = 2
-    Closing         = 3
-    Closed          = 4
-    CloseError      = 5
-    Connecting      = 6
-    Connected       = 7
-    Accepting       = 8
-    Accepted        = 9
-    Declining       = 10
-    Declined        = 11
-    Handshake       = 12
-    HandshakeResult = 13
-    Listen          = 14
-    Sending         = 15
-    SendingTo       = 16
-    Sent            = 17
-    Receiving       = 18
-    Received        = 19
-    ReceivedFrom    = 20
-    Content         = 21
-
+from .Connector_log import LogClass, Etypes
 
 class Connector:
 
@@ -42,7 +17,7 @@ class Connector:
         sname = s.getsockname()
         address, port = sname[0], sname[1]
         self.socket = s
-        self.log    = Globals.logger.new(Globals.LogTypes.Connector)
+        self.log    = Globals.logger.new(LogClass)
         self.log(Etypes.Inited, (address, port))
 
     @staticmethod
@@ -78,7 +53,7 @@ class Connector:
         try:
             self.close()
         except OSError as e:
-            self.log(Etypes.CloseError, (repr(e)))
+            self.log(Etypes.CloseError, repr(e))
             return False
         return True
 
@@ -90,16 +65,16 @@ class Connector:
 
     def sendto(self, data, addr):
         self.log(Etypes.SendingTo, (len(data), *addr))
-        self.log(Etypes.Content, (data))
+        self.log(Etypes.Content, data)
         sentSize = self.socket.sendto(data, addr)
-        self.log(Etypes.Sent, (sentSize))
+        self.log(Etypes.Sent, sentSize)
         return sentSize
 
     def recvfrom(self, bufferSize):
-        self.log(Etypes.Receiving, (bufferSize))
+        self.log(Etypes.Receiving, bufferSize)
         data, addr = self.socket.recvfrom(bufferSize)
         self.log(Etypes.ReceivedFrom, (len(data), *addr))
-        self.log(Etypes.Content, (data))
+        self.log(Etypes.Content, data)
         return data, addr
 
     # Mainly TCP
@@ -131,7 +106,7 @@ class Connector:
             conn, addr = self.accept()
         except OSError as e:
             conn, addr = None, None
-            self.log(Etypes.Error, (repr(e)))
+            self.log(Etypes.Error, repr(e))
         return conn, addr
 
     def tryDecline(self):
@@ -139,7 +114,7 @@ class Connector:
             addr = self.decline()
         except OSError as e:
             addr = None
-            self.log(Etypes.Error, (repr(e)))
+            self.log(Etypes.Error, repr(e))
         return addr
 
     def connect(self, endpoint):
@@ -151,30 +126,30 @@ class Connector:
         try:
             self.connect(endpoint)
         except OSError as e:
-            self.log(Etypes.Error, (repr(e)))
+            self.log(Etypes.Error, repr(e))
             self.tryClose()
             return False
         return True
 
     def sendall(self, data):
-        self.log(Etypes.Sending, (len(data)))
-        self.log(Etypes.Content, (data))
+        self.log(Etypes.Sending, len(data))
+        self.log(Etypes.Content, data)
         self.socket.sendall(data)
-        self.log(Etypes.Sent, (len(data)))
+        self.log(Etypes.Sent, len(data))
 
     def trySendall(self, data):
         try:
             self.sendall(data)
             return True
         except OSError as e:
-            self.log(Etypes.Error, (repr(e)))
+            self.log(Etypes.Error, repr(e))
             return False
 
     def recv(self, bufferSize):
-        self.log(Etypes.Receiving, (bufferSize))
+        self.log(Etypes.Receiving, bufferSize)
         data = self.socket.recv(bufferSize)
-        self.log(Etypes.Received, (len(data)))
-        self.log(Etypes.Content, (data))
+        self.log(Etypes.Received, len(data))
+        self.log(Etypes.Content, data)
         return data
 
     def tryRecv(self, bufferSize):
@@ -186,7 +161,7 @@ class Connector:
                 # No data is available but the connection is still OK.
                 return None
             else:
-                self.log(Etypes.Error, (repr(e)))
+                self.log(Etypes.Error, repr(e))
                 return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
@@ -233,8 +208,8 @@ class Connector:
             result = Connector.HandshakeStatus.WantWrite
         # except ssl.SSLError:
         except OSError as e:
-            self.log(Etypes.Error, (repr(e)))
+            self.log(Etypes.Error, repr(e))
             result = Connector.HandshakeStatus.Error
-        self.log(Etypes.Handshake, (result))
+        self.log(Etypes.Handshake, result)
         return result
 
