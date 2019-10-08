@@ -26,6 +26,15 @@ def runAndRemove(aSet, f):
     aSet -= dead
     return len(dead)
 
+
+# Like weakref.ref but not weak, intended for consistency
+# when mixing refs and weak refs in countainers.
+class Ref:
+    def __init__(self, obj):
+        self.obj = obj
+    def __call__(self):
+        return self.obj
+
 class Counter:
     def __init__(self, initialValue=0):
         self.value = initialValue
