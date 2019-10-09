@@ -18,11 +18,11 @@ class Todo:
         else:
             self.action = action
 
-    def fire(self, params=()):
+    def __call__(self, *params):
         self.now    = True
-        self.params = toTuple(params)
+        self.params = params
         if self.action:
-            self.action(*self.params)
+            self.action(*params)
             self.action = False
 
     def reset(self):
@@ -45,9 +45,8 @@ class Promise:
 
     def attach(self, promise):
         p         = promise
-        pID       = self.next.append(p)
+        p.myID    = self.next.append(p)
         p.getPrev = weakref.ref(self)
-        p.myID    = pID
         if self.hasFired:
             p.fire(self.value)
         return p
@@ -77,6 +76,9 @@ class Promise:
         for p in self.next:
             p.fire(self.value)
         self.cancel()
+
+    def __call__(self, *params):
+        self.fire(params)
 
 
 def InstantPromise(value):
@@ -145,7 +147,7 @@ class Loop:
         except StopIteration:
             pass
         finally:
-            self.onReady.fire()
+            self.onReady()
 
 
 loop = Loop()
