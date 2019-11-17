@@ -1,33 +1,34 @@
 
-from enum import Enum
+from enum import Enum, auto
 
 class Etypes(Enum):
-    Error           = 0
-    Initing         = 1
-    Inited          = 2
-    Deleting        = 3
-    Deleted         = 4
-    Closing         = 5
-    Closed          = 6
-    Connecting      = 7
-    Connected       = 8
-    Accepting       = 9
-    Accepted        = 10
-    Declining       = 11
-    Declined        = 12
-    Handshake       = 13
-    HandshakeResult = 14
-    Listen          = 15
-    Sending         = 16
-    SendingTo       = 17
-    Sent            = 18
-    Receiving       = 19
-    Received        = 20
-    ReceivedFrom    = 21
-    Content         = 22
+    Error           = auto()
+    Initing         = auto()
+    Inited          = auto()
+    Closing         = auto()
+    Closed          = auto()
+    Connecting      = auto()
+    Connected       = auto()
+    Accepting       = auto()
+    Accepted        = auto()
+    Declining       = auto()
+    Declined        = auto()
+    Handshake       = auto()
+    HandshakeResult = auto()
+    Listen          = auto()
+    Sending         = auto()
+    SendingTo       = auto()
+    Sent            = auto()
+    Receiving       = auto()
+    Received        = auto()
+    ReceivedFrom    = auto()
+    Content         = auto()
 
 class LogClass:
-    typeID = None
-    name   = 'Connector'
-    etypes = Etypes
+    name     = 'Connector'
+    etypes   = Etypes
+    disabled = [
+        Etypes.Content,
+        Etypes.Handshake
+    ]
 

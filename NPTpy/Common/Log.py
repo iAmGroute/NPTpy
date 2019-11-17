@@ -5,63 +5,90 @@ from enum import Enum
 
 from .SmartTabs import t
 
-class BasicEtypes(Enum):
-    LogInited  = 0
-    LogDeleted = 1
+
+def getAllowList(count, enabled):
+    res = [False] * count
+    for item in enabled:
+        res[item.value] = True
+    return res
+
+
+def getDenyList(count, disabled):
+    res = [True] * count
+    for item in disabled:
+        res[item.value] = False
+    return res
+
+
+def getPrefix(log):
+    tstamp  = time.time()
+    logID   = log.myID.to_bytes(4, 'big').hex().upper()
+    logName = log.logClass.name
+    return f'{tstamp:.1f}\t [{logID}] {logName}:\t '
+
 
 class Logger:
 
     def __init__(self):
         self.logCount = 0
-        self.logTypes = []
 
-    def getLogName(self, log):
-        return self.logTypes[log.typeID].name
-
-    def getLogTypeID(self, logClass):
-        if not logClass.typeID:
-            logClass.typeID = len(self.logTypes)
-            self.logTypes.append(logClass)
-        return logClass.typeID
+    def processLogClass(self, logClass):
+        if not hasattr(logClass, 'enList'):
+            m = 0
+            for et in logClass.etypes:
+                assert type(et.value) is int
+                assert et.value > 0
+                if et.value > m:
+                    m = et.value
+            m += 1
+            if   hasattr(logClass, 'enabled'):  eL = getAllowList(m, logClass.enabled)
+            elif hasattr(logClass, 'disabled'): eL = getDenyList(m, logClass.disabled)
+            else:                               eL = getDenyList(m, {})
+            logClass.enList = eL
 
     def new(self, logClass):
+        self.processLogClass(logClass)
         logID = self.logCount
         self.logCount += 1
-        typeID = self.getLogTypeID(logClass)
-        return Log(self, logID, typeID)
+        return Log(self, logID, logClass)
+
+    def logCreated(self, log):
+        prefix = getPrefix(log)
+        print(t.over(f'{prefix}Log created'))
+
+    def logDeleted(self, log):
+        prefix = getPrefix(log)
+        print(t.over(f'{prefix}Log deleted'))
 
     def upgradeLog(self, log, newLogClass):
-        tstamp = time.time()
-        print(t.over('{0:.1f}\t Changing log [{1}] from <{2}> to <{3}>'.format(
-            tstamp, log.myID, self.getLogName(log), newLogClass.name
-        )))
-        log.typeID = self.getLogTypeID(newLogClass)
+        log.logClass = newLogClass
+        prefix       = getPrefix(log)
+        newName      = newLogClass.name
+        print(t.over(f'{prefix}Upgrading to <{newName}>'))
 
-    def print(self, log, entryType, data):
-        tstamp    = time.time()
-        logID     = log.myID.to_bytes(4, 'big').hex().upper()
-        logName   = self.getLogName(log)
-        entryName = entryType.name
-        entryData = data
-        print(t('{0:.1f}\t [{1}] {2}:\t {3}\t {4}'.format(tstamp, logID, logName, entryName, entryData)))
+    def print(self, log, etype, data):
+        if log.logClass.enList[etype.value]:
+            prefix = getPrefix(log)
+            ename  = etype.name
+            print(t(f'{prefix}{ename}\t {data}'))
 
 
 class Log:
 
-    def __init__(self, myLogger, myID, typeID):
+    def __init__(self, myLogger, myID, logClass):
         self.myLogger = myLogger
         self.myID     = myID
-        self.typeID   = typeID
+        self.logClass = logClass
         self.entries  = []
-        self.__call__(BasicEtypes.LogInited)
+        self.myLogger.logCreated(self)
 
     def __del__(self):
-        if hasattr(self, '__call__'):
-            self.__call__(BasicEtypes.LogDeleted)
+        if hasattr(self, 'myLogger'):
+            self.myLogger.logDeleted(self)
 
-    def __call__(self, entryType, *data):
-        # self.entries.append((entryType, data))
-        self.myLogger.print(self, entryType, data)
+    def __call__(self, etype, *data):
+        # self.entries.append((etype.value, repr(data)))
+        self.myLogger.print(self, etype, data)
 
     def upgrade(self, newLogClass):
         self.myLogger.upgradeLog(self, newLogClass)
@@ -83,7 +110,7 @@ class Log:
 #             self.contexes[name] = ctx
 #         return ctx()
 
-#     def log(self, entryType, data):
+#     def log(self, etype, data):
 
 
 

@@ -204,6 +204,6 @@ class Connector:
         except OSError as e:
             self.log(Etypes.Error, repr(e))
             result = Connector.HandshakeStatus.Error
-        self.log(Etypes.Handshake, result)
+        self.log(Etypes.HandshakeResult, result)
         return result
 

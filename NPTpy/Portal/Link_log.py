@@ -1,12 +1,11 @@
 
-from enum import Enum
+from enum import Enum, auto
 
 class Etypes(Enum):
-    Inited  = 0
-    Deleted = 1
+    Inited  = auto()
+    Deleted = auto()
 
 class LogClass:
-    typeID = None
     name   = 'Link'
     etypes = Etypes
 
