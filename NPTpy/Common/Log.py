@@ -53,11 +53,11 @@ class Log:
         self.myID     = myID
         self.typeID   = typeID
         self.entries  = []
-        self.__call__(BasicEtypes.LogInited, ())
+        self.__call__(BasicEtypes.LogInited)
 
     def __del__(self):
         if hasattr(self, '__call__'):
-            self.__call__(BasicEtypes.LogDeleted, ())
+            self.__call__(BasicEtypes.LogDeleted)
 
     def __call__(self, entryType, *data):
         # self.entries.append((entryType, data))
