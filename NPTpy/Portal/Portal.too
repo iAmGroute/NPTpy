@@ -1,0 +1,158 @@
+root                             = Portal
+ |  log                          = Log
+ |  links                        = SlotList
+ |----- item                     = Link
+ |       |  log                  = Log
+ |       |  listeners            = SlotList
+ |       |----- item             = Listener
+ |       |          log          = Log
+ |       |          con          = Connector
+ |       |          readable     = %Selectable
+ |       |- channels             = Channels
+ |       |   |- epControl        = ControlEndpoint
+ |       |   |      log          = Log
+ |       |   |      promises     = SlotList
+ |       |   |          item     = Promise
+ |       |   |  eps              = SlotList
+ |       |   '----- item         = Endpoint, DataEndpoint, &epControl
+ |       |              log      = Log
+ |       |              con      = Connector
+ |       |              readable = %Selectable
+ |       |              writable = %Selectable
+ |       '- connect              = EventAsync
+ |          conRT                = Connector, AsyncConnector
+ |          reminderRX           = %Reminder
+ |          reminderTX           = %Reminder
+ |          readable             = %Selectable
+ |          writable             = %Selectable
+ |- connect                      = EventAsync
+ |  conST                        = AsyncConnectorPacketized
+ |  promises                     = SlotList
+ '----- item                     = Promise
+
+
+# Portal
+
+Portal          ---> Link links.item:
+    teardown(self)
+    task(self, readyR, readyW)
+    connectToRelay(self, token, relayPort, relayAddr)
+Portal          <--- Link links.item:
+    requestRelay(self, otherID)                                async
+
+Portal          ---> EventAsync connect:
+    __call__(self)                                             async
+    isComplete(self)
+    isPendingOrComplete(self)
+    reset(self)
+Portal          <--- EventAsync connect:
+    _connect(self)                                             async
+
+Portal          ---> AsyncConnectorPacketized conST:
+    fileno(self)
+    setKeepAlive(self)
+    secureClient(self, serverHostname, caFilename)
+    tryConnectAsync(self, endpoint)                            async
+    doHandshakeAsync(self)                                     async
+    sendPacketAsync(self, packet)                              async
+    recvPacketAsync(self)                                      async
+    tryClose(self)
+
+Portal          ---> Promise promises.item:
+    __call__(self, *params)
+Portal          <--- Promise promises.item:
+    *RR(self, data)
+
+# Link
+
+Link            ---> Listener listeners.item:
+    rtask(self)
+Link            <--- Listener listeners.item:
+    requestChannel(self, remotePort, remoteAddr)               async
+    upgradeChannel(self, channelID, channelIDF, channelSocket)
+    deleteChannel(self, channelID)
+
+Link            ---> Channels channels:
+    teardown(self)
+    isEmpty(self)
+    requestChannel(self, remotePort, remoteAddr)               async
+    upgradeChannel(self, channelID, channelIDF, channelSocket)
+    deleteChannel(self, channelID)
+    acceptMessage(self, channelID, data)
+    readAll(self, readables)
+Link            <--- Channels channels:
+    send(self, data)
+
+Link            ---> EventAsync connect:
+    __call__(self, **kwargs)                                   async
+    isPending(self)
+    isComplete(self)
+    reset(self)
+Link            <--- EventAsync connect:
+    _connect(self, ?info)                                      async
+
+Link            ---> Connector conRT:
+    fileno(self)
+    tryClose(self)
+    tryRecv(self, bufferSize)
+    sendall(self, data)
+Link            ---> AsyncConnector conRT:
+    tryConnectAsync(self, endpoint)                            async
+    trySendallAsync(self, data)                                async
+    tryRecvAsync(self, bufferSize)                             async
+    secureClient(self, serverHostname, caFilename)
+    secureServer(self, certFilename, keyFilename)
+    doHandshakeAsync(self)                                     async
+
+Link            ---> %Reminder reminderRX:
+Link            ---> %Reminder reminderTX:
+    skipNext
+    enabled
+Link            <--? %Reminder reminderRX:
+    handleRemindRX(self)
+Link            <--? %Reminder reminderTX:
+    handleRemindTX(self)
+
+Link            ---> %Selectable readable:
+Link            ---> %Selectable writable:
+    on(self)
+    off(self)
+
+# Listener
+
+Listener        ---> Connector con:
+    listen(self)
+    fileno(self)
+    tryAccept(self)
+    tryDecline(self)
+
+Listener        ---> %Selectable readable:
+    on(self)
+    off(self)
+
+# Channels
+
+Channels        ---> *Endpoint eps.item:
+    getMessages(self)
+Channels        <--- *Endpoint eps.item:
+    _remove(self, channelID)
+
+Channels        ---> ControlEndpoint epControl:
+    requestNewChannel(self, channelID, devicePort, deviceAddr) async
+    requestDeleteChannel(self, channelID, channelIDF)          async
+Channels        <--- ControlEndpoint epControl:
+    send(self, data)
+    newChannel(self, channelIDF, devicePort, deviceAddr)       async
+    deleteChannel(self, channelID)
+
+# *Endpoint
+
+DataEndpoint    ---> Connector con:
+    socket.settimeout(self, timeout)
+    fileno(self)
+    tryRecv(self, bufferSize)
+    sendall(self, data)
+
+ControlEndpoint ---> Promise promises.item:
+    __call__(self, *params)
+

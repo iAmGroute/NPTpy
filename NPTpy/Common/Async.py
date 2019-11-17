@@ -1,44 +1,22 @@
 import weakref
 import asyncio
 
-from .Generic  import noop, identityMany, toTuple
+from .Generic  import nop, identityMany, toTuple
 from .SlotList import SlotList
-
-# A very simple non-chainable promise with only 1 callback
-class Todo:
-
-    def __init__(self, now=False, action=None, params=()):
-        self.now     = now
-        self.action  = action
-        self.params  = params
-
-    def do(self, action):
-        if self.now:
-            action(*self.params)
-        else:
-            self.action = action
-
-    def __call__(self, *params):
-        self.now    = True
-        self.params = params
-        if self.action:
-            self.action(*params)
-            self.action = False
-
-    def reset(self):
-        self.now    = False
-        self.params = ()
-
 
 class Promise:
 
     def __init__(self, callback=identityMany):
         self.callback = callback
-        self.getPrev  = noop
+        self.getPrev  = nop
         self.myID     = None
         self.next     = SlotList()
         self.hasFired = False
         self.value    = None
+
+    def __del__(self):
+        if not self.hasFired:
+            self.fire()
 
     def reset(self):
         self.hasFired = False
@@ -54,16 +32,18 @@ class Promise:
     def then(self, callback):
         return self.attach(Promise(callback))
 
-    def thenWait(self, callback):
-        return self.attach(PromiseWait(callback))
+    # def thenWait(self, callback):
+    #     return self.attach(PromiseWait(callback))
 
-    def tee(self, callback):
-        return self.attach(PromiseTee(callback))
+    # def tee(self, callback):
+    #     return self.attach(PromiseTee(callback))
 
     def cancel(self):
         prev = self.getPrev()
         if prev:
             prev._cancel(self.myID)
+        for p in self.next:
+            p.cancel()
 
     def _cancel(self, pID):
         del self.next[pID]
@@ -81,28 +61,28 @@ class Promise:
         self.fire(params)
 
 
-def InstantPromise(value):
-    p = Promise()
-    p.hasFired = True
-    p.value    = value
-    return p
+# def InstantPromise(value):
+#     p = Promise()
+#     p.hasFired = True
+#     p.value    = value
+#     return p
 
 
-class PromiseWait(Promise):
+# class PromiseWait(Promise):
 
-    def __init__(self, *args, **kwargs):
-        Promise.__init__(self, *args, **kwargs)
-        self.hasJoined = False
+#     def __init__(self, *args, **kwargs):
+#         Promise.__init__(self, *args, **kwargs)
+#         self.hasJoined = False
 
-    def fire(self, params=()):
-        if self.hasJoined:
-            Promise.fire(self, params)
-        else:
-            self.hasJoined = True
-            newRoot = self.callback(*toTuple(params))
-            self.callback = identityMany
-            self.cancel()
-            newRoot.attach(self)
+#     def fire(self, params=()):
+#         if self.hasJoined:
+#             Promise.fire(self, params)
+#         else:
+#             self.hasJoined = True
+#             newRoot = self.callback(*toTuple(params))
+#             self.callback = identityMany
+#             self.cancel()
+#             newRoot.attach(self)
 
 
 class PromiseTee(Promise):
@@ -119,17 +99,31 @@ class PromiseTee(Promise):
 class Loop:
 
     def __init__(self):
+        self.stopped    = False
         self.coroutines = {}
-        self.onReady    = Todo(now=True)
+        self._ready   = Promise()
+        self._ready()
+
+    def stop(self):
+        self.stopped    = True
+        self.coroutines = {}
+
+    def stop(self):
+        self.stopped    = True
+        self.coroutines = {}
 
     def watch(self, promise):
+        if self.stopped:
+            return None
         future = asyncio.Future()
-        promise.then(lambda *v: self.cont(future, v))
+        promise.then(lambda *v: self._resolve(future, v))
         return future
 
-    def cont(self, future, v):
+    def _resolve(self, future, v):
+        if   len(v) == 0: v = None
+        elif len(v) == 1: v = v[0]
         future.set_result(v)
-        self.onReady.do(lambda: self._cont(future))
+        self._ready.then(lambda: self._cont(future))
 
     def _cont(self, future):
         try:
@@ -140,15 +134,93 @@ class Loop:
             pass
 
     def run(self, coroutine):
-        self.onReady.reset()
+        if self.stopped:
+            return
+        self._ready.reset()
         try:
             future = coroutine.send(None)
             self.coroutines[future] = coroutine
         except StopIteration:
             pass
         finally:
-            self.onReady()
+            self._ready()
 
 
 loop = Loop()
+
+
+# class Event:
+
+#     def __init__(self, fStart, fCancel=nop, fAfter=identityMany):
+#         self.fStart  = fStart
+#         self.fCancel = fCancel
+#         self.promise = Promise(fAfter)
+#         self.pending = False
+
+#     def isPending(self):
+#         return self.pending
+
+#     def isComplete(self):
+#         return self.promise.hasFired
+
+#     def start(self):
+#         if not self.pending and not self.isComplete():
+#             ok = self.fStart()
+#             if not ok:
+#                 return None
+#             self.pending = True
+#         return self.promise
+
+#     def cancel(self):
+#         if self.pending:
+#             ok = self.fCancel()
+#             if not ok:
+#                 return False
+#             self.pending = False
+#         self.promise.reset()
+#         self.promise.cancel()
+#         return True
+
+#     def complete(self, *params):
+#         if self.pending:
+#             self.pending = False
+#             self.promise.fire(params)
+
+#     async def __call__(self):
+#         p = self.start()
+#         return (await loop.watch(p)) if p else None
+
+
+class EventAsync:
+
+    def __init__(self, f):
+        self.f = f
+        self.promise = Promise()
+        self.pending = False
+
+    async def __call__(self, *args, **kwargs):
+        if not self.isPendingOrComplete():
+            self.pending = True
+            result = await self.f(*args, **kwargs)
+            self.promise.fire(result)
+            self.pending = False
+            if not result:
+                self.reset()
+            return result
+        elif self.pending:
+            return await loop.watch(self.promise)
+        else:
+            return self.promise.value
+
+    def isPending(self):
+        return self.pending
+
+    def isComplete(self):
+        return self.promise.hasFired
+
+    def isPendingOrComplete(self):
+        return self.pending or self.promise.hasFired
+
+    def reset(self):
+        self.promise.reset()
 

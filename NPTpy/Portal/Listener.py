@@ -2,18 +2,15 @@
 import logging
 import socket
 
-from enum import Enum
-
 import Globals
 import ConfigFields as CF
 
 from Common.Connector import Connector
+from Common.Async     import loop
+
+from .Listener_log import LogClass, Etypes
 
 log = logging.getLogger(__name__)
-
-class Etypes(Enum):
-    Inited  = 0
-    Deleted = 1
 
 class Listener:
 
@@ -23,88 +20,46 @@ class Listener:
         ('remotePort',  CF.Port(),    True,     True),
         ('remoteAddr',  CF.Address(), True,     True),
         ('localPort',   CF.Port(),    True,     True),
-        ('localAddr',   CF.Address(), True,     True),
-        ('waiting',     CF.Bool(),    True,     True),
-        ('reserveID',   CF.Int(),     True,     True)
+        ('localAddr',   CF.Address(), True,     True)
     ]
 
     def __init__(self, myID, myLink, remotePort, remoteAddr, localPort, localAddr):
+        self.log         = Globals.logger.new(LogClass)
         self.myID        = myID
         self.myLink      = myLink
         self.remotePort  = remotePort
         self.remoteAddr  = remoteAddr
         self.localPort   = localPort
         self.localAddr   = localAddr
-        self.readable    = Globals.readables.new(self, isActive=True, canWake=True)
-        self.waiting     = False
-        self.reserveID   = -1
         self.con         = Connector(new=(socket.SOCK_STREAM, 0, localPort, localAddr))
         self.con.listen()
-        self.reminder    = Globals.resetReminder.getDelegate(onRun={ self.handleRemind })
-        self.log         = Globals.logger.new(Globals.LogTypes.Listener)
-        self.log(Etypes.Inited, (myID, remotePort, remoteAddr, localPort, localAddr))
-
-
-    def __del__(self):
-        self.log(Etypes.Deleted, ())
-
-
-    def handleRemind(self):
-        if self.waiting:
-            self.decline()
-        return False
-
+        self.readable    = Globals.readables.new(self, isActive=True, canWake=True)
+        self.log(Etypes.Inited, myID, remotePort, remoteAddr, localPort, localAddr)
 
     # Needed for select()
     def fileno(self):
         return self.con.fileno()
 
-
-    def rtask(self, readables, writables):
-        self.reminder.skipNext = True
+    def rtask(self):
         self.readable.off()
-        self.waiting = True
-        self.myLink.connectAndCall(self.handleConnected)
+        loop.run(self.main())
 
-
-    def handleConnected(self, ok):
-        if ok:
-            self.reserveID = self.myLink.reserveChannel(self)
-            if self.reserveID > 0:
-                self.myLink.epControl.requestNewChannel(self.reserveID, self.remotePort, self.remoteAddr)
-            else:
-                self.decline()
+    async def main(self):
+        result = await self.myLink.requestChannel(self.remotePort, self.remoteAddr)
+        self.readable.on()
+        if result:
+            self.accept(*result)
         else:
             self.decline()
 
-
     def accept(self, channelID, channelIDF):
-
-        self.readable.on()
-        self.waiting = False
-
         connSocket, addr = self.con.tryAccept()
-        if not connSocket:
-            self.myLink.deleteChannel(self.reserveID)
-            self.reserveID = -1
-            return False
-        connSocket.settimeout(0)
-
-        self.myLink.upgradeChannel(channelID, channelIDF, connSocket)
-        self.reserveID = -1
-
-        return True
-
+        if connSocket:
+            connSocket.settimeout(0)
+            self.myLink.upgradeChannel(channelID, channelIDF, connSocket)
+        else:
+            self.myLink.deleteChannel(channelID)
 
     def decline(self):
-
-        self.readable.on()
-        self.waiting = False
-
         addr = self.con.tryDecline()
-
-        self.myLink.deleteChannel(self.reserveID)
-        self.reserveID = -1
-
-        return bool(addr)
 

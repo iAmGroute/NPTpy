@@ -9,6 +9,7 @@ import webbrowser
 from Portal.PortalConfig import PortalConfig
 from Portal.PortalAPI    import PortalAPI
 from Common.SimpleServer import SimpleServer
+from Common.Async        import loop
 
 portalConfig = PortalConfig('portal.config.json')
 portalConfig.save()
@@ -30,7 +31,7 @@ while True:
 
         if firstIter:
             firstIter = False
-            webbrowser.open('http://127.0.0.1:8000')
+            # webbrowser.open('http://127.0.0.1:8000')
 
         while True:
             p.main()
@@ -46,7 +47,9 @@ while True:
         logging.exception(e)
 
     try:
+        loop.stop()
         server.stop()
+        p.teardown()
     except Exception as e:
         pass
     s      = None

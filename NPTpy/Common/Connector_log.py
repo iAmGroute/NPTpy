@@ -3,27 +3,28 @@ from enum import Enum
 
 class Etypes(Enum):
     Error           = 0
-    Inited          = 1
-    Deleted         = 2
-    Closing         = 3
-    Closed          = 4
-    CloseError      = 5
-    Connecting      = 6
-    Connected       = 7
-    Accepting       = 8
-    Accepted        = 9
-    Declining       = 10
-    Declined        = 11
-    Handshake       = 12
-    HandshakeResult = 13
-    Listen          = 14
-    Sending         = 15
-    SendingTo       = 16
-    Sent            = 17
-    Receiving       = 18
-    Received        = 19
-    ReceivedFrom    = 20
-    Content         = 21
+    Initing         = 1
+    Inited          = 2
+    Deleting        = 3
+    Deleted         = 4
+    Closing         = 5
+    Closed          = 6
+    Connecting      = 7
+    Connected       = 8
+    Accepting       = 9
+    Accepted        = 10
+    Declining       = 11
+    Declined        = 12
+    Handshake       = 13
+    HandshakeResult = 14
+    Listen          = 15
+    Sending         = 16
+    SendingTo       = 17
+    Sent            = 18
+    Receiving       = 19
+    Received        = 20
+    ReceivedFrom    = 21
+    Content         = 22
 
 class LogClass:
     typeID = None

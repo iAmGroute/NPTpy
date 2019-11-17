@@ -1,6 +1,5 @@
 
-
-def noop(*args, **kwargs):
+def nop(*args, **kwargs):
     pass
 
 def identity(v):
@@ -26,7 +25,6 @@ def runAndRemove(aSet, f):
     aSet -= dead
     return len(dead)
 
-
 # Like weakref.ref but not weak, intended for consistency
 # when mixing refs and weak refs in countainers.
 class Ref:
@@ -34,12 +32,4 @@ class Ref:
         self.obj = obj
     def __call__(self):
         return self.obj
-
-class Counter:
-    def __init__(self, initialValue=0):
-        self.value = initialValue
-    def __call__(self, increment=1):
-        result = self.value
-        self.value += increment
-        return result
 

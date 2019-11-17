@@ -1,97 +1,119 @@
 
+import random
+
 from SlotList import *
 
-sl = SlotList(2)
+sl = SlotList()
 
+# Start empty
 assert len(sl) == 0
 
-assert sl.append('Hello')   == 0  and len(sl) == 1
-assert sl.append('World')   == 1  and len(sl) == 2
-assert sl.append('Hello 2') == 2  and len(sl) == 3
-assert sl.append('World 2') == 3  and len(sl) == 4
-assert sl.append('World 3') == -1 and len(sl) == 4
+# Append
+assert sl.append('Hello 0') == 0 and len(sl) == 1
+assert sl.append('Hello 1') == 1 and len(sl) == 2
+assert sl.append('Hello 2') == 2 and len(sl) == 3
+assert sl.append('Hello 3') == 3 and len(sl) == 4
 
-assert sl[0] == 'Hello'
-assert sl[1] == 'World'
+# Accessible (only) by given IDs
+assert sl[0] == 'Hello 0'
+assert sl[1] == 'Hello 1'
 assert sl[2] == 'Hello 2'
-assert sl[3] == 'World 2'
+assert sl[3] == 'Hello 3'
+assert sl[4] == None
 
+# Deletion
+del sl[1]
+assert len(sl) == 3
+assert sl[1] == None
+assert sl[3] == 'Hello 3'
+assert sl[4] == None
+
+# Iteration
+assert list(sl) == ['Hello 0', 'Hello 2', 'Hello 3']
+
+# IDs should increment and old ones be invalid
+newID = sl.append('Hello new')
+assert newID > 3
+assert sl[1] == None
+assert sl[3] == 'Hello 3'
+assert sl[newID] == 'Hello new'
+
+# 'del' on old IDs should have no effect
 del sl[1]
 assert sl[1] == None
-assert sl[5] == None
+assert sl[3] == 'Hello 3'
+assert sl[newID] == 'Hello new'
 
-# Gen should increment
-assert sl.append('Hello 3') == 5
-assert sl[1] == None
-assert sl[5] == 'Hello 3'
-assert sl[9] == None
+del sl
 
-# Del on old gen should have no effect
-del sl[1]
-assert sl[1] == None
-assert sl[5] == 'Hello 3'
+# Grow after deletion
+sl = SlotList()
+sl.append('0')
+sl.append('1')
+sl.append('2')
+sl.append('3')
+del sl[2]
+newID  = sl.append('new')
+newID2 = sl.append('new2')
+assert sl[0] == '0'
+assert sl[1] == '1'
+assert sl[2] == None
+assert sl[3] == '3'
+assert sl[newID]  == 'new'
+assert sl[newID2] == 'new2'
 
-# Assign order should be the same as delete order (oldest first)
+del sl
 
+# Assign order should be the same as delete order (oldest first / LRU)
+sl = SlotList()
+sl.append('0')
+sl.append('1')
+sl.append('2')
+sl.append('3')
 del sl[3]
 del sl[0]
 assert sl[3] == None
 assert sl[0] == None
+a = sl.append('Hello a')
+b = sl.append('Hello b')
+# without LRU, we would expect 'b > a' (since 'b' is added later)
+# with LRU, 'a' should go where '3' previously was, and 'b' where '0' was:
+assert a > b
 
-assert sl.append('Hello 4') == 7
+# deleteAll()
+sl.deleteAll()
+assert len(sl) == 0
+assert sl.append('Test') > a
 
-del sl[5]
-del sl[2]
+del sl
 
-assert sl.append('Hello 5') == 4
-assert sl.append('Hello 6') == 9
-assert sl.append('Hello 7') == 6
+# Stress test
+sl = SlotList()
+d  = {}
+for i in range(251):
+    v     = f'Hello {i}'
+    ID    = sl.append(v)
+    d[ID] = v
+for i in range(241):
+    ID = random.randrange(0, 251)
+    del sl[ID]
+    if ID in d:
+        del d[ID]
+for i in range(2111):
+    v     = f'Hello {251 + i}'
+    ID    = sl.append(v)
+    d[ID] = v
+# check length and values
+assert len(sl) == len(d)
+for i in range(251 + 241 + 2111):
+    assert sl[i] == d.get(i)
+# also check iteration
+sd = set(d.values())
+for item in sl:
+    assert item in sd
+del sl
+del d
+del sd
 
-# Check assignments
-
-for i in range(4):
-    assert sl[i] == None, '@ i == {0}'.format(i)
-
-assert sl[4] == 'Hello 5'
-assert sl[5] == None
-assert sl[6] == 'Hello 7'
-assert sl[7] == 'Hello 4'
-
-assert sl[8] == None
-assert sl[9] == 'Hello 6'
-assert sl[10] == None
-assert sl[11] == None
-
-for i in range(12, 128):
-    assert sl[i] == None, '@ i == {0}'.format(i)
-
-# No more space left
-assert sl.append('World 4') == -1
-
-
-# Delete all slots
-
-del sl[4]
-
-del sl[6]
-del sl[7]
-
-del sl[9]
-
-assert sl.append('Hello 8') == 8
-for i in range(128):
-    assert sl[i] == ('Hello 8' if i == 8 else None), '@ i == {0}'.format(i)
-
-del sl[8]
-
-assert sl.append('Hello 9') == 10
-for i in range(128):
-    assert sl[i] == ('Hello 9' if i == 10 else None), '@ i == {0}'.format(i)
-
-del sl[10]
-
-for i in range(128):
-    assert sl[i] == None, '@ i == {0}'.format(i)
-
-
+# OK
 print('OK')

@@ -77,7 +77,7 @@ class Obj(Field):
 
     def map(self, val, operation):
         r = {}
-        for fname, ftype, _, _ in self.fields:
+        for fname, ftype in self.fields:
             if fname in val:
                 try:
                     r[fname] = operation(ftype, val[fname])

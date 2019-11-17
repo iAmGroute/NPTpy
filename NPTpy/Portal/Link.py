@@ -1,104 +1,133 @@
 
 import logging
 import socket
-import time
-
-from enum import Enum
 
 import Globals
 import ConfigFields as CF
 
-from Common.SmartTabs import t
-from Common.SlotList  import SlotList
-from Common.Connector import Connector
-
-from .ChannelEndpoint import ChannelEndpoint, ChannelPlaceholder
-from .ChannelControl  import ChannelControl
-from .ChannelData     import ChannelData
-from .Listener        import Listener
+from Common.SlotList       import SlotList
+from Common.Connector      import Connector
+from Common.AsyncConnector import AsyncConnector
+from Common.Async          import EventAsync, loop
+from .Channels             import Channels
+from .Listener             import Listener
+from .Link_log             import LogClass, Etypes
 
 log   = logging.getLogger(__name__ + '    ')
 logEP = logging.getLogger(__name__ + ' :EP')
 
-class Etypes(Enum):
-    Inited  = 0
-    Deleted = 1
-
 class Link:
 
-    class States(Enum):
-        Disconnected = 0
-        WaitReady    = 1
-        Forwarding   = 2
-
-    fields = [
-        # Name,          Type,            Readable, Writable
-        # ('myID',         CF.Int(),        True,     False),
-        ('isClient',     CF.Bool(),       True,     True),
-        ('otherID',      CF.PortalID(),   True,     True),
-        ('rtPort',       CF.Port(),       True,     True),
-        ('rtAddr',       CF.Address(),    True,     True),
-        ('ltPort',       CF.Port(),       True,     True),
-        ('ltAddr',       CF.Address(),    True,     True),
-        ('state',        CF.Enum(States), True,     True),
-        ('waitingSince', CF.Float(),      True,     True),
-        ('kaCountIdle',  CF.Int(),        True,     True),
-        ('buffer',       CF.Hex(),        True,     True),
-        ('listeners',    CF.SlotList(),   True,     True),
-        ('eps',          CF.SlotList(),   True,     True)
-    ]
-
-    def __init__(self, isClient, myID, myPortal, otherID, rtPort=0, rtAddr='0.0.0.0', ltPort=0, ltAddr='0.0.0.0'):
-
+    def __init__(self, isClient, myID, myPortal, otherID, rtPort, rtAddr, ltPort, ltAddr):
+        self.log           = Globals.logger.new(LogClass)
         self.isClient      = isClient
         self.myID          = myID
         self.myPortal      = myPortal
         self.otherID       = otherID
         self.rtPort        = rtPort
         self.rtAddr        = rtAddr
-        self.ltPort        = ltPort
-        self.ltAddr        = ltAddr
-
-        self.listeners     = SlotList(6)
-
-        self.epControl     = ChannelControl(0, 0, self)
-        self.eps           = SlotList(10, [self.epControl])
-        assert self.eps[0] is self.epControl
-
+        self.listeners     = SlotList()
+        self.channels      = Channels(self, ltPort, ltAddr)
         self.buffer        = b''
-        self.state         = self.States.Disconnected
+        self.connect       = EventAsync(self._connect)
         self.conRT         = None
-        self.onConnected   = []
-        self.reminderRX    = Globals.kaReminderRX.getDelegate(onRun={ self.handleRemindRx })
-        self.reminderTX    = Globals.kaReminderTX.getDelegate(onRun={ self.handleRemindTx })
+        self.reminderRX    = Globals.kaReminderRX.new(enabled=False, onRun=self.handleRemindRX)
+        self.reminderTX    = Globals.kaReminderTX.new(enabled=False, onRun=self.handleRemindTX)
         self.kaCountIdle   = 0
         self.readable      = Globals.readables.new(self, isActive=False, canWake=True)
-        self.writable      = Globals.writables.new(self, isActive=False, canWake=True)
+        self.writable      = Globals.writables.new(self, isActive=False, canWake=False)
+        self.log(Etypes.Inited, isClient, myID, otherID, rtPort, rtAddr, ltPort, ltAddr)
 
-        self.waitingSince  = 0
+    def teardown(self):
+        self.channels.teardown()
+        self.listeners = None
+        self.channels  = None
+        self.connect   = None
 
-        self.log           = Globals.logger.new(Globals.LogTypes.Link)
-        self.log(Etypes.Inited, (isClient, myID, otherID, rtPort, rtAddr, ltPort, ltAddr))
+    # Needed for select()
+    def fileno(self):
+        return self.conRT.fileno()
 
+# Connect
 
-    def __del__(self):
-        self.log(Etypes.Deleted, ())
+    async def _connect(self, info=None):
+        clientSide = info is None
+        if clientSide:
+            if not self.isClient:
+                return False
+            info = await self.myPortal.requestRelay(self.otherID)
+            if not info:
+                return False
+        conRT = await self._connectViaRelay(*info)
+        if not conRT:
+            return False
+        conRT = await self._secureForward(conRT, clientSide)
+        if not conRT:
+            return False
+        self.conRT = Connector(fromSocket=conRT.socket)
+        self.readable.on()
+        self.writable.on()
+        self.kaCountIdle         = 0
+        self.reminderRX.skipNext = True
+        self.reminderRX.enabled  = True
+        return True
 
+    def connectToRelay(self, token, relayPort, relayAddr):
+        # Todo: uncomment isIdle() condition
+        # if self.isIdle():
+        self.disconnect()
+        loop.run(self.connect(info=(token, relayPort, relayAddr)))
+        return True
+        # else:
+        #     return False
+
+    async def _connectViaRelay(self, token, relayPort, relayAddr):
+        data = token + b'0' * 56
+        conRT = AsyncConnector(
+            Globals.readables,
+            Globals.writables,
+            new=(socket.SOCK_STREAM, 0, self.rtPort, self.rtAddr)
+        )
+        if not await conRT.tryConnectAsync((relayAddr, relayPort)): return None
+        if not await conRT.trySendallAsync(data):                   return None
+        reply = await conRT.tryRecvAsync(64)
+        if reply != data:                                           return None
+        reply = await conRT.tryRecvAsync(8)
+        if reply != b'Ready !\n':                                   return None
+        return conRT
+
+    async def _secureForward(self, conRT, clientSide):
+        try:
+            if clientSide:
+                conRT.secureClient(serverHostname='portal', caFilename='portal.cer')
+            else:
+                conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
+            ok = await conRT.doHandshakeAsync()
+            if ok:
+                return conRT
+        except OSError as e:
+            log.error(e)
+        return None
+
+    def disconnect(self):
+        if self.connect.isComplete():
+            self.connect.reset()
+            self.conRT.tryClose()
+            self.conRT = None
+            self.readable.off()
+            self.writable.off()
+
+    async def reconnect(self):
+        self.disconnect()
+        return await self.connect()
 
     def isIdle(self):
-        return self.kaCountIdle > 3 and not self.onConnected and len(self.eps) <= 1
-
-    def handleRemindRx(self):
-        if self.state != self.States.Disconnected:
-            self.connectionLost('RX keepalive timeout')
-        return False
-
-    def handleRemindTx(self):
-        self.kaCountIdle += 1
-        if self.state == self.States.Forwarding:
-            self.epControl.sendKA()
-        return False
-
+        return \
+            not self.connect.isPending() \
+            and (
+                not self.connect.isComplete() \
+                or  self.kaCountIdle > 3 and self.channels.isEmpty()
+            )
 
     def connectionLost(self, reason='N/A'):
         log.warn('Connection lost, reason: {0}'.format(reason))
@@ -107,276 +136,127 @@ class Link:
             self.disconnect()
         else:
             log.warn('Reconnecting')
-            self.reconnect()
+            loop.run(self.reconnect())
 
+# Keepalives
+
+    def handleRemindRX(self):
+        if self.connect.isComplete():
+            self.connectionLost('RX keepalive timeout')
+
+    def handleRemindTX(self):
+        self.kaCountIdle += 1
+        if self.connect.isComplete():
+            self.epControl.sendKA()
+
+# Listeners
 
     def addListener(self, remotePort, remoteAddr, localPort, localAddr):
-        listener      = Listener(-1, self, remotePort, remoteAddr, localPort, localAddr)
-        listenerID    = self.listeners.append(listener)
-        listener.myID = listenerID
-        return listener
+        try:
+            lID = self.listeners.append(0)
+            l   = Listener(lID, self, remotePort, remoteAddr, localPort, localAddr)
+            self.listeners[lID] = l
+            return l
+        except OSError:
+            return None
 
     def removeListener(self, listenerID):
         del self.listeners[listenerID]
 
+    async def requestChannel(self, remotePort, remoteAddr):
+        ok = await self.connect()
+        log.warn(f'ok = {ok}')
+        if ok:
+            return await self.channels.requestChannel(remotePort, remoteAddr)
+        else:
+            return None
 
-    def removeEP(self, channelID):
-        ep = self.eps[channelID]
-        if ep:
-            del self.eps[channelID]
-            log.info(t('Channel\t [{0:5d}] closed locally'.format(channelID)))
-            self.epControl.requestDeleteChannel(channelID, ep.myIDF)
+    def upgradeChannel(self, channelID, channelIDF, connSocket):
+        return self.channels.upgradeChannel(channelID, channelIDF, connSocket)
 
+    def deleteChannel(self, channelID):
+        return self.channels.deleteChannel(channelID)
 
-    def secureForward(self):
+# Task
+
+    def yesWakeW(self):
+        self.writable.yesWake()
+        # self.channels.noWake() ?
+    def noWakeW(self):
+        self.writable.noWake()
+        # self.channels.yesWake() ?
+
+    def task(self, readyR, readyW):
+        if self in readyR:
+            self.rtask(readyW)
+        if self in readyW:
+            self.wtask(readyR)
+        else:
+            self.yesWakeW()
+        for listener in self.listeners:
+            if listener in readyR:
+                listener.rtask()
+
+    def rtask(self, readyW):
+        self.reminderRX.skipNext = True
+        if self.connect.isComplete():
+            cap = 32768 - len(self.buffer)
+            if cap < 16384:
+                return
+            data = self.conRT.tryRecv(cap)
+            if data is None:
+                return
+            if len(data) < 1:
+                self.connectionLost('Closed by other end')
+                return
+            self.buffer += data
+            while len(self.buffer) >= 4:
+                header    = self.buffer[0:4]
+                totalLen  = int.from_bytes(header[0:2], 'little') + 4
+                channelID = int.from_bytes(header[2:4], 'little')
+                # Check if we need more bytes to complete the packet
+                if totalLen > len(self.buffer):
+                    break
+                self.channels.acceptMessage(channelID, self.buffer[4:totalLen])
+                self.buffer = self.buffer[totalLen:]
+
+    def send(self, data):
+        self.reminderTX.skipNext = True
+        self.kaCountIdle = 0
         try:
-            if self.isClient:
-                self.conRT.secureClient(serverHostname='portal', caFilename='portal.cer')
-            else:
-                self.conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
-            hs = self.conRT.doHandshake()
-            if hs == Connector.HandshakeStatus.OK:
-                self.conRT.socket.settimeout(0)
-                self.state = self.States.Forwarding
-                self.waitingSince = 0
-                self.kaCountIdle = 0
-                self.reminderRX.skipNext = True
+            self.conRT.sendall(data)
         except OSError as e:
             log.error(e)
             self.reconnect()
-        else:
-            self.connected(True)
 
-
-    def disconnect(self):
-        self.conRT.tryClose()
-        self.conRT = None
-        self.readable.off()
-        self.writable.off()
-        self.state = self.States.Disconnected
-
-
-    def reconnect(self):
-        self.disconnect()
-        self.requestConnect()
-
-
-    def requestConnect(self):
-        if self.isClient:
-            now = time.time()
-            if now > self.waitingSince + 2:
-                self.waitingSince = now
-                self.myPortal.connectToPortal(self.otherID)
-
-
-    def connected(self, ok):
-        handlers = self.onConnected
-        self.onConnected = []
-        for handler in handlers:
-            handler(ok)
-
-
-    def connectAndCall(self, f):
-        if self.state == self.States.Forwarding:
-            f(True)
-        else:
-            self.onConnected.append(f)
-            self.requestConnect()
-
-
-    def connectToRelay(self, token, relayPort, relayAddr):
-
-        if self.conRT:
-            self.disconnect()
-
-        data = token + b'0' * 56
-
-        for i in range(3):
-            conRT = Connector(new=(socket.SOCK_STREAM, 2, self.rtPort, self.rtAddr))
-            if conRT.tryConnect((relayAddr, relayPort)):
-                conRT.sendall(data)
-                # conRT.setKeepAlive()
-                break
+    def wtask(self, readyR):
+        if self.connect.isComplete():
+            data = self.channels.readAll(readyR)
+            if data:
+                self.send(data)
             else:
-                conRT = None
-
-        if conRT:
-            self.conRT = conRT
-            self.readable.on()
-            self.writable.on()
-            self.state = self.States.WaitReady
-            self.reminderRX.skipNext = True
-        else:
-            self.connected(False)
+                self.noWakeW()
 
 
-    # Needed for select()
-    def fileno(self):
-        return self.conRT.fileno()
-
-
-    def rtask(self, readables, writables):
-        if   self.state == self.States.Disconnected: assert False # should not ever be called
-        elif self.state == self.States.WaitReady:    self.taskReady()
-        elif self.state == self.States.Forwarding:   self.taskForward()
-
-
-    def wtask(self, readables, writables):
-        if self.state == self.States.Forwarding:
-            for ep in self.eps:
-                if ep in readables:
-                    ep.rtask()
-
-
-    def taskReady(self):
-        data = self.conRT.tryRecv(64)
-        if data is None:
-            return
-        if len(data) == 64:
-            # Confirmation
-            return
-        if   data == b'Ready !\n': self.secureForward()
-        elif data == b'Bad T !\n': self.disconnect()
-        else:                      self.reconnect()
-
-
-    def taskForward(self):
-
-        self.reminderRX.skipNext = True
-
-        data = self.conRT.tryRecv(32768)
-        if data is None:
-            return
-        if len(data) < 1:
-            self.connectionLost('Closed by other end')
-            return
-
-        self.buffer += data
-
-        while len(self.buffer) >= 4:
-
-            header = self.buffer[0:4]
-            totalLen = int.from_bytes(header[0:2], 'little') + 4
-            epID     = int.from_bytes(header[2:4], 'little')
-
-            # Check if we need more bytes to complete the packet
-            if totalLen > len(self.buffer):
-                break
-
-            ep = self.eps[epID]
-            if ep:
-                ep.acceptMessage(self.buffer[4:totalLen])
-            else:
-                log.info(t('Channel\t [{0:5d}] not found'.format(epID)))
-
-            self.buffer = self.buffer[totalLen:]
-
-
-    # Called by ChannelEndpoint,
-    # sends <packet> through the link to the remote portal.
-    def sendPacket(self, packet, untracked=False):
-        if not untracked:
-            self.reminderTX.skipNext = True
-            self.kaCountIdle = 0
-        if self.state == self.States.Forwarding:
-            try:
-                self.conRT.socket.settimeout(2)
-                self.conRT.sendall(packet)
-                self.conRT.socket.settimeout(0)
-            except OSError as e:
-                log.error(e)
-                self.reconnect()
-
-
-    # Functions called by control channel and listeners
-
-    def reserveChannel(self, listener):
-        channel            = ChannelPlaceholder(-1, -1, self)
-        channel.myListener = listener
-        channelID          = self.eps.append(channel)
-        channel.myID       = channelID
-        return channelID
-
-
-    def addChannel(self, channelIDF, conn):
-
-        if not conn:
-            return 0
-
-        channel      = ChannelData(-1, channelIDF, self, conn)
-        channelID    = self.eps.append(channel)
-        channel.myID = channelID
-
-        return channelID
-
-
-    def newChannel(self, channelIDF, devicePort, deviceAddr):
-
-        for i in range(3):
-            conn = Connector(new=(socket.SOCK_STREAM, 2, self.ltPort, self.ltAddr))
-            if conn.tryConnect((deviceAddr, devicePort)):
-                conn.socket.settimeout(0)
-                return self.addChannel(channelIDF, conn)
-
-        return 0
-
-
-    def upgradeChannel(self, channelID, channelIDF, channelSocket):
-
-        conn = Connector(channelSocket)
-
-        ep = self.eps[channelID]
-        if not isinstance(self.eps[channelID], ChannelPlaceholder):
-            return False
-
-        self.eps[channelID] = ChannelData(channelID, channelIDF, self, conn)
-
-        return True
-
-
-    # Accept local connection
-    # by calling accept() on the listener (= socket accept)
-    # that corresponds to the channelID
-    def acceptChannel(self, channelID, channelIDF):
-        try:
-            listener = self.eps[channelID].myListener
-            return listener.accept(channelID, channelIDF)
-        except (IndexError, AttributeError):
-            return False
-
-
-    # Accept local connection
-    # by calling decline() on the listener (= socket accept and close immediately)
-    # that corresponds to the channelID
-    def declineChannel(self, channelID, channelIDF):
-        try:
-            listener = self.eps[channelID].myListener
-            return listener.decline()
-        except (IndexError, AttributeError):
-            return False
-
-
-    def deleteChannel(self, channelID):
-        if channelID > 0:
-            try:
-                del self.eps[channelID]
-                return True
-            except (IndexError, AttributeError):
-                return False
-
-
-    fields.extend([
+    fields = [
+        # Name,          Type,          Readable, Writable
+        # ('myID',         CF.Int(),      True,     False),
+        ('isClient',     CF.Bool(),     True,     True),
+        ('otherID',      CF.PortalID(), True,     True),
+        ('rtPort',       CF.Port(),     True,     True),
+        ('rtAddr',       CF.Address(),  True,     True),
+        ('kaCountIdle',  CF.Int(),      True,     True),
+        ('buffer',       CF.Hex(),      True,     True),
+        ('listeners',    CF.SlotList(), True,     True),
+        # Functions
         ('addListener', CF.Call(addListener, [
-            ('remotePort', CF.Port(),    False, False),
-            ('remoteAddr', CF.Address(), False, False),
-            ('localPort',  CF.Port(),    False, False),
-            ('localAddr',  CF.Address(), False, False)
+            ('remotePort', CF.Port()),
+            ('remoteAddr', CF.Address()),
+            ('localPort',  CF.Port()),
+            ('localAddr',  CF.Address())
         ]), False, True),
         ('removeListener', CF.Call(removeListener, [
-            ('listenerID', CF.Int(), False, False)
-        ]), False, True),
-        ('deleteChannel', CF.Call(deleteChannel, [
-            ('channelID', CF.Int(), False, False)
+            ('listenerID', CF.Int())
         ]), False, True)
-    ])
+    ]
 

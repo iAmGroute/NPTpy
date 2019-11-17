@@ -1,24 +1,26 @@
 
 import socket
 import ssl
+from enum import Enum
 
 import Globals
 
-from .this_OS import OS, this_OS
-
+from .this_OS       import OS, this_OS
 from .Connector_log import LogClass, Etypes
 
 class Connector:
 
     def __init__(self, fromSocket=None, new=None):
+        self.log    = Globals.logger.new(LogClass)
+        self.log(Etypes.Initing, fromSocket, new)
         s = fromSocket if fromSocket else Connector.new(*new)
         if s.type == socket.SOCK_STREAM:
             s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            # s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT, 16 * 1024)
         sname = s.getsockname()
         address, port = sname[0], sname[1]
         self.socket = s
-        self.log    = Globals.logger.new(LogClass)
-        self.log(Etypes.Inited, (address, port))
+        self.log(Etypes.Inited, address, port)
 
     @staticmethod
     def new(socketType=socket.SOCK_DGRAM, timeout=0, port=0, address='0.0.0.0', proto=0):
@@ -29,13 +31,6 @@ class Connector:
         s.bind((address, port))
         return s
 
-    def __del__(self):
-        try:
-            self.close()
-        except OSError:
-            pass
-        self.log(Etypes.Deleted, ())
-
     def __enter__(self):
         return self
 
@@ -45,15 +40,15 @@ class Connector:
         self.tryClose()
 
     def close(self):
-        self.log(Etypes.Closing, ())
+        self.log(Etypes.Closing)
         self.socket.close()
-        self.log(Etypes.Closed, ())
+        self.log(Etypes.Closed)
 
     def tryClose(self):
         try:
             self.close()
         except OSError as e:
-            self.log(Etypes.CloseError, repr(e))
+            self.log(Etypes.Error, repr(e))
             return False
         return True
 
@@ -64,7 +59,7 @@ class Connector:
     # Mainly UDP
 
     def sendto(self, data, addr):
-        self.log(Etypes.SendingTo, (len(data), *addr))
+        self.log(Etypes.SendingTo, len(data), *addr)
         self.log(Etypes.Content, data)
         sentSize = self.socket.sendto(data, addr)
         self.log(Etypes.Sent, sentSize)
@@ -73,7 +68,7 @@ class Connector:
     def recvfrom(self, bufferSize):
         self.log(Etypes.Receiving, bufferSize)
         data, addr = self.socket.recvfrom(bufferSize)
-        self.log(Etypes.ReceivedFrom, (len(data), *addr))
+        self.log(Etypes.ReceivedFrom, len(data), *addr)
         self.log(Etypes.Content, data)
         return data, addr
 
@@ -81,17 +76,17 @@ class Connector:
 
     def listen(self):
         self.socket.listen()
-        self.log(Etypes.Listen, ())
+        self.log(Etypes.Listen)
 
     def accept(self):
-        self.log(Etypes.Accepting, ())
+        self.log(Etypes.Accepting)
         conn, addr = self.socket.accept()
         conn.settimeout(self.socket.gettimeout())
         self.log(Etypes.Accepted, addr)
         return conn, addr
 
     def decline(self):
-        self.log(Etypes.Declining, ())
+        self.log(Etypes.Declining)
         conn, addr = self.socket.accept()
         self.log(Etypes.Declined, addr)
         try:
@@ -120,16 +115,15 @@ class Connector:
     def connect(self, endpoint):
         self.log(Etypes.Connecting, endpoint)
         self.socket.connect(endpoint)
-        self.log(Etypes.Connected, ())
+        self.log(Etypes.Connected)
 
     def tryConnect(self, endpoint):
         try:
             self.connect(endpoint)
+            return True
         except OSError as e:
             self.log(Etypes.Error, repr(e))
-            self.tryClose()
             return False
-        return True
 
     def sendall(self, data):
         self.log(Etypes.Sending, len(data))
@@ -180,15 +174,15 @@ class Connector:
         return True
 
     def secureClient(self, serverHostname, caFilename=None, caDirpath=None, caData=None):
-        self.sslContext = ssl.create_default_context(cafile=caFilename, capath=caDirpath, cadata=caData)
-        self.socket     = self.sslContext.wrap_socket(self.socket, server_hostname=serverHostname, do_handshake_on_connect=False)
+        ctx         = ssl.create_default_context(cafile=caFilename, capath=caDirpath, cadata=caData)
+        self.socket = ctx.wrap_socket(self.socket, server_hostname=serverHostname, do_handshake_on_connect=False)
 
     def secureServer(self, certFilename, keyFilename=None, keyPassword=None):
-        self.sslContext          = ssl.SSLContext(ssl.PROTOCOL_TLS)
-        self.sslContext.options |= ssl.OP_NO_TLSv1
-        self.sslContext.options |= ssl.OP_NO_TLSv1_1
-        self.sslContext.load_cert_chain(certFilename, keyFilename, keyPassword)
-        self.socket = self.sslContext.wrap_socket(self.socket, server_side=True, do_handshake_on_connect=False)
+        ctx          = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        ctx.options |= ssl.OP_NO_TLSv1
+        ctx.options |= ssl.OP_NO_TLSv1_1
+        ctx.load_cert_chain(certFilename, keyFilename, keyPassword)
+        self.socket  = ctx.wrap_socket(self.socket, server_side=True, do_handshake_on_connect=False)
 
     class HandshakeStatus(Enum):
         OK = 0
@@ -197,7 +191,7 @@ class Connector:
         Error = 3
 
     def doHandshake(self):
-        self.log(Etypes.Handshake, ())
+        self.log(Etypes.Handshake)
         result = None
         try:
             self.socket.do_handshake()

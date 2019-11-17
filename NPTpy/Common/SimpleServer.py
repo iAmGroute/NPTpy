@@ -27,7 +27,7 @@ def scanDir(path, maxDepth=4):
     maxDepth -= 1
     if maxDepth < 0:
         return []
-    result = [];
+    result = []
     for name in os.listdir(path):
         if name.startswith('.'):
             continue
