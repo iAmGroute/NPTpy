@@ -82,18 +82,18 @@ class Connector:
         self.log(Etypes.Accepting)
         conn, addr = self.socket.accept()
         conn.settimeout(self.socket.gettimeout())
-        self.log(Etypes.Accepted, addr)
+        self.log(Etypes.Accepted, *addr)
         return conn, addr
 
     def decline(self):
         self.log(Etypes.Declining)
         conn, addr = self.socket.accept()
-        self.log(Etypes.Declined, addr)
-        try:
-            conn.settimeout(0)
-            conn.close()
-        except OSError:
-            pass
+        self.log(Etypes.Declined, *addr)
+        # try:
+        #     conn.settimeout(0)
+        #     conn.close()
+        # except OSError:
+        #     pass
         return addr
 
     def tryAccept(self):
