@@ -165,7 +165,6 @@ class Link:
 
     async def requestChannel(self, remotePort, remoteAddr):
         ok = await self.connect()
-        log.warn(f'ok = {ok}')
         if ok:
             return await self.channels.requestChannel(remotePort, remoteAddr)
         else:
