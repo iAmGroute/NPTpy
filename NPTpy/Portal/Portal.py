@@ -51,7 +51,7 @@ class Portal:
         Globals.reminders.run()
         activeR, canWakeR = Globals.readables.get()
         activeW, canWakeW = Globals.writables.get()
-        wokeR,  wokeW,  _ = select.select(canWakeR, canWakeW, [])
+        wokeR,  wokeW,  _ = select.select(canWakeR, canWakeW, [], 5)
         readyR, readyW, _ = select.select(activeR,  activeW,  [], 0)
         Globals.readables.selected(readyR, (readyR, readyW))
         Globals.writables.selected(readyW, (readyR, readyW))
