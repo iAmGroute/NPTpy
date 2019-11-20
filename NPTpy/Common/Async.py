@@ -195,32 +195,35 @@ class EventAsync:
 
     def __init__(self, f):
         self.f = f
-        self.promise = Promise()
-        self.pending = False
+        self.promise  = Promise()
+        self.complete = False
+        self.pending  = False
+
+    async def run(self, *args, **kwargs):
+        if not self.pending and not self.complete:
+            self.pending  = True
+            result = await self.f(*args, **kwargs)
+            self.pending  = False
+            self.complete = bool(result)
+            self.promise.fire(result)
+            if not self.complete:
+                self.promise.reset()
 
     async def __call__(self, *args, **kwargs):
-        if not self.isPendingOrComplete():
-            self.pending = True
-            result = await self.f(*args, **kwargs)
-            self.promise.fire(result)
-            self.pending = False
-            if not result:
-                self.reset()
-            return result
-        elif self.pending:
-            return await loop.watch(self.promise)
-        else:
-            return self.promise.value
+        loop.run(self.run(*args, **kwargs))
+        return await loop.watch(self.promise)
 
     def isPending(self):
         return self.pending
 
     def isComplete(self):
-        return self.promise.hasFired
+        return self.complete
 
     def isPendingOrComplete(self):
-        return self.pending or self.promise.hasFired
+        return self.pending or self.complete
 
     def reset(self):
+        assert not self.pending
         self.promise.reset()
+        self.complete = False
 
