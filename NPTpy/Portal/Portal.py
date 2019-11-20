@@ -40,10 +40,6 @@ class Portal:
         self.connect  = None
         self.promises = None
 
-    # Needed for select()
-    def fileno(self):
-        return self.conST.fileno()
-
 # Main
 
     def main(self):
@@ -51,7 +47,7 @@ class Portal:
         Globals.reminders.run()
         activeR, canWakeR = Globals.readables.get()
         activeW, canWakeW = Globals.writables.get()
-        wokeR,  wokeW,  _ = select.select(canWakeR, canWakeW, [], 5)
+        wokeR,  wokeW,  _ = select.select(canWakeR, canWakeW, [], 10)
         readyR, readyW, _ = select.select(activeR,  activeW,  [], 0)
         Globals.readables.selected(readyR, (readyR, readyW))
         Globals.writables.selected(readyW, (readyR, readyW))

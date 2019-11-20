@@ -49,7 +49,6 @@ Portal          <--- EventAsync connect:
     _connect(self)                                             async
 
 Portal          ---> AsyncConnectorPacketized conST:
-    fileno(self)
     setKeepAlive(self)
     secureClient(self, serverHostname, caFilename)
     tryConnectAsync(self, endpoint)                            async
