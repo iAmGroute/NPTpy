@@ -67,11 +67,11 @@ class Portal:
         conST = await self._connectToServer()
         if not conST:
             return False
-        self.conST = conST
-        self.conST.setKeepAlive()
-        ok = await self._authenticate()
+        conST.setKeepAlive()
+        ok = await self._authenticate(conST)
         if not ok:
             return False
+        self.conST = conST
         loop.run(self.rtask())
         return True
 
@@ -86,12 +86,12 @@ class Portal:
         if not await conST.doHandshakeAsync():                                  return None
         return conST
 
-    async def _authenticate(self):
+    async def _authenticate(self, conST):
         data  = b'V0.1'
         data += b'AUTH'
         data += self.portalID
-        await self.conST.sendPacketAsync(data)
-        reply = await self.conST.recvPacketAsync()
+        await conST.sendPacketAsync(data)
+        reply = await conST.recvPacketAsync()
         return reply == b'V0.1REPL.OK.'
 
     def disconnect(self):
