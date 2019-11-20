@@ -30,6 +30,7 @@ assert sl[4] == None
 
 # Iteration
 assert list(sl) == ['Hello 0', 'Hello 2', 'Hello 3']
+assert sl.listIDs() == [0, 2, 3]
 
 # IDs should increment and old ones be invalid
 newID = sl.append('Hello new')

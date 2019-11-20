@@ -67,6 +67,9 @@ class SlotList:
     def __iter__(self):
         return SlotList_Iterator(self)
 
+    def listIDs(self):
+        return [s.myID for s in self.slots if s]
+
     def prettyPrint(self, f):
         result = [f(val) for val in self]
         return '[' + ', '.join(result) + ']'
