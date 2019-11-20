@@ -50,7 +50,7 @@ class Link:
 
 # Connect
 
-    async def _connect(self, info=None):
+    async def _connect_p1(self, info):
         clientSide = info is None
         if clientSide:
             if not self.isClient:
@@ -71,6 +71,12 @@ class Link:
         self.reminderRX.skipNext = True
         self.reminderRX.enabled  = True
         return True
+
+    async def _connect(self, info=None):
+        self.log(Etypes.Connect, info)
+        result = await self._connect_p1(info)
+        self.log(Etypes.ConnectResult, result)
+        return result
 
     def connectToRelay(self, token, relayPort, relayAddr):
         # Todo: uncomment isIdle() condition
@@ -111,11 +117,13 @@ class Link:
 
     def disconnect(self):
         if self.connect.isComplete():
+            self.log(Etypes.Disconnect)
             self.connect.reset()
             self.conRT.tryClose()
             self.conRT = None
             self.readable.off()
             self.writable.off()
+            self.channels.reset()
 
     async def reconnect(self):
         self.disconnect()
