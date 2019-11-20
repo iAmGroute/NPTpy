@@ -25,6 +25,11 @@ class Channels:
         self.epControl = None
         self.eps       = None
 
+    def reset(self):
+        self.epControl.reset()
+        for i in self.eps.listIDs()[1:]:
+            del self.eps[i]
+
     def isEmpty(self):
         return len(self.eps) <= 1
 

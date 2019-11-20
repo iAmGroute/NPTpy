@@ -73,6 +73,7 @@ Link            <--- Listener listeners.item:
 
 Link            ---> Channels channels:
     teardown(self)
+    reset(self)
     isEmpty(self)
     requestChannel(self, remotePort, remoteAddr)               async
     upgradeChannel(self, channelID, channelIDF, channelSocket)
@@ -137,6 +138,7 @@ Channels        <--- *Endpoint eps.item:
     _remove(self, channelID)
 
 Channels        ---> ControlEndpoint epControl:
+    reset(self)
     requestNewChannel(self, channelID, devicePort, deviceAddr) async
     requestDeleteChannel(self, channelID, channelIDF)          async
 Channels        <--- ControlEndpoint epControl:

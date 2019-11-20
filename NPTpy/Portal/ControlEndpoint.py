@@ -19,6 +19,11 @@ class ControlEndpoint(Endpoint):
         Endpoint.__init__(self, myID, myIDF, parent)
         self.promises = SlotList()
 
+    def reset(self):
+        for p in self.promises:
+            p(None)
+        self.promises.deleteAll()
+
     def send(self, data):
         self.parent.send(self.formMessage(data))
 
@@ -52,9 +57,7 @@ class ControlEndpoint(Endpoint):
         else:
             log.warn(t('Channel\t [{0:5d}] was NOT {1}'.format(channelID, whatHappened)))
 
-
     async def requestNewChannel(self, channelID, devicePort, deviceAddr):
-        log.warn(f'requestNewChannel')
         p        = Promise()
         reqID    = self.promises.append(p)
         request  = b'n...'
