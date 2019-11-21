@@ -64,6 +64,7 @@ class Link:
         conRT = await self._secureForward(conRT, clientSide)
         if not conRT:
             return False
+        conST.setKeepAlive()
         self.conRT = Connector(fromSocket=conRT.socket)
         self.readable.on()
         self.writable.on()
