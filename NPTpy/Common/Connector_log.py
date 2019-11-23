@@ -28,6 +28,12 @@ class LogClass:
     name     = 'Connector'
     etypes   = Etypes
     disabled = [
+        Etypes.Sending,
+        Etypes.SendingTo,
+        Etypes.Sent,
+        Etypes.Receiving,
+        Etypes.Received,
+        Etypes.ReceivedFrom,
         Etypes.Content,
         Etypes.Handshake
     ]
