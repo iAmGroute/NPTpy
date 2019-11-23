@@ -26,7 +26,7 @@ class ControlEndpoint(Endpoint):
         self.parent.send(self.formMessage(data), untracked)
 
     def acceptMessage(self, data):
-        if len(data) > 8:
+        try:
             action = data[0:1]
             if   action == b'\x00' \
               or action == b'\xFF' : pass
@@ -35,11 +35,10 @@ class ControlEndpoint(Endpoint):
             elif action == b'N'    : self.actionNewChannelReply(data)
             elif action == b'd'    : self.actionDeleteChannel(data)
             elif action == b'D'    : self.actionDeleteChannelReply(data)
-            else                   : self.corrupted()
-
-    def corrupted(self):
-        self.log(Etypes.Corrupted)
-        self.remove()
+            else                   : assert False, f'Unknown action: {action}'
+        except (AssertionError, IndexError) as e:
+            self.log(Etypes.Corrupted, repr(e))
+            self.remove()
 
     # Note:
     #   The prefix 'request' means we send to the other portal,
@@ -66,9 +65,7 @@ class ControlEndpoint(Endpoint):
         return await loop.watch(p)
 
     def actionNewChannel(self, data):
-        if len(data) < 13:
-            self.corrupted()
-            return
+        assert len(data) > 12
         loop.run(self._actionNewChannel(data))
 
     async def _actionNewChannel(self, data):
@@ -85,9 +82,6 @@ class ControlEndpoint(Endpoint):
         self.send(reply)
 
     def actionNewChannelReply(self, data):
-        if len(data) != 12:
-            self.corrupted()
-            return
         reqID      = int.from_bytes(data[ 4: 8], 'little')
         channelID  = int.from_bytes(data[ 8:10], 'little')
         channelIDF = int.from_bytes(data[10:12], 'little')
@@ -113,9 +107,6 @@ class ControlEndpoint(Endpoint):
         return await loop.watch(p)
 
     def actionDeleteChannel(self, data):
-        if len(data) != 12:
-            self.corrupted()
-            return
         channelID  = int.from_bytes(data[ 8:10], 'little')
         channelIDF = int.from_bytes(data[10:12], 'little')
         ok = self.parent.deleteChannel(channelID)
@@ -127,16 +118,11 @@ class ControlEndpoint(Endpoint):
         self.send(reply)
 
     def actionDeleteChannelReply(self, data):
-        if len(data) != 12:
-            self.corrupted()
-            return
         reqID     = int.from_bytes(data[4: 8], 'little')
         channelID = int.from_bytes(data[8:10], 'little')
         if   data[10:12] == b'\x00.': ok = False
         elif data[10:12] == b'\x01.': ok = True
-        else:
-            self.corrupted()
-            return
+        else:                         assert False
         self.log(Etypes.DeletedByUs, ok, channelID)
         p = self.promises[reqID]
         if p:
