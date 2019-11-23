@@ -25,9 +25,6 @@ class ControlEndpoint(Endpoint):
     def send(self, data, untracked=False):
         self.parent.send(self.formMessage(data), untracked)
 
-    def sendKA(self):
-        self.send(b'.', True)
-
     def acceptMessage(self, data):
         if len(data) > 8:
             action = data[0:1]
@@ -49,6 +46,10 @@ class ControlEndpoint(Endpoint):
     #     and the task is done by the other portal.
     #   The prefix 'action' means we have received from the other portal,
     #     and the task is done by this portal.
+
+    def sendKA(self):
+        self.log(Etypes.SendingKA)
+        self.send(b'.', True)
 
     def actionKA(self, data):
         self.log(Etypes.ReceivedKA, data)
