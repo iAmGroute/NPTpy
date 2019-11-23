@@ -24,14 +24,18 @@ class ControlEndpoint(Endpoint):
             p(None)
         self.promises.deleteAll()
 
-    def send(self, data):
-        self.parent.send(self.formMessage(data))
+    def send(self, data, untracked=False):
+        self.parent.send(self.formMessage(data), untracked)
+
+    def sendKA(self):
+        self.send(b'.', True)
 
     def acceptMessage(self, data):
         if len(data) > 8:
             action = data[0:1]
             if   action == b'\x00' \
               or action == b'\xFF' : pass
+            elif action == b'.'    : self.actionKA(data)
             elif action == b'n'    : self.actionNewChannel(data)
             elif action == b'N'    : self.actionNewChannelReply(data)
             elif action == b'd'    : self.actionDeleteChannel(data)
@@ -41,9 +45,6 @@ class ControlEndpoint(Endpoint):
     def corrupted(self):
         log.error('Link or control channel is corrupted !')
         self.remove()
-
-    def sendKA(self):
-        self.send(b'\x00')
 
     # Note:
     #   The prefix 'request' means we send to the other portal,
@@ -56,6 +57,10 @@ class ControlEndpoint(Endpoint):
             log.info(t('Channel\t [{0:5d}] {1}'.format(channelID, whatHappened)))
         else:
             log.warn(t('Channel\t [{0:5d}] was NOT {1}'.format(channelID, whatHappened)))
+
+    def actionKA(self, data):
+        # Todo: log
+        pass
 
     async def requestNewChannel(self, channelID, devicePort, deviceAddr):
         p        = Promise()

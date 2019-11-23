@@ -64,13 +64,13 @@ class Link:
         conRT = await self._secureForward(conRT, clientSide)
         if not conRT:
             return False
-        conST.setKeepAlive()
         self.conRT = Connector(fromSocket=conRT.socket)
         self.readable.on()
         self.writable.on()
         self.kaCountIdle         = 0
         self.reminderRX.skipNext = True
         self.reminderRX.enabled  = True
+        self.reminderTX.enabled  = True
         return True
 
     async def _connect(self, info=None):
@@ -120,11 +120,12 @@ class Link:
         if self.connect.isComplete():
             self.log(Etypes.Disconnect)
             self.connect.reset()
-            self.conRT.tryClose()
             self.conRT = None
             self.readable.off()
             self.writable.off()
             self.channels.reset()
+            self.reminderRX.enabled = False
+            self.reminderTX.enabled = False
 
     async def reconnect(self):
         self.disconnect()
@@ -156,7 +157,7 @@ class Link:
     def handleRemindTX(self):
         self.kaCountIdle += 1
         if self.connect.isComplete():
-            self.epControl.sendKA()
+            self.channels.sendKA()
 
 # Listeners
 
@@ -228,9 +229,10 @@ class Link:
                 self.channels.acceptMessage(channelID, self.buffer[4:totalLen])
                 self.buffer = self.buffer[totalLen:]
 
-    def send(self, data):
-        self.reminderTX.skipNext = True
-        self.kaCountIdle = 0
+    def send(self, data, untracked=False):
+        if not untracked:
+            self.reminderTX.skipNext = True
+            self.kaCountIdle = 0
         try:
             self.conRT.sendall(data)
         except OSError as e:

@@ -47,8 +47,11 @@ class Channels:
         if ep:
             ep.acceptMessage(data)
 
-    def send(self, data):
-        self.myLink.send(data)
+    def send(self, data, untracked=False):
+        self.myLink.send(data, untracked)
+
+    def sendKA(self):
+        self.epControl.sendKA()
 
 # Channel management
 

@@ -75,13 +75,14 @@ Link            ---> Channels channels:
     teardown(self)
     reset(self)
     isEmpty(self)
+    sendKA(self)
     requestChannel(self, remotePort, remoteAddr)               async
     upgradeChannel(self, channelID, channelIDF, channelSocket)
     deleteChannel(self, channelID)
     acceptMessage(self, channelID, data)
     readAll(self, readables)
 Link            <--- Channels channels:
-    send(self, data)
+    send(self, data, untracked)
 
 Link            ---> EventAsync connect:
     __call__(self, **kwargs)                                   async
@@ -139,10 +140,11 @@ Channels        <--- *Endpoint eps.item:
 
 Channels        ---> ControlEndpoint epControl:
     reset(self)
+    sendKA(self)
     requestNewChannel(self, channelID, devicePort, deviceAddr) async
     requestDeleteChannel(self, channelID, channelIDF)          async
 Channels        <--- ControlEndpoint epControl:
-    send(self, data)
+    send(self, data, untracked)
     newChannel(self, channelIDF, devicePort, deviceAddr)       async
     deleteChannel(self, channelID)
 
