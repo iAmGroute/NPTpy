@@ -3,20 +3,18 @@
 # it is used for managing the portal-client link
 # and the other channels.
 
-import logging
-
 from Common.SmartTabs import t
 from Common.SlotList  import SlotList
 from Common.Async     import Promise, loop
 
-from .Endpoint import Endpoint
-
-log = logging.getLogger(__name__)
+from .Endpoint            import Endpoint
+from .ControlEndpoint_log import LogClass, Etypes
 
 class ControlEndpoint(Endpoint):
 
     def __init__(self, myID, myIDF, parent):
         Endpoint.__init__(self, myID, myIDF, parent)
+        self.log.upgrade(LogClass)
         self.promises = SlotList()
 
     def reset(self):
@@ -43,24 +41,17 @@ class ControlEndpoint(Endpoint):
             else                   : self.corrupted()
 
     def corrupted(self):
-        log.error('Link or control channel is corrupted !')
+        self.log(Etypes.Corrupted)
         self.remove()
 
     # Note:
     #   The prefix 'request' means we send to the other portal,
     #     and the task is done by the other portal.
     #   The prefix 'action' means we have received from the other portal,
-    #     and the task is done by this portal's Link.
-
-    def logResult(self, channelID, resultOK, whatHappened):
-        if resultOK:
-            log.info(t('Channel\t [{0:5d}] {1}'.format(channelID, whatHappened)))
-        else:
-            log.warn(t('Channel\t [{0:5d}] was NOT {1}'.format(channelID, whatHappened)))
+    #     and the task is done by this portal.
 
     def actionKA(self, data):
-        # Todo: log
-        pass
+        self.log(Etypes.ReceivedKA, data)
 
     async def requestNewChannel(self, channelID, devicePort, deviceAddr):
         p        = Promise()
@@ -85,8 +76,7 @@ class ControlEndpoint(Endpoint):
         deviceAddr = str(           data[12:],   'utf-8')
         channelID = await self.parent.newChannel(channelIDF, devicePort, deviceAddr)
         ok = channelID != 0
-        self.logResult(channelID, ok, 'created')
-        log.info(t('    remote ID\t [{0:5d}]'.format(channelIDF)))
+        self.log(Etypes.Created, ok, channelID, channelIDF)
         reply  = b'N...'
         reply += data[4: 8] # reqID
         reply += data[8:10] # channelIDF
@@ -101,9 +91,8 @@ class ControlEndpoint(Endpoint):
         channelID  = int.from_bytes(data[ 8:10], 'little')
         channelIDF = int.from_bytes(data[10:12], 'little')
         ok = channelIDF != 0
-        self.logResult(channelID, ok, 'ready to accept')
+        self.log(Etypes.ReadyToAccept, ok, channelID, channelIDF)
         if ok:
-            log.info(t('    remote ID\t [{0:5d}]'.format(channelIDF)))
             result = channelID, channelIDF
         else:
             result = None
@@ -129,7 +118,7 @@ class ControlEndpoint(Endpoint):
         channelID  = int.from_bytes(data[ 8:10], 'little')
         channelIDF = int.from_bytes(data[10:12], 'little')
         ok = self.parent.deleteChannel(channelID)
-        self.logResult(channelID, ok, 'deleted by other')
+        self.log(Etypes.DeletedByOther, ok, channelID, channelIDF)
         reply  = b'D...'
         reply += data[ 4: 8] # reqID
         reply += data[10:12] # channelIDF
@@ -147,7 +136,7 @@ class ControlEndpoint(Endpoint):
         else:
             self.corrupted()
             return
-        self.logResult(channelID, ok, 'deleted by us')
+        self.log(Etypes.DeletedByUs, ok, channelID)
         p = self.promises[reqID]
         if p:
             del self.promises[reqID]
