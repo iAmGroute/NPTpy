@@ -41,6 +41,7 @@ class Listener:
         return self.con.fileno()
 
     def rtask(self):
+        self.log(Etypes.NewConnection)
         self.readable.off()
         loop.run(self.main())
 
@@ -53,6 +54,7 @@ class Listener:
             self.decline()
 
     def accept(self, channelID, channelIDF):
+        self.log(Etypes.Accept, channelID, channelIDF)
         connSocket, addr = self.con.tryAccept()
         if connSocket:
             connSocket.settimeout(0)
@@ -61,5 +63,6 @@ class Listener:
             self.myLink.deleteChannel(channelID)
 
     def decline(self):
+        self.log(Etypes.Decline)
         addr = self.con.tryDecline()
 
