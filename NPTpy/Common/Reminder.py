@@ -26,24 +26,30 @@ class Reminder:
 
 class ReminderDelegate:
 
-    def __init__(self, myModule, myID, enabled=True, skipNext=False, onRun=None, onSkip=None):
+    def __init__(self, myModule, myID, owner, onRun=None, onSkip=None, enabled=True, skipNext=False):
         self.myModule  = myModule
         self.myID      = myID
-        self.enabled   = enabled
-        self.skipNext  = skipNext
+        self.getOwner  = weakref.ref(owner)
         self.getOnRun  = weakref.ref(onRun)  if onRun  else nop
         self.getOnSkip = weakref.ref(onSkip) if onSkip else nop
+        self.enabled   = enabled
+        self.skipNext  = skipNext
 
     def __del__(self):
         self.myModule._remove(self.myID)
 
     def run(self):
         if self.enabled:
-            if self.skipNext:
-                self.skipNext = False
-                f = self.getOnSkip()
-                if f: f()
+            owner = self.getOwner()
+            if not owner:
+                # shouldn't happen
+                self.__del__()
             else:
-                f = self.getOnRun()
-                if f: f()
+                if self.skipNext:
+                    self.skipNext = False
+                    f = self.getOnSkip()
+                    if f: f(owner)
+                else:
+                    f = self.getOnRun()
+                    if f: f(owner)
 

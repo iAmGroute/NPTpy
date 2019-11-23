@@ -66,6 +66,7 @@ class Logger:
         prefix       = getPrefix(log)
         newName      = newLogClass.name
         print(t.over(f'{prefix}[Upgrading to <{newName}>]'))
+        return log
 
     def print(self, log, etype, data):
         if log.logClass.enList[etype.value]:
@@ -92,7 +93,7 @@ class Log:
         self.myLogger.print(self, etype, data)
 
     def upgrade(self, newLogClass):
-        self.myLogger.upgradeLog(self, newLogClass)
+        return self.myLogger.upgradeLog(self, newLogClass)
 
 
 

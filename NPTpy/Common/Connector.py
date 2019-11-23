@@ -10,8 +10,8 @@ from .Connector_log import LogClass, Etypes
 
 class Connector:
 
-    def __init__(self, fromSocket=None, new=None):
-        self.log    = Globals.logger.new(LogClass)
+    def __init__(self, fromSocket=None, new=None, log=None):
+        self.log = log.upgrade(LogClass) if log else Globals.logger.new(LogClass)
         self.log(Etypes.Initing, fromSocket, new)
         s = fromSocket if fromSocket else Connector.new(*new)
         if s.type == socket.SOCK_STREAM:
@@ -113,7 +113,7 @@ class Connector:
         return addr
 
     def connect(self, endpoint):
-        self.log(Etypes.Connecting, endpoint)
+        self.log(Etypes.Connecting, *endpoint)
         self.socket.connect(endpoint)
         self.log(Etypes.Connected)
 

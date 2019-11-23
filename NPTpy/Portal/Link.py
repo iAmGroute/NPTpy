@@ -31,8 +31,8 @@ class Link:
         self.buffer        = b''
         self.connect       = EventAsync(self._connect)
         self.conRT         = None
-        self.reminderRX    = Globals.kaReminderRX.new(enabled=False, onRun=self.handleRemindRX)
-        self.reminderTX    = Globals.kaReminderTX.new(enabled=False, onRun=self.handleRemindTX)
+        self.reminderRX    = Globals.kaReminderRX.new(owner=self, onRun=Link.handleRemindRX, enabled=False)
+        self.reminderTX    = Globals.kaReminderTX.new(owner=self, onRun=Link.handleRemindTX, enabled=False)
         self.kaCountIdle   = 0
         self.readable      = Globals.readables.new(self, isActive=False, canWake=True)
         self.writable      = Globals.writables.new(self, isActive=False, canWake=False)
@@ -64,7 +64,7 @@ class Link:
         conRT = await self._secureForward(conRT, clientSide)
         if not conRT:
             return False
-        self.conRT = Connector(fromSocket=conRT.socket)
+        self.conRT = Connector(fromSocket=conRT.socket, log=conRT.log)
         self.readable.on()
         self.writable.on()
         self.kaCountIdle         = 0
