@@ -61,6 +61,7 @@ class Logger:
         print(t.over(f'{prefix}[Log deleted]'))
 
     def upgradeLog(self, log, newLogClass):
+        self.processLogClass(newLogClass)
         log.logClass = newLogClass
         prefix       = getPrefix(log)
         newName      = newLogClass.name
