@@ -54,17 +54,17 @@ class Logger:
 
     def logCreated(self, log):
         prefix = getPrefix(log)
-        print(t.over(f'{prefix}Log created'))
+        print(t.over(f'{prefix}[Log created]'))
 
     def logDeleted(self, log):
         prefix = getPrefix(log)
-        print(t.over(f'{prefix}Log deleted'))
+        print(t.over(f'{prefix}[Log deleted]'))
 
     def upgradeLog(self, log, newLogClass):
         log.logClass = newLogClass
         prefix       = getPrefix(log)
         newName      = newLogClass.name
-        print(t.over(f'{prefix}Upgrading to <{newName}>'))
+        print(t.over(f'{prefix}[Upgrading to <{newName}>]'))
 
     def print(self, log, etype, data):
         if log.logClass.enList[etype.value]:
