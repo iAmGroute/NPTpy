@@ -31,6 +31,8 @@ class Portal:
         self.conST        = None
         self.promises     = SlotList()
         self.waitingSince = 0
+        self.reminderRX   = Globals.kaReminderRX.new(owner=self, onRun=Portal.handleRemindRX, enabled=False)
+        self.reminderTX   = Globals.kaReminderTX.new(owner=self, onRun=Portal.handleRemindTX, enabled=True)
         self.log(Etypes.Inited, portalID, serverPort, serverAddr, port, address)
 
     def teardown(self):
@@ -43,7 +45,7 @@ class Portal:
 # Main
 
     def main(self):
-        self.runConnect()
+        # self.runConnect()
         Globals.runReminders()
         activeR, canWakeR = Globals.readables.get()
         activeW, canWakeW = Globals.writables.get()
@@ -72,6 +74,8 @@ class Portal:
         if not ok:
             return False
         self.conST = conST
+        self.reminderRX.skipNext = True
+        self.reminderRX.enabled  = True
         loop.run(self.rtask())
         return True
 
@@ -99,6 +103,27 @@ class Portal:
         self.connect.reset()
         self.conST.tryClose()
         self.conST = None
+        self.reminderRX.enabled = False
+
+# Keepalives
+
+    def handleRemindRX(self):
+        if self.connect.isComplete():
+            log.warn('RX keepalive timeout')
+            self.disconnect()
+
+    def handleRemindTX(self):
+        loop.run(self.requestKA())
+
+# Send
+
+    async def send(self, data):
+        self.reminderTX.skipNext = True
+        ok = await self.connect()
+        if not ok:
+            return False
+        await self.conST.sendPacketAsync(data)
+        return True
 
 # Receive task
 
@@ -111,13 +136,14 @@ class Portal:
             if not packet:
                 log.warn('Server disconnected us')
                 break
+            self.reminderRX.skipNext = True
             try:
                 reply = self.process(bytearray(packet))
             except AssertionError:
                 log.warn('Bad packet')
                 break
             if reply:
-                await self.conST.sendPacketAsync(reply)
+                await self.send(reply)
         self.disconnect()
 
     def process(self, data):
@@ -166,16 +192,21 @@ class Portal:
             assert False
 
     async def requestRelay(self, otherID):
-        ok = await self.connect()
-        if not ok:
-            return None
         p      = Promise(self.requestRelayRR)
         reqID  = self.promises.append(p)
         data   = reqID.to_bytes(4, 'little')
         data  += b'RQRL'
         data  += otherID
-        await self.conST.sendPacketAsync(data)
+        await self.send(data)
         return await loop.watch(p)
+
+    async def requestKA(self):
+        p      = Promise()
+        reqID  = self.promises.append(p)
+        data   = reqID.to_bytes(4, 'little')
+        data  += b'.KA.'
+        await self.send(data)
+        # await loop.watch(p)
 
 # Links
 
