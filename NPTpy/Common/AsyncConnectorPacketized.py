@@ -13,6 +13,7 @@ class AsyncConnectorPacketized(AsyncConnector):
         while len(self.recvBuffer) < size:
             data = await self.tryRecvAsync(32768)
             if not data:
+                self.recvBuffer = b''
                 return False
             self.recvBuffer += data
         return True
