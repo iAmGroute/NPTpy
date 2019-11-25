@@ -1,52 +1,75 @@
 
 import asyncio
 
-from .Async import Promise
+import Globals
+
+from .Async    import Promise
+from .Loop_log import LogClass, Etypes
+
+def reprCoroutine(c):
+    line = c.cr_frame.f_lineno
+    name = c.cr_frame.f_code.co_name
+    file = c.cr_frame.f_code.co_filename
+    slash = file.rfind('/')
+    if slash < 0: slash = file.rfind('\\')
+    return f'{name} {file[slash + 1:]}:{line}'
 
 class Loop:
 
     def __init__(self):
+        self.log = Globals.logger.new(LogClass)
         self.stopped    = False
         self.coroutines = {}
         self._ready     = Promise()
         self._ready()
 
     def stop(self):
+        self.log(Etypes.Stopping)
         self.stopped    = True
         self.coroutines = {}
+        self.log(Etypes.Stopped)
 
     def watch(self, promise):
         if self.stopped:
             return None
         future = asyncio.Future()
+        self.log(Etypes.Watching, id(promise), id(future))
         promise.then(lambda *v: self._resolve(future, v))
         return future
 
     def _resolve(self, future, v):
         if   len(v) == 0: v = None
         elif len(v) == 1: v = v[0]
+        self.log(Etypes.Resolving, id(future), v)
         future.set_result(v)
         self._ready.then(lambda: self._cont(future))
 
     def _cont(self, future):
+        self.log(Etypes.Continuing, id(future))
         try:
             coroutine = self.coroutines[future]
             del self.coroutines[future]
-            self.run(coroutine)
         except KeyError:
+            self.log(Etypes.NotFound, id(future))
             pass
+        else:
+            self.run(coroutine)
 
     def run(self, coroutine):
         if self.stopped:
             return
+        self.log(Etypes.Running, reprCoroutine(coroutine))
         self._ready.reset()
         try:
             future = coroutine.send(None)
             self.coroutines[future] = coroutine
         except StopIteration:
-            pass
-        finally:
-            self._ready()
+            self.log(Etypes.Finished, reprCoroutine(coroutine))
+        except Exception as e:
+            self.log(Etypes.RunError, e)
+        else:
+            self.log(Etypes.Paused, reprCoroutine(coroutine))
+        self._ready()
 
 
 loop = Loop()
