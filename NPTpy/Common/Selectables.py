@@ -3,38 +3,31 @@ import weakref
 from .SlotList import SlotList
 from .Async    import Promise
 
-class SelectPromise:
-
-    def __init__(self):
-        self.next = SlotList()
-
-    def attach(self, sDelegate, promise):
-        s         = sDelegate
-        p         = promise
-        p.myID    = self.next.append((s, p))
-        p.getPrev = weakref.ref(self)
-        return p
-
-    def _cancel(self, pID):
-        del self.next[pID]
-
-    def fire(self, selectables, params):
-        for s, p in self.next:
-            if s.getOwner() in selectables:
-                p.fire(params)
-
-
 class Selectables:
 
     def __init__(self):
         self.delegates = SlotList()
-        self.promise   = SelectPromise()
+        self.next      = SlotList()
 
-    def _onSelect(self, delegate):
-        return self.promise.attach(delegate, Promise())
+    def _cancel(self, promiseID):
+        del self.next[promiseID]
+
+    def _onSelect(self, delegateID):
+        dRef      = self.delegates[delegateID]
+        p         = Promise()
+        p.myID    = self.next.append((dRef, p))
+        p.getPrev = weakref.ref(self)
+        return p
 
     def selected(self, selectables, params=()):
-        self.promise.fire(selectables, params)
+        for i in self.next.getIDs():
+            dRef, p = self.next[i]
+            d = dRef()
+            if not d:
+                del self.next[i]
+            else:
+                if d.getOwner() in selectables:
+                    p.fire(params)
 
     def new(self, owner, isActive, canWake):
         dID = self.delegates.append(0)
@@ -73,7 +66,7 @@ class SelectablesDelegate:
         self.myModule._remove(self.myID)
 
     def onSelect(self):
-        return self.myModule._onSelect(self)
+        return self.myModule._onSelect(self.myID)
 
     def isActive(self):
         return self._isActive
