@@ -51,11 +51,11 @@ class Promise:
             self.cancel()
 
     def fire(self, params=()):
+        self.cancel()
         self.hasFired = True
-        self.value = self.callback(*toTuple(params))
+        self.value    = self.callback(*toTuple(params))
         for p in self.next:
             p.fire(self.value)
-        self.cancel()
 
     def __call__(self, *params):
         self.fire(params)
