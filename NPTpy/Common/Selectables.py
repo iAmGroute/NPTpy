@@ -20,7 +20,7 @@ class Selectables:
         return p
 
     def selected(self, selectables, params=()):
-        for i in self.next.getIDs():
+        for i in self.next.listIDs():
             dRef, p = self.next[i]
             d = dRef()
             if not d:
