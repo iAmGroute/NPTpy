@@ -27,6 +27,8 @@ root                             = Portal
  |          writable             = %Selectable
  |- connect                      = EventAsync
  |  conST                        = AsyncConnectorPacketized
+ |  reminderRX                   = %Reminder
+ |  reminderTX                   = %Reminder
  |  promises                     = SlotList
  '----- item                     = Promise
 
@@ -56,6 +58,11 @@ Portal          ---> AsyncConnectorPacketized conST:
     sendPacketAsync(self, packet)                              async
     recvPacketAsync(self)                                      async
     tryClose(self)
+
+Portal          <--? %Reminder reminderRX:
+    handleRemindRX(self)
+Portal          <--? %Reminder reminderTX:
+    handleRemindTX(self)
 
 Portal          ---> Promise promises.item:
     __call__(self, *params)
