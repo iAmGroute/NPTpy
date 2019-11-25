@@ -243,6 +243,9 @@ A few things to note here:
 * Keywords like `async` may be added after the `:` and a lot of spaces :wink:.
 * Sometimes you can use `*` together with letters like a glob to refer to many similar functions.
 
+#### Tips
+To get nice colorization, you can set your editor to interpret it as 'Makefile' (works well at least in Sublime Text 3).
+
 ## This is still not set in stone, many things may be changed or added in the future :no_mouth:
 
 *(BTW, everything noted here is totally informal and may in some cases contradict 'real' theory. This format and ideas on interpretation of any piece of code are meant only for the contributors of this particular repository and might not apply that well in other cases.)*
