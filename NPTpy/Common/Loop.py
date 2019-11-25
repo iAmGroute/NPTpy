@@ -64,7 +64,7 @@ class Loop:
             future = coroutine.send(None)
             self.coroutines[future] = coroutine
         except StopIteration:
-            self.log(Etypes.Finished, reprCoroutine(coroutine))
+            self.log(Etypes.Finished)
         except Exception as e:
             self.log(Etypes.RunError, e)
         else:
