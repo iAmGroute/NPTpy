@@ -45,6 +45,7 @@ class Portal:
 # Main
 
     def main(self):
+        print('.')
         # self.runConnect()
         Globals.runReminders()
         activeR, canWakeR = Globals.readables.get()
@@ -113,7 +114,10 @@ class Portal:
             self.disconnect()
 
     def handleRemindTX(self):
-        loop.run(self.requestKA())
+        if self.connect.isComplete():
+            loop.run(self.requestKA())
+        else:
+            loop.run(self.connect())
 
 # Send
 
@@ -143,7 +147,7 @@ class Portal:
                 log.warn('Bad packet')
                 break
             if reply:
-                await self.send(reply)
+                if not await self.send(reply): break
         self.disconnect()
 
     def process(self, data):
@@ -197,7 +201,7 @@ class Portal:
         data   = reqID.to_bytes(4, 'little')
         data  += b'RQRL'
         data  += otherID
-        await self.send(data)
+        if not await self.send(data): return None
         return await loop.watch(p)
 
     async def requestKA(self):
@@ -205,8 +209,8 @@ class Portal:
         reqID  = self.promises.append(p)
         data   = reqID.to_bytes(4, 'little')
         data  += b'.KA.'
-        await self.send(data)
-        # await loop.watch(p)
+        if not await self.send(data): return None
+        return await loop.watch(p)
 
 # Links
 
