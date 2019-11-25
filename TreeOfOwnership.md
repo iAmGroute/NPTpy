@@ -2,9 +2,9 @@
 # This document describes the Tree Of Ownership (.too) code description format.
 
 ## What is it ?
-The TOO shows an ownership diagram: a graph where each node/vertex represents an object and each link/edge shows that one object is owned by the other.
-An ownership diagram is directed, with the links starting from a parent object and pointing to the objects that it owns.
-The TOO specifically assumes that the object graph is (almost) a tree and has a single root.
+The TOO shows an ownership diagram: a graph where each node/vertex represents an object and each link/edge shows that one object is owned by the other.  
+An ownership diagram is directed, with the links starting from a parent object and pointing to the objects that it owns.  
+The TOO specifically assumes that the object graph is (almost) a tree and has a single root.  
 
 ## Representation
 
@@ -48,12 +48,12 @@ a               = A
     c           = C
         counter = int
 ```
-As you can see, the object's name is added on the left, then spaces the `=` followed by 1 space, then the object's type.
-The objects that are owned by an object, are idented using 4 spaces.
+As you can see, the object's name is added on the left, then spaces the `=` followed by 1 space, then the object's type.  
+The objects that are owned by an object, are idented using 4 spaces.  
 
-However, usually, we do not care about trivial objects and so omit them from the TOO.
-Which objects are considered trivial depends on the application, in this case, we could consider primitive types to be trivial.
-Furthermore, we can make it obvious that `a` is the root of the TOO by naming it as such (`root`).
+However, usually, we do not care about trivial objects and so omit them from the TOO.  
+Which objects are considered trivial depends on the application, in this case, we could consider primitive types to be trivial.  
+Furthermore, we can make it obvious that `a` is the root of the TOO by naming it as such (`root`).  
 Our updated TOO would look like this:
 ```makefile
 root  = A
@@ -92,18 +92,18 @@ a = A()
 while True:
     pass
 ```
-If we assume that having a reference to an object is the same as owning it, the above code results in an ownership graph that has a cycle:
-`a` owns `a.b` and `a.b` owns `a`
-**or** one could say:
-`b` owns `b.parent` and `b.parent` owns `b`
-Programmatically, it makes no difference as a result of *owning* being the same as *having a referece to*.
-(In some other languages, like Rust, the concept of ownership is stricter and the above doesn't apply.)
-However, when looking at the code as humans, we see a (clear) distinction: `a` owns `a.b` and not the other way around.
+If we assume that having a reference to an object is the same as owning it, the above code results in an ownership graph that has a cycle:  
+`a` owns `a.b` and `a.b` owns `a`  
+**or** one could say:  
+`b` owns `b.parent` and `b.parent` owns `b`  
+Programmatically, it makes no difference as a result of *owning* being the same as *having a referece to*.  
+(In some other languages, like Rust, the concept of ownership is stricter and the above doesn't apply.)  
+However, when looking at the code as humans, we see a (clear) distinction: `a` owns `a.b` and not the other way around.  
 This could mean a few things, such as:
 * there is a problem with the code, a bug, an issue waiting to happend, perhaps a memory leak
 * the parent reference should actually be a weak reference (see [weakref](https://docs.python.org/3/library/weakref.html))
 * the code is fine, but we need to be aware of this reference cycle and deal with it
-There are cases where the cycle can be removed, but there are also some where it is there intentionally.
+There are cases where the cycle can be removed, but there are also some where it is there intentionally.  
 In the format we are describing, we will chose to allow these back-references and depict them in a prominent way:
 ```makefile
 root  = A
@@ -111,9 +111,9 @@ root  = A
  '- c = C
     d = D
 ```
-We use the `|`, `'` and `-` characters to mark a line that begins from the object that contains the back-edge (here it's `c`) and ends at the object it is referencing (here it's `root` or `a`).
-There is 1 space between the last `-` and the name of the object and the vetrical line is idented by 1 space from the level of the referenced object.
-Note that the line starts from the name of the object that *contains* the refernce (`c`), not the name of the reference (`parent`, which is not shown in the TOO).
+We use the `|`, `'` and `-` characters to mark a line that begins from the object that contains the back-edge (here it's `c`) and ends at the object it is referencing (here it's `root` or `a`).  
+There is 1 space between the last `-` and the name of the object and the vetrical line is idented by 1 space from the level of the referenced object.  
+Note that the line starts from the name of the object that *contains* the refernce (`c`), not the name of the reference (`parent`, which is not shown in the TOO).  
 Also note that weak references are not depicted at all.
 
 #### A more extensive example:
@@ -164,12 +164,12 @@ root          = A
             c = C
     d         = D
 ```
-*For a more complete and realistic example, see [Portal.too](./NPTpy/Portal/Portal.too)*
-*The term `item` is used for an item inside a list (for no reason other than it seems ok :smiley:)*
+*For a more complete and realistic example, see [Portal.too](./NPTpy/Portal/Portal.too)*  
+*The term `item` is used for an item inside a list (for no reason other than it seems ok :smiley:)*  
 
 #### teardown()
 Noting these back-edges is important, as it can lead to memory leaks, and worse, objects staying alive when we think they've been deleted,
-if the objects in the cycle override the `__del__` method.
+if the objects in the cycle override the `__del__` method.  
 In this repository, we make the agreement that every object that has incident back-edges (== back-references that point **to** it) must have a `teardown()` method, in which it is responsible for calling the `teardown()` method to all its descendants that also have incident back-edges and deleting its forth-edges (== forward/normal references it has to the objects it owns). An example from [Portal.py](./NPTpy/Portal/Portal.py):
 ```python
     def teardown(self):
@@ -184,16 +184,16 @@ In this repository, we make the agreement that every object that has incident ba
 
 ### Module delegates
 
-Module delegates are objects that are created by (usually) top-level modules and are owned by regular objects.
-The delegates can have references to their modules which are usually outside the TOO.
-Any reference **to** delegates must be a weak reference, except for the reference that the host object holds to it.
-Delegates are shown in the `.too` files with a `%` in front of their class name.
-More on this topic in another document *(aka TODO)*.
+Module delegates are objects that are created by (usually) top-level modules and are owned by regular objects.  
+The delegates can have references to their modules which are usually outside the TOO.  
+Any reference **to** delegates must be a weak reference, except for the reference that the host object holds to it.  
+Delegates are shown in the `.too` files with a `%` in front of their class name.  
+More on this topic in another document *(aka TODO)*.  
 
 ### Interfaces
 
-Since we already have a nice layout of the object graph in the `.too` file, it is very convenient to add the interface between the TOO's objects here as well.
-At this point, the interface only mentions the methods of one object that are called by another.
+Since we already have a nice layout of the object graph in the `.too` file, it is very convenient to add the interface between the TOO's objects here as well.  
+At this point, the interface only mentions the methods of one object that are called by another.  
 For the above 'extensive example' we have:
 ```makefile
 # A
@@ -243,7 +243,7 @@ A few things to note here:
 * Keywords like `async` may be added after the `:` and a lot of spaces :wink:.
 * Sometimes you can use `*` together with letters like a glob to refer to many similar functions.
 
-## This is still not set in stone, many things may be changed or added in the future :no_mouth:.
+## This is still not set in stone, many things may be changed or added in the future :no_mouth:
 
 *(BTW, everything noted here is totally informal and may in some cases contradict 'real' theory. This format and ideas on interpretation of any piece of code are meant only for the contributors of this particular repository and might not apply that well in other cases.)*
 
