@@ -93,8 +93,8 @@ class Log:
             self.myLogger.logDeleted(self)
 
     def __call__(self, etype, *data):
-        if   len(data) == 0: data = None
-        elif len(data) == 1: data = data[0]
+        # if   len(data) == 0: data = None
+        # elif len(data) == 1: data = data[0]
         # self.entries.append((etype.value, repr(data)))
         self.myLogger.print(self, etype, data)
 

@@ -7,12 +7,17 @@ from .Async    import Promise
 from .Loop_log import LogClass, Etypes
 
 def reprCoroutine(c):
-    line = c.cr_frame.f_lineno
-    name = c.cr_frame.f_code.co_name
-    file = c.cr_frame.f_code.co_filename
-    slash = file.rfind('/')
-    if slash < 0: slash = file.rfind('\\')
-    return f'{name} {file[slash + 1:]}:{line}'
+    res = []
+    while hasattr(c, 'cr_frame') and c.cr_frame:
+        line  = c.cr_frame.f_lineno
+        name  = c.cr_frame.f_code.co_name
+        file  = c.cr_frame.f_code.co_filename
+        dot   = file.rfind('.')
+        slash = file.rfind('/')
+        if slash < 0: slash = file.rfind('\\')
+        res.append(f'{name} {file[slash+1:dot]}:{line}')
+        c = c.cr_await
+    return ', '.join(res)
 
 class Loop:
 
@@ -58,17 +63,18 @@ class Loop:
     def run(self, coroutine):
         if self.stopped:
             return
-        self.log(Etypes.Running, reprCoroutine(coroutine))
+        cid = id(coroutine)
+        self.log(Etypes.Running, cid, reprCoroutine(coroutine))
         self._ready.reset()
         try:
             future = coroutine.send(None)
             self.coroutines[future] = coroutine
         except StopIteration:
-            self.log(Etypes.Finished)
+            self.log(Etypes.Finished, cid)
         except Exception as e:
             self.log(Etypes.RunError, e)
         else:
-            self.log(Etypes.Paused, reprCoroutine(coroutine))
+            self.log(Etypes.Paused, cid, reprCoroutine(coroutine), id(future))
         self._ready()
 
 
