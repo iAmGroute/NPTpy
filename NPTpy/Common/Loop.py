@@ -15,10 +15,6 @@ class Loop:
         self.stopped    = True
         self.coroutines = {}
 
-    def stop(self):
-        self.stopped    = True
-        self.coroutines = {}
-
     def watch(self, promise):
         if self.stopped:
             return None
