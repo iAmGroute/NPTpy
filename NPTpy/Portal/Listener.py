@@ -6,7 +6,7 @@ import Globals
 import ConfigFields as CF
 
 from Common.Connector import Connector
-from Common.Async     import loop
+from Common.Loop      import loop
 
 from .Listener_log import LogClass, Etypes
 

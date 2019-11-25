@@ -5,7 +5,8 @@
 
 from Common.SmartTabs import t
 from Common.SlotList  import SlotList
-from Common.Async     import Promise, loop
+from Common.Async     import Promise
+from Common.Loop      import loop
 
 from .Endpoint            import Endpoint
 from .ControlEndpoint_log import LogClass, Etypes

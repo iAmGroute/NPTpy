@@ -9,7 +9,7 @@ import webbrowser
 from Portal.PortalConfig import PortalConfig
 from Portal.PortalAPI    import PortalAPI
 from Common.SimpleServer import SimpleServer
-from Common.Async        import loop
+from Common.Loop         import loop
 
 portalConfig = PortalConfig('portal.config.json')
 portalConfig.save()

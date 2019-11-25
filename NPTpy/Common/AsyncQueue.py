@@ -1,6 +1,7 @@
 from collections import deque
 
-from .Async import Promise, loop
+from .Async import Promise
+from .Loop  import loop
 
 class AsyncQueue:
 

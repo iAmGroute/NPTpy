@@ -3,7 +3,7 @@ import socket
 from errno import errorcode
 from ssl   import SSLWantReadError
 
-from .Async         import loop
+from .Loop          import loop
 from .Connector     import Connector
 from .Connector_log import Etypes
 

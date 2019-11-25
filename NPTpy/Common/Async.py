@@ -1,5 +1,5 @@
+
 import weakref
-import asyncio
 
 from .Generic  import nop, identityMany, toTuple
 from .SlotList import SlotList
@@ -85,145 +85,13 @@ class Promise:
 #             newRoot.attach(self)
 
 
-class PromiseTee(Promise):
+# class PromiseTee(Promise):
 
-    def fire(self, params=()):
-        self.hasFired = True
-        self.callback(*toTuple(params))
-        self.value = params
-        for p in self.next:
-            p.fire(params)
-        self.cancel()
-
-
-class Loop:
-
-    def __init__(self):
-        self.stopped    = False
-        self.coroutines = {}
-        self._ready   = Promise()
-        self._ready()
-
-    def stop(self):
-        self.stopped    = True
-        self.coroutines = {}
-
-    def stop(self):
-        self.stopped    = True
-        self.coroutines = {}
-
-    def watch(self, promise):
-        if self.stopped:
-            return None
-        future = asyncio.Future()
-        promise.then(lambda *v: self._resolve(future, v))
-        return future
-
-    def _resolve(self, future, v):
-        if   len(v) == 0: v = None
-        elif len(v) == 1: v = v[0]
-        future.set_result(v)
-        self._ready.then(lambda: self._cont(future))
-
-    def _cont(self, future):
-        try:
-            coroutine = self.coroutines[future]
-            del self.coroutines[future]
-            self.run(coroutine)
-        except KeyError:
-            pass
-
-    def run(self, coroutine):
-        if self.stopped:
-            return
-        self._ready.reset()
-        try:
-            future = coroutine.send(None)
-            self.coroutines[future] = coroutine
-        except StopIteration:
-            pass
-        finally:
-            self._ready()
-
-
-loop = Loop()
-
-
-# class Event:
-
-#     def __init__(self, fStart, fCancel=nop, fAfter=identityMany):
-#         self.fStart  = fStart
-#         self.fCancel = fCancel
-#         self.promise = Promise(fAfter)
-#         self.pending = False
-
-#     def isPending(self):
-#         return self.pending
-
-#     def isComplete(self):
-#         return self.promise.hasFired
-
-#     def start(self):
-#         if not self.pending and not self.isComplete():
-#             ok = self.fStart()
-#             if not ok:
-#                 return None
-#             self.pending = True
-#         return self.promise
-
-#     def cancel(self):
-#         if self.pending:
-#             ok = self.fCancel()
-#             if not ok:
-#                 return False
-#             self.pending = False
-#         self.promise.reset()
-#         self.promise.cancel()
-#         return True
-
-#     def complete(self, *params):
-#         if self.pending:
-#             self.pending = False
-#             self.promise.fire(params)
-
-#     async def __call__(self):
-#         p = self.start()
-#         return (await loop.watch(p)) if p else None
-
-
-class EventAsync:
-
-    def __init__(self, f):
-        self.f = f
-        self.promise  = Promise()
-        self.complete = False
-        self.pending  = False
-
-    async def run(self, *args, **kwargs):
-        if not self.pending and not self.complete:
-            self.pending  = True
-            result = await self.f(*args, **kwargs)
-            self.pending  = False
-            self.complete = bool(result)
-            self.promise.fire(result)
-            if not self.complete:
-                self.promise.reset()
-
-    async def __call__(self, *args, **kwargs):
-        loop.run(self.run(*args, **kwargs))
-        return await loop.watch(self.promise)
-
-    def isPending(self):
-        return self.pending
-
-    def isComplete(self):
-        return self.complete
-
-    def isPendingOrComplete(self):
-        return self.pending or self.complete
-
-    def reset(self):
-        assert not self.pending
-        self.promise.reset()
-        self.complete = False
+#     def fire(self, params=()):
+#         self.hasFired = True
+#         self.callback(*toTuple(params))
+#         self.value = params
+#         for p in self.next:
+#             p.fire(params)
+#         self.cancel()
 

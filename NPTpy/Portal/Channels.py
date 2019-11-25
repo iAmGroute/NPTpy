@@ -6,7 +6,7 @@ import Globals
 from Common.SlotList       import SlotList
 from Common.Connector      import Connector
 from Common.AsyncConnector import AsyncConnector
-from Common.Async          import loop
+from Common.Loop           import loop
 from .Endpoint             import Endpoint
 from .ControlEndpoint      import ControlEndpoint
 from .DataEndpoint         import DataEndpoint

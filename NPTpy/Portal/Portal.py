@@ -11,7 +11,8 @@ from Common.Generic  import find
 from Common.SlotList import SlotList
 from Common.AsyncConnectorPacketized \
     import  AsyncConnectorPacketized
-from Common.Async    import Promise, EventAsync, loop
+from Common.Async    import Promise
+from Common.Loop     import EventAsync, loop
 from .Link           import Link
 from .Portal_log     import LogClass, Etypes
 

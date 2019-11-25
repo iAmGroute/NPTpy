@@ -8,7 +8,7 @@ import ConfigFields as CF
 from Common.SlotList       import SlotList
 from Common.Connector      import Connector
 from Common.AsyncConnector import AsyncConnector
-from Common.Async          import EventAsync, loop
+from Common.Loop           import EventAsync, loop
 from .Channels             import Channels
 from .Listener             import Listener
 from .Link_log             import LogClass, Etypes
