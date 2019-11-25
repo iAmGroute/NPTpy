@@ -15,10 +15,13 @@ async def wait(selectable):
 
 class AsyncConnector(Connector):
 
-    def __init__(self, readables, writables, fromSocket=None, new=None):
-        Connector.__init__(self, fromSocket, new)
+    def __init__(self, readables, writables, **kwargs):
+        Connector.__init__(self, **kwargs)
         self.readable = readables.new(self, True, False)
         self.writable = writables.new(self, True, False)
+
+    def __repr__(self):
+        return f'<AsyncConnector {self.reprEndpoints()}>'
 
     def close(self):
         self.readable.off()
@@ -27,6 +30,7 @@ class AsyncConnector(Connector):
 
     async def connectAsync(self, endpoint):
         self.log(Etypes.Connecting, endpoint)
+        self.incoming = False
         try:
             self.socket.connect(endpoint)
         except BlockingIOError:

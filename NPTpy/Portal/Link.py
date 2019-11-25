@@ -64,7 +64,7 @@ class Link:
         conRT = await self._secureForward(conRT, clientSide)
         if not conRT:
             return False
-        self.conRT = Connector(fromSocket=conRT.socket, log=conRT.log)
+        self.conRT = Connector(fromConnector=conRT)
         self.readable.on()
         self.writable.on()
         self.kaCountIdle         = 0

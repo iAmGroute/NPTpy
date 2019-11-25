@@ -9,6 +9,9 @@ class AsyncConnectorPacketized(AsyncConnector):
         self.recvBuffer = b''
         self.lock       = AsyncQueue()
 
+    def __repr__(self):
+        return f'<AsyncConnectorPacketized {self.reprEndpoints()}>'
+
     async def bufferAsync(self, size):
         while len(self.recvBuffer) < size:
             data = await self.tryRecvAsync(32768)

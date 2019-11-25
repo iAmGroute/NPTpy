@@ -8,28 +8,60 @@ import Globals
 from .this_OS       import OS, this_OS
 from .Connector_log import LogClass, Etypes
 
+
+def newSocket(socketType=socket.SOCK_STREAM, timeout=0, port=0, address='0.0.0.0', proto=0):
+    af = socket.AF_INET if address.count('.') == 3 else socket.AF_INET6
+    s  = socket.socket(af, socketType, proto)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.settimeout(timeout)
+    s.bind((address, port))
+    return s
+
+def _newSocket(args):
+    if type(args) is tuple: return newSocket(*args)
+    else:                   return newSocket(**args)
+
+
 class Connector:
 
-    def __init__(self, fromSocket=None, new=None, log=None):
-        self.log = log.upgrade(LogClass) if log else Globals.logger.new(LogClass)
-        self.log(Etypes.Initing, fromSocket, new)
-        s = fromSocket if fromSocket else Connector.new(*new)
-        if s.type == socket.SOCK_STREAM:
-            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            # s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT, 16 * 1024)
-        sname = s.getsockname()
-        address, port = sname[0], sname[1]
-        self.socket = s
-        self.log(Etypes.Inited, address, port)
+    def __init__(self, fromSocket=None, new=None, fromConnector=None):
+        if fromConnector:
+            self.log       = fromConnector.log.upgrade(LogClass)
+            self.listening = fromConnector.listening
+            self.incoming  = fromConnector.incoming
+            self.socket    = fromConnector.socket
+        else:
+            self.log       = Globals.logger.new(LogClass)
+            self.listening = False
+            self.incoming  = True
+            self.log(Etypes.Initing, fromSocket, new)
+            self.socket    = fromSocket if fromSocket else _newSocket(new)
+            s = self.socket
+            if s.type == socket.SOCK_STREAM:
+                s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                # s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT, 16 * 1024)
+            sname         = s.getsockname()
+            address, port = sname[0], sname[1]
+            self.log(Etypes.Inited, address, port)
 
-    @staticmethod
-    def new(socketType=socket.SOCK_DGRAM, timeout=0, port=0, address='0.0.0.0', proto=0):
-        af = socket.AF_INET if address.count('.') == 3 else socket.AF_INET6
-        s = socket.socket(af, socketType, proto)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.settimeout(timeout)
-        s.bind((address, port))
-        return s
+    def reprEndpoints(self):
+        lname  = self.socket.getsockname()
+        la, lp = lname[0], lname[1]
+        res    = f'[{la}]:{lp}'
+        if self.listening:
+            res += '\'L'
+        try:
+            rname = self.socket.getpeername()
+        except OSError:
+            rname = None
+        if rname:
+            ra, rp = rname[0], rname[1]
+            res += '<-' if self.incoming else '->'
+            res += f'[{ra}]:{rp}'
+        return res
+
+    def __repr__(self):
+        return f'<Connector {self.reprEndpoints()}>'
 
     def __enter__(self):
         return self
@@ -75,8 +107,9 @@ class Connector:
     # Mainly TCP
 
     def listen(self):
-        self.socket.listen()
         self.log(Etypes.Listen)
+        self.socket.listen()
+        self.listening = True
 
     def accept(self):
         self.log(Etypes.Accepting)
@@ -88,6 +121,7 @@ class Connector:
     def decline(self):
         self.log(Etypes.Declining)
         conn, addr = self.socket.accept()
+        del conn
         self.log(Etypes.Declined, *addr)
         # try:
         #     conn.settimeout(0)
@@ -114,6 +148,7 @@ class Connector:
 
     def connect(self, endpoint):
         self.log(Etypes.Connecting, *endpoint)
+        self.incoming = False
         self.socket.connect(endpoint)
         self.log(Etypes.Connected)
 

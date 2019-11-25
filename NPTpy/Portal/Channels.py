@@ -68,7 +68,7 @@ class Channels:
         return cID
 
     def addChannel(self, channelIDF, connSocket):
-        conn = Connector(connSocket)
+        conn = Connector(fromSocket=connSocket)
         cID  = self.eps.append(0)
         ep   = DataEndpoint(cID, channelIDF, self, conn)
         self.eps[cID] = ep
@@ -85,7 +85,7 @@ class Channels:
             return None
 
     def upgradeChannel(self, channelID, channelIDF, connSocket):
-        conn = Connector(connSocket)
+        conn = Connector(fromSocket=connSocket)
         ep   = self.eps[channelID]
         self.eps[channelID] = DataEndpoint(channelID, channelIDF, self, conn)
         return True
