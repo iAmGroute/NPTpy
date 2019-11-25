@@ -38,7 +38,7 @@ class ControlEndpoint(Endpoint):
             elif action == b'D'    : self.actionDeleteChannelReply(data)
             else                   : assert False, f'Unknown action: {action}'
         except (AssertionError, IndexError) as e:
-            self.log(Etypes.Corrupted, repr(e))
+            self.log(Etypes.Corrupted, e)
             self.remove()
 
     # Note:

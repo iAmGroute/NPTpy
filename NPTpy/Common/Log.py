@@ -54,17 +54,20 @@ class Logger:
 
     def logCreated(self, log):
         prefix = getPrefix(log)
+        t(prefix)
         print(t.over(f'{prefix}[Log created]'))
 
     def logDeleted(self, log):
         prefix = getPrefix(log)
+        t(prefix)
         print(t.over(f'{prefix}[Log deleted]'))
 
     def upgradeLog(self, log, newLogClass):
         self.processLogClass(newLogClass)
-        log.logClass = newLogClass
         prefix       = getPrefix(log)
+        log.logClass = newLogClass
         newName      = newLogClass.name
+        t(prefix)
         print(t.over(f'{prefix}[Upgrading to <{newName}>]'))
         return log
 
@@ -72,7 +75,8 @@ class Logger:
         if log.logClass.enList[etype.value]:
             prefix = getPrefix(log)
             ename  = etype.name
-            print(t(f'{prefix}{ename}\t {data}'))
+            data   = f'\t {repr(data)}' if data is not None else ''
+            print(t(prefix + ename + data))
 
 
 class Log:
@@ -89,6 +93,8 @@ class Log:
             self.myLogger.logDeleted(self)
 
     def __call__(self, etype, *data):
+        if   len(data) == 0: data = None
+        elif len(data) == 1: data = data[0]
         # self.entries.append((etype.value, repr(data)))
         self.myLogger.print(self, etype, data)
 

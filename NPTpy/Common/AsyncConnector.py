@@ -41,7 +41,7 @@ class AsyncConnector(Connector):
             await self.connectAsync(endpoint)
             return True
         except OSError as e:
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
             return False
 
     async def sendallAsync(self, data, maxLoops=8):
@@ -61,7 +61,7 @@ class AsyncConnector(Connector):
             await self.sendallAsync(data, maxLoops)
             return True
         except OSError as e:
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
             return False
 
     async def recvAsync(self, bufferSize, maxLoops=8):
@@ -81,7 +81,7 @@ class AsyncConnector(Connector):
         try:
             return await self.recvAsync(bufferSize, maxLoops)
         except OSError as e:
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
             return b''
 
     async def doHandshakeAsync(self, maxLoops=8):

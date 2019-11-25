@@ -48,7 +48,7 @@ class Connector:
         try:
             self.close()
         except OSError as e:
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
             return False
         return True
 
@@ -101,7 +101,7 @@ class Connector:
             conn, addr = self.accept()
         except OSError as e:
             conn, addr = None, None
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
         return conn, addr
 
     def tryDecline(self):
@@ -109,7 +109,7 @@ class Connector:
             addr = self.decline()
         except OSError as e:
             addr = None
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
         return addr
 
     def connect(self, endpoint):
@@ -122,7 +122,7 @@ class Connector:
             self.connect(endpoint)
             return True
         except OSError as e:
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
             return False
 
     def sendall(self, data):
@@ -136,7 +136,7 @@ class Connector:
             self.sendall(data)
             return True
         except OSError as e:
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
             return False
 
     def recv(self, bufferSize):
@@ -155,7 +155,7 @@ class Connector:
                 # No data is available but the connection is still OK.
                 return None
             else:
-                self.log(Etypes.Error, repr(e))
+                self.log(Etypes.Error, e)
                 return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
@@ -202,7 +202,7 @@ class Connector:
             result = Connector.HandshakeStatus.WantWrite
         # except ssl.SSLError:
         except OSError as e:
-            self.log(Etypes.Error, repr(e))
+            self.log(Etypes.Error, e)
             result = Connector.HandshakeStatus.Error
         self.log(Etypes.HandshakeResult, result)
         return result
