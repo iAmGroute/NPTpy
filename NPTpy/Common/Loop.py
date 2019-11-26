@@ -56,7 +56,6 @@ class Loop:
             del self.coroutines[future]
         except KeyError:
             self.log(Etypes.NotFound, id(future))
-            pass
         else:
             self.run(coroutine)
 
@@ -95,7 +94,7 @@ class EventAsync:
             result = await self.f(*args, **kwargs)
             self.pending  = False
             self.complete = bool(result)
-            self.promise.fire(result)
+            self.promise(result)
             if not self.complete:
                 self.promise.reset()
 

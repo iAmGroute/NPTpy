@@ -51,12 +51,12 @@ class Promise:
     def _cancel(self, pID):
         del self.next[pID]
         if not self.next:
-            self.cancel()
+            self.detach()
 
     def fire(self, params=()):
         self.detach()
         self.hasFired = True
-        self.value    = self.callback(*toTuple(params))
+        self.value    = toTuple(self.callback(*params))
         for p in self.next:
             p.fire(self.value)
 
@@ -82,7 +82,7 @@ class Promise:
 #             Promise.fire(self, params)
 #         else:
 #             self.hasJoined = True
-#             newRoot = self.callback(*toTuple(params))
+#             newRoot = self.callback(*params)
 #             self.callback = identityMany
 #             self.cancel()
 #             newRoot.attach(self)
@@ -92,7 +92,7 @@ class Promise:
 
 #     def fire(self, params=()):
 #         self.hasFired = True
-#         self.callback(*toTuple(params))
+#         self.callback(*params)
 #         self.value = params
 #         for p in self.next:
 #             p.fire(params)
