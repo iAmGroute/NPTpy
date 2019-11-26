@@ -1,27 +1,36 @@
 
 import weakref
 
-from .Generic  import nop, identityMany, toTuple
-from .SlotList import SlotList
+import Globals
+
+from .Generic   import nop, identityMany, toTuple
+from .SlotList  import SlotList
+from .Async_log import LogClass, Etypes
 
 class Promise:
 
     def __init__(self, callback=identityMany):
+        self.log      = Globals.logger.new(LogClass)
         self.callback = callback
         self.getPrev  = nop
         self.myID     = None
         self.next     = SlotList()
         self.hasFired = False
         self.value    = None
+        self.log(Etypes.Inited, id(self), callback)
 
     def __del__(self):
+        if hasattr(self, 'log'):
+            self.log(Etypes.Deleting)
         if not self.hasFired:
             self.fire()
 
     def reset(self):
+        self.log(Etypes.Reset)
         self.hasFired = False
 
     def attach(self, promise):
+        self.log(Etypes.Attach, id(promise))
         p         = promise
         p.myID    = self.next.append(p)
         p.getPrev = weakref.ref(self)
@@ -39,6 +48,7 @@ class Promise:
     #     return self.attach(PromiseTee(callback))
 
     def detach(self):
+        self.log(Etypes.Detach)
         prev = self.getPrev()
         if prev:
             prev._cancel(self.myID)
@@ -54,9 +64,11 @@ class Promise:
             self.detach()
 
     def fire(self, params=()):
+        self.log(Etypes.Fire, *params)
         self.detach()
         self.hasFired = True
         self.value    = toTuple(self.callback(*params))
+        self.log(Etypes.FireResult, *self.value)
         for p in self.next:
             p.fire(self.value)
 
