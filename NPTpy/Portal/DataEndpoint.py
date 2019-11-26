@@ -4,12 +4,21 @@
 
 import Globals
 
-from .Endpoint import Endpoint
+from .Endpoint     import Endpoint
+# TODO: create DataEndpoint log
+from .Endpoint_log import LogClass, Etypes
 
 class DataEndpoint(Endpoint):
 
-    def __init__(self, myID, myIDF, parent, con):
-        Endpoint.__init__(self, myID, myIDF, parent)
+    def __init__(self, con, new=None, fromEndpoint=None):
+        if new:
+            Endpoint.__init__(self, *new)
+        elif fromEndpoint:
+            self.log    = fromEndpoint.log
+            self.myID   = fromEndpoint.myID
+            self.myIDF  = fromEndpoint.myIDF
+            self.parent = fromEndpoint.parent
+        self.log.upgrade(LogClass)
         self.con      = con
         self.readable = Globals.readables.new(self, isActive=True, canWake=True)
         self.writable = Globals.writables.new(self, isActive=True, canWake=False)

@@ -15,5 +15,6 @@ class Etypes(Enum):
 class LogClass:
     name     = 'ControlEndpoint'
     etypes   = Etypes
-    disabled = {}
+    disabled = [
+    ]
 

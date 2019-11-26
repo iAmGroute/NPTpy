@@ -70,7 +70,7 @@ class Channels:
     def addChannel(self, channelIDF, connSocket):
         conn = Connector(fromSocket=connSocket)
         cID  = self.eps.append(0)
-        ep   = DataEndpoint(cID, channelIDF, self, conn)
+        ep   = DataEndpoint(conn, new=(cID, channelIDF, self))
         self.eps[cID] = ep
         return cID
 
@@ -85,9 +85,11 @@ class Channels:
             return None
 
     def upgradeChannel(self, channelID, channelIDF, connSocket):
-        conn = Connector(fromSocket=connSocket)
-        ep   = self.eps[channelID]
-        self.eps[channelID] = DataEndpoint(channelID, channelIDF, self, conn)
+        conn  = Connector(fromSocket=connSocket)
+        ep    = self.eps[channelID]
+        newEP = DataEndpoint(conn, fromEndpoint=ep)
+        newEP.myIDF = channelIDF
+        self.eps[channelID] = newEP
         return True
 
     async def newChannel(self, channelIDF, devicePort, deviceAddr):
