@@ -48,9 +48,9 @@ class Promise:
     #     return self.attach(PromiseTee(callback))
 
     def detach(self):
-        self.log(Etypes.Detach)
         prev = self.getPrev()
         if prev:
+            self.log(Etypes.Detach)
             prev._cancel(self.myID)
 
     def cancel(self):
