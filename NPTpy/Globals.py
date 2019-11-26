@@ -15,4 +15,17 @@ def runReminders():
 readables = Selectables()
 writables = Selectables()
 
-logger = Logger()
+
+logPrintLF = True
+def logPrint(*args, **kwargs):
+    global logPrintLF
+    if 'end' in kwargs:
+        logPrintLF = False
+    else:
+        if not logPrintLF:
+            logPrintLF = True
+            print()
+    print(*args, **kwargs)
+
+
+logger = Logger(logPrint)

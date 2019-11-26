@@ -46,7 +46,7 @@ class Portal:
 # Main
 
     def main(self):
-        print('.')
+        Globals.logPrint('.', end='')
         # self.runConnect()
         Globals.runReminders()
         activeR, canWakeR = Globals.readables.get()

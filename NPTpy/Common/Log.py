@@ -29,8 +29,9 @@ def getPrefix(log):
 
 class Logger:
 
-    def __init__(self):
+    def __init__(self, logPrint):
         self.logCount = 0
+        self.logPrint = logPrint
 
     def processLogClass(self, logClass):
         if not hasattr(logClass, 'enList'):
@@ -55,12 +56,12 @@ class Logger:
     def logCreated(self, log):
         prefix = getPrefix(log)
         t(prefix)
-        print(t.over(f'{prefix}[Log created]'))
+        self.logPrint(t.over(f'{prefix}[Log created]'))
 
     def logDeleted(self, log):
         prefix = getPrefix(log)
         t(prefix)
-        print(t.over(f'{prefix}[Log deleted]'))
+        self.logPrint(t.over(f'{prefix}[Log deleted]'))
 
     def upgradeLog(self, log, newLogClass):
         self.processLogClass(newLogClass)
@@ -68,7 +69,7 @@ class Logger:
         log.logClass = newLogClass
         newName      = newLogClass.name
         t(prefix)
-        print(t.over(f'{prefix}[Upgrading to <{newName}>]'))
+        self.logPrint(t.over(f'{prefix}[Upgrading to <{newName}>]'))
         return log
 
     def print(self, log, etype, data):
@@ -76,7 +77,7 @@ class Logger:
             prefix = getPrefix(log)
             ename  = etype.name
             data   = f'\t {repr(data)}' if data is not None else ''
-            print(t(prefix + ename + data))
+            self.logPrint(t(prefix + ename + data))
 
 
 class Log:
