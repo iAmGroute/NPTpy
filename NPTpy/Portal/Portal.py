@@ -67,7 +67,7 @@ class Portal:
                 self.waitingSince = now
                 loop.run(self.connect())
 
-    async def _connect(self):
+    async def _connect_p1(self):
         conST = await self._connectToServer()
         if not conST:
             return False
@@ -80,6 +80,12 @@ class Portal:
         self.reminderRX.enabled  = True
         loop.run(self.rtask())
         return True
+
+    async def _connect(self):
+        self.log(Etypes.Connect)
+        result = await self._connect_p1()
+        self.log(Etypes.ConnectResult, result)
+        return result
 
     async def _connectToServer(self):
         conST = AsyncConnectorPacketized(
@@ -102,6 +108,7 @@ class Portal:
 
     def disconnect(self):
         assert self.connect.isComplete() # TODO: remove
+        self.log(Etypes.Disconnect)
         self.connect.reset()
         self.conST.tryClose()
         self.conST = None
