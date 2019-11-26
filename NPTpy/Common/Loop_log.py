@@ -17,11 +17,11 @@ class LogClass:
     name     = 'Loop'
     etypes   = Etypes
     disabled = [
-        Watching,
-        Resolving,
-        Continuing,
-        Running,
-        Finished,
-        Paused,
+        Etypes.Watching,
+        Etypes.Resolving,
+        Etypes.Continuing,
+        Etypes.Running,
+        Etypes.Finished,
+        Etypes.Paused,
     ]
 
