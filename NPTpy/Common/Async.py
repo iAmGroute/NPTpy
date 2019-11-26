@@ -38,10 +38,13 @@ class Promise:
     # def tee(self, callback):
     #     return self.attach(PromiseTee(callback))
 
-    def cancel(self):
+    def detach(self):
         prev = self.getPrev()
         if prev:
             prev._cancel(self.myID)
+
+    def cancel(self):
+        self.detach()
         for p in self.next:
             p.cancel()
 
@@ -51,7 +54,7 @@ class Promise:
             self.cancel()
 
     def fire(self, params=()):
-        self.cancel()
+        self.detach()
         self.hasFired = True
         self.value    = self.callback(*toTuple(params))
         for p in self.next:
