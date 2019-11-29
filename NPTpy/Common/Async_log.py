@@ -13,6 +13,13 @@ class Etypes(Enum):
 class LogClass:
     name     = 'Promise'
     etypes   = Etypes
-    disabletd = [
+    disabled = [
+        Inited,
+        Deleting,
+        Reset,
+        Attach,
+        Detach,
+        Fire,
+        FireResult,
     ]
 
