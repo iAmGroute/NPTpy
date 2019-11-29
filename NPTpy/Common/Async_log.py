@@ -14,12 +14,12 @@ class LogClass:
     name     = 'Promise'
     etypes   = Etypes
     disabled = [
-        Inited,
-        Deleting,
-        Reset,
-        Attach,
-        Detach,
-        Fire,
-        FireResult,
+        Etypes.Inited,
+        Etypes.Deleting,
+        Etypes.Reset,
+        Etypes.Attach,
+        Etypes.Detach,
+        Etypes.Fire,
+        Etypes.FireResult,
     ]
 
