@@ -1,25 +1,15 @@
 
-from enum import Enum, auto
+from .Log import newClass
 
-class Etypes(Enum):
-    Inited     = auto()
-    Deleting   = auto()
-    Reset      = auto()
-    Attach     = auto()
-    Detach     = auto()
-    Fire       = auto()
-    FireResult = auto()
+class Etypes:  # (Enabled, Displayed)
+    Inited     = (   True,      True)
+    Deleting   = (   True,      True)
+    Reset      = (   True,      True)
+    Attach     = (   True,      True)
+    Detach     = (   True,      True)
+    Fire       = (   True,      True)
+    FireResult = (   True,      True)
 
-class LogClass:
-    name     = 'Promise'
-    etypes   = Etypes
-    disabled = [
-        Etypes.Inited,
-        Etypes.Deleting,
-        Etypes.Reset,
-        Etypes.Attach,
-        Etypes.Detach,
-        Etypes.Fire,
-        Etypes.FireResult,
-    ]
+
+LogClass = newClass('Promise', Etypes, enabled=False)
 

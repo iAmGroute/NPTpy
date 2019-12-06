@@ -1,11 +1,10 @@
 
-from enum import Enum, auto
+from Common.Log import newClass
 
-class Etypes(Enum):
-    Inited  = auto()
-    Deleted = auto()
+class Etypes: # (Enabled, Displayed)
+    Inited    = (   True,      True)
+    Deleted   = (   True,      True)
 
-class LogClass:
-    name   = 'Endpoint'
-    etypes = Etypes
+
+LogClass = newClass('Endpoint', Etypes)
 

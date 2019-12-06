@@ -1,27 +1,18 @@
 
-from enum import Enum, auto
+from .Log import newClass
 
-class Etypes(Enum):
-    Stopping   = auto()
-    Stopped    = auto()
-    Watching   = auto()
-    Resolving  = auto()
-    Continuing = auto()
-    NotFound   = auto()
-    Running    = auto()
-    RunError   = auto()
-    Finished   = auto()
-    Paused     = auto()
+class Etypes:  # (Enabled, Displayed)
+    Stopping   = (   True,      True)
+    Stopped    = (   True,      True)
+    Watching   = (  False,     False)
+    Resolving  = (  False,     False)
+    Continuing = (  False,     False)
+    NotFound   = (   True,      True)
+    Running    = (  False,     False)
+    RunError   = (   True,      True)
+    Finished   = (  False,     False)
+    Paused     = (  False,     False)
 
-class LogClass:
-    name     = 'Loop'
-    etypes   = Etypes
-    disabled = [
-        Etypes.Watching,
-        Etypes.Resolving,
-        Etypes.Continuing,
-        Etypes.Running,
-        Etypes.Finished,
-        Etypes.Paused,
-    ]
+
+LogClass = newClass('Loop', Etypes)
 

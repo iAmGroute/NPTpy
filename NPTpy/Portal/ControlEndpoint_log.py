@@ -1,20 +1,17 @@
 
-from enum import Enum, auto
+from Common.Log import newClass
 
-class Etypes(Enum):
-    Inited         = auto()
-    Deleted        = auto()
-    Corrupted      = auto()
-    SendingKA      = auto()
-    ReceivedKA     = auto()
-    Created        = auto()
-    ReadyToAccept  = auto()
-    DeletedByOther = auto()
-    DeletedByUs    = auto()
+class Etypes:      # (Enabled, Displayed)
+    Inited         = (   True,      True)
+    Deleted        = (   True,      True)
+    Corrupted      = (   True,      True)
+    SendingKA      = (   True,      True)
+    ReceivedKA     = (   True,      True)
+    Created        = (   True,      True)
+    ReadyToAccept  = (   True,      True)
+    DeletedByOther = (   True,      True)
+    DeletedByUs    = (   True,      True)
 
-class LogClass:
-    name     = 'ControlEndpoint'
-    etypes   = Etypes
-    disabled = [
-    ]
+
+LogClass = newClass('ControlEndpoint', Etypes)
 

@@ -21,10 +21,9 @@ def getDenyList(count, disabled):
 
 
 def getPrefix(log):
-    tstamp  = time.time()
-    logID   = log.myID.to_bytes(4, 'big').hex().upper()
-    logName = log.logClass.name
-    return f'{tstamp:.1f}\t [{logID}] {logName}:\t '
+    tstamp = time.time()
+    logID  = log.myID.to_bytes(4, 'big').hex().upper()
+    return f'{tstamp:.1f}\t [{logID}] {log.name}:\t '
 
 
 class Logger:
@@ -33,22 +32,7 @@ class Logger:
         self.logCount = 0
         self.logPrint = logPrint
 
-    def processLogClass(self, logClass):
-        if not hasattr(logClass, 'enList'):
-            m = 0
-            for et in logClass.etypes:
-                assert type(et.value) is int
-                assert et.value > 0
-                if et.value > m:
-                    m = et.value
-            m += 1
-            if   hasattr(logClass, 'enabled'):  eL = getAllowList(m, logClass.enabled)
-            elif hasattr(logClass, 'disabled'): eL = getDenyList(m, logClass.disabled)
-            else:                               eL = getDenyList(m, {})
-            logClass.enList = eL
-
     def new(self, logClass):
-        self.processLogClass(logClass)
         logID = self.logCount
         self.logCount += 1
         return Log(self, logID, logClass)
@@ -64,20 +48,16 @@ class Logger:
         self.logPrint(t.over(f'{prefix}[Log deleted]'))
 
     def upgradeLog(self, log, newLogClass):
-        self.processLogClass(newLogClass)
-        prefix       = getPrefix(log)
-        log.logClass = newLogClass
-        newName      = newLogClass.name
+        prefix = getPrefix(log)
+        log.setClass(newLogClass)
         t(prefix)
-        self.logPrint(t.over(f'{prefix}[Upgrading to <{newName}>]'))
+        self.logPrint(t.over(f'{prefix}[Upgrading to <{log.name}>]'))
         return log
 
-    def print(self, log, etype, data):
-        if log.logClass.enList[etype.value]:
-            prefix = getPrefix(log)
-            ename  = etype.name
-            data   = f'\t {repr(data)}' if data is not None else ''
-            self.logPrint(t(prefix + ename + data))
+    def print(self, log, ename, data):
+        prefix = getPrefix(log)
+        data   = f'\t {repr(data)}' if data is not None else ''
+        self.logPrint(t(prefix + ename + data))
 
 
 class Log:
@@ -85,23 +65,64 @@ class Log:
     def __init__(self, myLogger, myID, logClass):
         self.myLogger = myLogger
         self.myID     = myID
-        self.logClass = logClass
         self.entries  = []
-        self.myLogger.logCreated(self)
+        self.setClass(logClass)
+        if self.enabled:
+            self.myLogger.logCreated(self)
+
+    def setClass(self, logClass):
+        self.name    = logClass.name
+        self.etypes  = logClass.etypes
+        self.enabled = logClass.enabled
 
     def __del__(self):
         if hasattr(self, 'myLogger'):
-            self.myLogger.logDeleted(self)
+            if self.enabled:
+                self.myLogger.logDeleted(self)
 
     def __call__(self, etype, *data):
-        # if   len(data) == 0: data = None
-        # elif len(data) == 1: data = data[0]
-        # self.entries.append((etype.value, repr(data)))
-        self.myLogger.print(self, etype, data)
+        if self.enabled:
+            ename, enabled, displayed = self.etypes[etype]
+            if enabled:
+                # self.entries.append((etype.value, repr(data)))
+                pass
+            if displayed:
+                self.myLogger.print(self, ename, data)
 
     def upgrade(self, newLogClass):
         return self.myLogger.upgradeLog(self, newLogClass)
 
+
+def parseEtypeValue(enabled=False, displayed=False):
+    assert type(enabled)   is bool
+    assert type(displayed) is bool
+    return enabled, displayed
+
+
+# Gathers the names and values of each variable
+# in the class `etypes` and puts them in the list `res`.
+# The variables in `etypes` are replaced with the index they got in `res`.
+# `res` is also saved in `etypes` as `_processed`.
+def parseEtypes(etypes):
+    if not hasattr(etypes, '_processed'):
+        res = []
+        for etName in etypes.__dict__:
+            if etName[0] != '_':
+                value = parseEtypeValue(*getattr(etypes, etName))
+                setattr(etypes, etName, len(res))
+                res.append((etName, *value))
+        etypes._processed = res
+    return etypes._processed
+
+
+def newClass(name, etypes, enabled=True):
+    etypes = parseEtypes(etypes)
+    res = type(name + '_log', (), {
+        'name':    name,
+        'etypes':  etypes,
+        'enabled': enabled
+    })
+    return res
 
 
 # class Log:

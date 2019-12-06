@@ -1,14 +1,13 @@
 
-from enum import Enum, auto
+from Common.Log import newClass
 
-class Etypes(Enum):
-    Inited        = auto()
-    Deleted       = auto()
-    NewConnection = auto()
-    Accept        = auto()
-    Decline       = auto()
+class Etypes:     # (Enabled, Displayed)
+    Inited        = (   True,      True)
+    Deleted       = (   True,      True)
+    NewConnection = (   True,      True)
+    Accept        = (   True,      True)
+    Decline       = (   True,      True)
 
-class LogClass:
-    name   = 'Listener'
-    etypes = Etypes
+
+LogClass = newClass('Listener', Etypes)
 
