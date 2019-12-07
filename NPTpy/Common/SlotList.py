@@ -1,5 +1,5 @@
 # SlotList:
-#   A container based on a fixed length array,
+#   A container based on a variable length list,
 #   useful for fast allocation, random access and random deallocation.
 #   An ID is returned on allocation, which is unique
 #   until the ID counter overflows (does not happen in Python).
@@ -55,14 +55,11 @@ class SlotList:
                 count += 1
         return count
 
-    def isEmpty(self):
-        return len(self) == 0
-
     def isFull(self):
         return len(self) == len(self.slots)
 
     def __bool__(self):
-        return not self.isEmpty()
+        return bool(len(self))
 
     def __iter__(self):
         return SlotList_Iterator(self)
