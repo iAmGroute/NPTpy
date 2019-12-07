@@ -23,16 +23,34 @@ class Slot:
         return self.val is not None
 
 
-class SlotList_Iterator:
+class Iterator:
 
     def __init__(self, mySlotList):
         self.subiter = iter(mySlotList.slots)
+
+    def __iter__(self):
+        return self
 
     def __next__(self):
         while True:
             slot = next(self.subiter)
             if slot:
                 return slot.val
+
+
+class IteratorKV:
+
+    def __init__(self, mySlotList):
+        self.subiter = iter(mySlotList.slots)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            slot = next(self.subiter)
+            if slot:
+                return slot.myID, slot.val
 
 
 class SlotList:
@@ -62,7 +80,10 @@ class SlotList:
         return bool(len(self))
 
     def __iter__(self):
-        return SlotList_Iterator(self)
+        return Iterator(self)
+
+    def iterKV(self):
+        return IteratorKV(self)
 
     def listIDs(self):
         return [s.myID for s in self.slots if s]

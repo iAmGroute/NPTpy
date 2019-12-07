@@ -57,6 +57,32 @@ def test(Container):
 
     del sl
 
+    # Iteration KV
+    original = list(range(777))
+    sl       = Container(original)
+    items    = list(sl.iterKV())
+    assert items == [(i, i) for i in original]
+
+    # Iteration KV allows simultaneous deletion
+    original = list(range(555))
+    sl       = Container(original)
+
+    items = []
+    for k, v in sl.iterKV():
+        if k % 3 == 0:
+            del sl[k]
+        items.append(v)
+
+    items.sort()
+    assert items == original
+
+    expected = [original[i] for i in range(len(original)) if i % 3 != 0]
+    items    = list(sl)
+    items.sort()
+    assert items == expected
+
+    del sl
+
     # Grow after deletion
     sl = Container()
     sl.append('0')

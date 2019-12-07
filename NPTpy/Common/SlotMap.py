@@ -20,14 +20,39 @@ class Slot:
         return '({0}|{1})'.format(self.myID, repr(self.val))
 
 
-class SlotMap_Iterator:
+class Iterator:
 
     def __init__(self, mySlotMap):
         self.subiter = iter(mySlotMap.slots)
 
+    def __iter__(self):
+        return self
+
     def __next__(self):
         slot = next(self.subiter)
         return slot.val
+
+
+class IteratorKV:
+
+    def __init__(self, mySlotMap):
+        self.slots  = mySlotMap.slots
+        self.i      = 0
+        self.lastID = -1
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        i = self.i
+        if self.slots[i].myID == self.lastID:
+            i += 1
+            self.i = i
+        if i < len(self.slots):
+            slot = self.slots[i]
+            self.lastID = slot.myID
+            return slot.myID, slot.val
+        raise StopIteration
 
 
 class SlotMap:
@@ -46,7 +71,10 @@ class SlotMap:
         return self.slots.__bool__()
 
     def __iter__(self):
-        return SlotMap_Iterator(self)
+        return Iterator(self)
+
+    def iterKV(self):
+        return IteratorKV(self)
 
     def listIDs(self):
         return self.indexes.listIDs()
