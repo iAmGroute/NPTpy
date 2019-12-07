@@ -50,6 +50,13 @@ def test(Container):
 
     del sl
 
+    # Initial values as constructor parameter
+    ivs = ['World 0' 'World 1', 'World 2', 'World 3']
+    sl  = Container(ivs)
+    assert list(sl) == ivs
+
+    del sl
+
     # Grow after deletion
     sl = Container()
     sl.append('0')
