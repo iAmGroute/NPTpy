@@ -99,6 +99,13 @@ class SlotMap:
         slot.myID = self.indexes.append(index)
         return slot.myID
 
+    def _delete(self, index, ID):
+        replacement       = self.slots[-1]
+        self.slots[index] = replacement
+        self.slots.pop()
+        self.indexes[replacement.myID] = index
+        del self.indexes[ID]
+
     def deleteAll(self):
         self.slots = []
         self.indexes.deleteAll()
@@ -117,12 +124,16 @@ class SlotMap:
         self.slots[index].val = value
 
     def __delitem__(self, ID):
-        index             = self.indexes[ID]
+        index = self.indexes[ID]
         if index is None:
             return
-        replacement       = self.slots[-1]
-        self.slots[index] = replacement
-        self.slots.pop()
-        self.indexes[replacement.myID] = index
-        del self.indexes[ID]
+        self._delete(index, ID)
+
+    def pop(self, ID):
+        index = self.indexes[ID]
+        if index is None:
+            return None
+        res = self.slots[index].val
+        self._delete(index, ID)
+        return res
 

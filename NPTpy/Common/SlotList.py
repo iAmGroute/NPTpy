@@ -172,3 +172,11 @@ class SlotList:
             return
         self.deleteByIndex(index)
 
+    def pop(self, ID):
+        index = self.getIndex(ID)
+        if index < 0:
+            return None
+        res = self.slots[index].val
+        self.deleteByIndex(index)
+        return res
+

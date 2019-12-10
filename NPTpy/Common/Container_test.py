@@ -48,6 +48,19 @@ def test(Container):
     assert sl[3] == 'Hello 3'
     assert sl[newID] == 'Hello new'
 
+    # pop()
+    assert sl.pop(1) == None
+    assert sl.pop(3) == 'Hello 3'
+    assert sl[1]     == None
+    assert sl[3]     == None
+    assert sl[newID] == 'Hello new'
+    items = list(sl)
+    items.sort()
+    assert items == ['Hello 0', 'Hello 2', 'Hello new']
+    items = sl.listIDs()
+    items.sort()
+    assert items == [0, 2, newID]
+
     del sl
 
     # Initial values as constructor parameter
