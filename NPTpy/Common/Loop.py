@@ -66,7 +66,10 @@ class Loop:
         self.log(Etypes.Running, cid, reprCoroutine(coroutine))
         self._ready.reset()
         try:
-            future = coroutine.send(None)
+            while True:
+                future = coroutine.send(None)
+                if not future.done():
+                    break
             self.coroutines[future] = coroutine
         except StopIteration:
             self.log(Etypes.Finished, cid)
