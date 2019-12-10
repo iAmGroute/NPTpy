@@ -13,8 +13,8 @@ def runReminders():
     kaReminderRX.run()
     kaReminderTX.run()
 
-readables = Selectables()
-writables = Selectables()
+readables = Selectables(timeoutReminder)
+writables = Selectables(timeoutReminder)
 
 
 logPrintLF = True

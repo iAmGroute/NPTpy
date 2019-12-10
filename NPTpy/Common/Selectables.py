@@ -1,32 +1,24 @@
 import weakref
 
 from .SlotList import SlotList
-from .Async    import Promise
+from .Promises import Promises
 
 class Selectables:
 
-    def __init__(self):
+    def __init__(self, timeoutReminder):
         self.delegates = SlotList()
-        self.next      = SlotList()
+        self.promises  = Promises(timeoutReminder)
 
-    def _cancel(self, promiseID):
-        del self.next[promiseID]
-
-    def _onSelect(self, delegateID):
-        dRef      = self.delegates[delegateID]
-        p         = Promise()
-        p.myID    = self.next.append((dRef, p))
-        p.getPrev = weakref.ref(self)
-        return p
+    def _onSelect(self):
+        return self.promises.new()
 
     def selected(self, selectables, params=()):
-        for i in self.next.listIDs():
-            dRef, p = self.next[i]
+        for dRef in self.delegates:
             d = dRef()
-            if not d:
-                del self.next[i]
-            else:
-                if d.getOwner() in selectables:
+            if d:
+                p = d.promise
+                if p and d.getOwner() in selectables:
+                    d.promise = None
                     p.fire(params)
 
     def new(self, owner, isActive, canWake):
@@ -61,12 +53,17 @@ class SelectablesDelegate:
         self.getOwner  = weakref.ref(owner)
         self._isActive = _isActive
         self._canWake  = _canWake
+        self.promise   = None
 
     def __del__(self):
+        if self.promise:
+            self.promise.cancel()
         self.myModule._remove(self.myID)
 
     def onSelect(self):
-        return self.myModule._onSelect(self.myID)
+        assert self.promise is None
+        self.promise = self.myModule._onSelect()
+        return self.promise
 
     def isActive(self):
         return self._isActive
