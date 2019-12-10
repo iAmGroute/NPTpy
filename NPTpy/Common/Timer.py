@@ -4,7 +4,7 @@ class Timer:
 
     def __init__(self, interval):
         self.interval  = interval
-        self.time = time.time()
+        self.time      = time.time()
 
     def run(self, reset=True):
         result = time.time() > self.time + self.interval
