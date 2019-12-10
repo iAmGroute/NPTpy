@@ -1,10 +1,12 @@
 
 import asyncio
+from collections import deque
 
 import Globals
 
 from .Async    import Promise
 from .Loop_log import LogClass, Etypes
+from .SlotList import SlotList
 
 def reprCoroutine(c):
     res = []
@@ -24,60 +26,75 @@ class Loop:
     def __init__(self):
         self.log = Globals.logger.new(LogClass)
         self.stopped    = False
-        self.coroutines = {}
-        self._ready     = Promise()
-        self._ready()
+        self.coroutines = SlotList()
+        self.lastID     = -1
+        self.queue      = deque()
 
     def stop(self):
         self.log(Etypes.Stopping)
-        self.stopped    = True
-        self.coroutines = {}
+        self.stopped = True
+        self.coroutines.deleteAll()
+        self.queue   = deque()
         self.log(Etypes.Stopped)
 
     def watch(self, promise):
         if self.stopped:
             return None
         future = asyncio.Future()
-        self.log(Etypes.Watching, id(promise), id(future))
-        promise.then(lambda *v: self._resolve(future, v))
+        ID     = self.coroutines.append(0)
+        self.log(Etypes.Watching, id(promise), ID)
+        promise.then(lambda *v: self._resolve(ID, future, v))
+        self.lastID = ID # don't use self.lastID in the lambda
         return future
 
-    def _resolve(self, future, v):
+    def _resolve(self, ID, future, v):
+        if self.stopped:
+            return
         if   len(v) == 0: v = None
         elif len(v) == 1: v = v[0]
-        self.log(Etypes.Resolving, id(future), v)
+        self.log(Etypes.Resolving, ID, v)
         future.set_result(v)
-        self._ready.then(lambda: self._cont(future))
-
-    def _cont(self, future):
-        self.log(Etypes.Continuing, id(future))
-        try:
-            coroutine = self.coroutines[future]
-            del self.coroutines[future]
-        except KeyError:
-            self.log(Etypes.NotFound, id(future))
-        else:
-            self.run(coroutine)
+        self.enqueue(ID)
 
     def run(self, coroutine):
         if self.stopped:
             return
-        cid = id(coroutine)
-        self.log(Etypes.Running, cid, reprCoroutine(coroutine))
-        self._ready.reset()
-        try:
-            while True:
-                future = coroutine.send(None)
-                if not future.done():
-                    break
-            self.coroutines[future] = coroutine
-        except StopIteration:
-            self.log(Etypes.Finished, cid)
-        except Exception as e:
-            self.log(Etypes.RunError, e)
-        else:
-            self.log(Etypes.Paused, cid, reprCoroutine(coroutine), id(future))
-        self._ready()
+        ID = self.coroutines.append(coroutine)
+        self.enqueue(ID)
+
+    def enqueue(self, ID):
+        self.log(Etypes.Enqueue, ID)
+        now = not self.queue
+        self.queue.append(ID)
+        if now:
+            self._run()
+
+    def _run(self):
+        while self.queue:
+            ID = self.queue[0]
+            c  = self.coroutines.pop(ID)
+            if not c:
+                self.log(Etypes.NotFound, ID)
+            else:
+                cid = id(c)
+                self.log(Etypes.Running, cid, reprCoroutine(c))
+                try:
+                    # while c.send(None).done(): pass
+                    while True:
+                        future = c.send(None)
+                        if not future.done():
+                            break
+                except StopIteration:
+                    self.log(Etypes.Finished, cid)
+                # except Exception as e:
+                    # self.log(Etypes.RunError, e)
+                else:
+                    # We assume that the returned future is the last watched future
+                    assert self.lastID >= 0 # debug
+                    self.coroutines[self.lastID] = c
+                    self.log(Etypes.Paused, cid, reprCoroutine(c), self.lastID)
+                    self.lastID = -1        # debug
+            self.queue.popleft()
 
 
 loop = Loop()
