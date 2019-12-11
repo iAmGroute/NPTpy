@@ -54,7 +54,7 @@ Portal          ---> AsyncConnectorPacketized conST:
     setKeepAlive(self)
     secureClient(self, serverHostname, caFilename)
     tryConnectAsync(self, endpoint)                            async
-    doHandshakeAsync(self)                                     async
+    tryDoHandshakeAsync(self)                                  async
     sendPacketAsync(self, packet)                              async
     recvPacketAsync(self)                                      async
     tryClose(self)
@@ -110,7 +110,7 @@ Link            ---> AsyncConnector conRT:
     tryRecvAsync(self, bufferSize)                             async
     secureClient(self, serverHostname, caFilename)
     secureServer(self, certFilename, keyFilename)
-    doHandshakeAsync(self)                                     async
+    tryDoHandshakeAsync(self)                                  async
 
 Link            ---> %Reminder reminderRX:
 Link            ---> %Reminder reminderTX:

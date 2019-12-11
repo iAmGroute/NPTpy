@@ -37,5 +37,5 @@ class AsyncConnectorPacketized(AsyncConnector):
         header  = b''
         header += len(packet).to_bytes(2, 'little')
         header += b'..'
-        await self.sendallAsync(header + packet)
+        return await self.trySendallAsync(header + packet)
 

@@ -95,14 +95,14 @@ class Portal:
                 )
         if not await conST.tryConnectAsync((self.serverAddr, self.serverPort)): return None
         conST.secureClient(serverHostname='server', caFilename='server.cer')
-        if not await conST.doHandshakeAsync():                                  return None
+        if not await conST.tryDoHandshakeAsync():                               return None
         return conST
 
     async def _authenticate(self, conST):
         data  = b'V0.1'
         data += b'AUTH'
         data += self.portalID
-        await conST.sendPacketAsync(data)
+        if not await conST.sendPacketAsync(data): return False
         reply = await conST.recvPacketAsync()
         return reply == b'V0.1REPL.OK.'
 
@@ -134,8 +134,7 @@ class Portal:
         ok = await self.connect()
         if not ok:
             return False
-        await self.conST.sendPacketAsync(data)
-        return True
+        return await self.conST.sendPacketAsync(data)
 
 # Receive task
 

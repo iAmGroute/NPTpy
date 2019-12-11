@@ -11,7 +11,8 @@ async def wait(selectable):
     selectable.yesWake()
     result = await loop.watch(selectable.onSelect())
     selectable.noWake()
-    return result
+    if result is None:
+        raise socket.timeout()
 
 class AsyncConnector(Connector):
 
@@ -58,12 +59,12 @@ class AsyncConnector(Connector):
                 await wait(self.writable)
             else:
                 self.log(Etypes.Sent, len(data))
-                return
+                return True
+        return False
 
     async def trySendallAsync(self, data, maxLoops=8):
         try:
-            await self.sendallAsync(data, maxLoops)
-            return True
+            return await self.sendallAsync(data, maxLoops)
         except OSError as e:
             self.log(Etypes.Error, e)
             return False
@@ -96,4 +97,11 @@ class AsyncConnector(Connector):
             elif result == Connector.HandshakeStatus.OK:        return True
             else:                                               break
         return False
+
+    async def tryDoHandshakeAsync(self, maxLoops=8):
+        try:
+            return await self.doHandshakeAsync(self, maxLoops)
+        except OSError as e:
+            self.log(Etypes.Error, e)
+            return b''
 

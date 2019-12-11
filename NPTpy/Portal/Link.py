@@ -109,7 +109,7 @@ class Link:
                 conRT.secureClient(serverHostname='portal', caFilename='portal.cer')
             else:
                 conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
-            ok = await conRT.doHandshakeAsync()
+            ok = await conRT.tryDoHandshakeAsync()
             if ok:
                 return conRT
         except OSError as e:
