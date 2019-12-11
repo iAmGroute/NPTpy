@@ -76,7 +76,7 @@ def test(Container):
     items    = list(sl.iterKV())
     assert items == [(i, i) for i in original]
 
-    # Iteration KV allows simultaneous deletion
+    # Iteration KV allows deletion of the current item
     original = list(range(555))
     sl       = Container(original)
 
@@ -96,6 +96,27 @@ def test(Container):
 
     del sl
 
+    # Iteration KV doesn't crash if the container is changed between iterations
+    original = list(range(5))
+    sl       = Container(original)
+    i = 0
+    for k, v in sl.iterKV():
+        del sl[2]
+        if   i == 1:
+            sl.append('hello')
+        elif i >= 3:
+            del sl[4]
+            del sl[5]
+            del sl[6]
+        i += 1
+
+    items = list(sl)
+    items.append(2)
+    items.append(4)
+    items.sort()
+    assert items == original
+
+    del sl
     # Grow after deletion
     sl = Container()
     sl.append('0')

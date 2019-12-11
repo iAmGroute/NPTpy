@@ -45,14 +45,14 @@ class IteratorKV:
 
     def __next__(self):
         i = self.i
+        if i >= len(self.slots): raise StopIteration
         if self.slots[i].myID == self.lastID:
             i += 1
+            if i >= len(self.slots): raise StopIteration
             self.i = i
-        if i < len(self.slots):
-            slot = self.slots[i]
-            self.lastID = slot.myID
-            return slot.myID, slot.val
-        raise StopIteration
+        slot = self.slots[i]
+        self.lastID = slot.myID
+        return slot.myID, slot.val
 
 
 class SlotMap:
