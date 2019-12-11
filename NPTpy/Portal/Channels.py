@@ -17,7 +17,7 @@ class Channels:
         self.myLink    = myLink
         self.ltPort    = ltPort
         self.ltAddr    = ltAddr
-        self.epControl = ControlEndpoint(0, 0, self)
+        self.epControl = ControlEndpoint(0, 0, self, Globals.timeoutReminder)
         self.eps       = SlotList([self.epControl])
         assert self.eps[0] is self.epControl
 

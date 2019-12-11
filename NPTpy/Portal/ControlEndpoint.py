@@ -5,7 +5,7 @@
 
 from Common.SmartTabs import t
 from Common.SlotList  import SlotList
-from Common.Async     import Promise
+from Common.Promises  import Promises
 from Common.Loop      import loop
 
 from .Endpoint            import Endpoint
@@ -13,15 +13,13 @@ from .ControlEndpoint_log import LogClass, Etypes
 
 class ControlEndpoint(Endpoint):
 
-    def __init__(self, myID, myIDF, parent):
+    def __init__(self, myID, myIDF, parent, timeoutReminder):
         Endpoint.__init__(self, myID, myIDF, parent)
         self.log.upgrade(LogClass)
-        self.promises = SlotList()
+        self.promises = Promises(timeoutReminder)
 
     def reset(self):
-        for p in self.promises:
-            p(None)
-        self.promises.deleteAll()
+        self.promises.dropAll()
 
     def send(self, data, untracked=False):
         self.parent.send(self.formMessage(data), untracked)
@@ -55,8 +53,8 @@ class ControlEndpoint(Endpoint):
         self.log(Etypes.ReceivedKA, data)
 
     async def requestNewChannel(self, channelID, devicePort, deviceAddr):
-        p        = Promise()
-        reqID    = self.promises.append(p)
+        p        = self.promises.new()
+        reqID    = p.myID
         request  = b'n...'
         request += reqID.to_bytes(4, 'little')
         request += channelID.to_bytes(2, 'little')
@@ -91,15 +89,12 @@ class ControlEndpoint(Endpoint):
         if ok:
             result = channelID, channelIDF
         else:
-            result = None
-        p = self.promises[reqID]
-        if p:
-            self.promises[reqID] = None
-            p(result)
+            result = ()
+        self.promises.fire(reqID, result)
 
     async def requestDeleteChannel(self, channelID, channelIDF):
-        p        = Promise()
-        reqID    = self.promises.append(p)
+        p        = self.promises.new()
+        reqID    = p.myID
         request  = b'd...'
         request += reqID.to_bytes(4, 'little')
         request += channelIDF.to_bytes(2, 'little')
@@ -125,8 +120,5 @@ class ControlEndpoint(Endpoint):
         elif data[10:12] == b'\x01.': ok = True
         else:                         assert False
         self.log(Etypes.DeletedByUs, ok, channelID)
-        p = self.promises[reqID]
-        if p:
-            del self.promises[reqID]
-            p(ok, channelID)
+        self.promises.fire(reqID, (ok, channelID))
 
