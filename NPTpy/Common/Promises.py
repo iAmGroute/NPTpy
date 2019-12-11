@@ -21,9 +21,9 @@ class Promises:
                 try:
                     params = self.timeoutFunction(meta)
                 except AssertionError:
-                    params = None
+                    pass
                 else:
-                    p.fire(toTuple(params))
+                    promise.fire(toTuple(params))
 
     def _cancel(self, promiseID):
         del self.items[promiseID]
