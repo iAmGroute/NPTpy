@@ -34,3 +34,21 @@ class Promises:
         p.getPrev = weakref.ref(self)
         return p
 
+    def fire(self, promiseID, params=()):
+        p = self.items[promiseID]
+        if p:
+            p.fire(params)
+            return True
+        return False
+
+    def dropAll(self):
+        for k, v in self.items.iterKV():
+            promise, _, _ = v
+            try:
+                params = self.timeoutFunction(meta)
+            except AssertionError:
+                pass
+            else:
+                promise.fire(toTuple(params))
+        self.items.deleteAll()
+
