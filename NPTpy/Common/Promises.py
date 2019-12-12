@@ -1,6 +1,6 @@
 import weakref
 
-from .Generic import nop, toTuple
+from .Generic import nop, identityMany, toTuple
 from .SlotMap import SlotMap
 from .Async   import Promise
 
@@ -28,8 +28,8 @@ class Promises:
     def _cancel(self, promiseID):
         del self.items[promiseID]
 
-    def new(self, meta=None):
-        p         = Promise()
+    def new(self, callback=identityMany, meta=None):
+        p         = Promise(callback)
         p.myID    = self.items.append((p, False, meta))
         p.getPrev = weakref.ref(self)
         return p
