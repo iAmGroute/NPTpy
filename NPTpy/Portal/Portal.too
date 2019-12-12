@@ -11,8 +11,7 @@ root                             = Portal
  |       |- channels             = Channels
  |       |   |- epControl        = ControlEndpoint
  |       |   |      log          = Log
- |       |   |      promises     = SlotList
- |       |   |          item     = Promise
+ |       |   |      promises     = Promises
  |       |   |  eps              = SlotList
  |       |   '----- item         = Endpoint, DataEndpoint, &epControl
  |       |              log      = Log
@@ -29,8 +28,7 @@ root                             = Portal
  |  conST                        = AsyncConnectorPacketized
  |  reminderRX                   = %Reminder
  |  reminderTX                   = %Reminder
- |  promises                     = SlotList
- '----- item                     = Promise
+ '- promises                     = Promises
 
 
 # Portal
@@ -64,9 +62,11 @@ Portal          <--? %Reminder reminderRX:
 Portal          <--? %Reminder reminderTX:
     handleRemindTX(self)
 
-Portal          ---> Promise promises.item:
-    __call__(self, *params)
-Portal          <--- Promise promises.item:
+Portal          ---> Promise promises:
+    dropAll(self)
+    new(self, callback)
+    fire(self, promiseID, params)
+Portal          <--- Promise promises:
     *RR(self, data)
 
 # Link
@@ -163,6 +163,8 @@ DataEndpoint    ---> Connector con:
     tryRecv(self, bufferSize)
     sendall(self, data)
 
-ControlEndpoint ---> Promise promises.item:
-    __call__(self, *params)
+ControlEndpoint ---> Promises promises:
+    dropAll(self)
+    new(self)
+    fire(self, promiseID, params)
 
