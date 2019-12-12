@@ -11,7 +11,7 @@ from Common.Generic  import find
 from Common.SlotList import SlotList
 from Common.AsyncConnectorPacketized \
     import  AsyncConnectorPacketized
-from Common.Async    import Promise
+from Common.Promises import Promises
 from Common.Loop     import EventAsync, loop
 from .Link           import Link
 from .Portal_log     import LogClass, Etypes
@@ -30,18 +30,18 @@ class Portal:
         self.links        = SlotList()
         self.connect      = EventAsync(self._connect)
         self.conST        = None
-        self.promises     = SlotList()
+        self.promises     = Promises(Globals.timeoutReminder)
         self.waitingSince = 0
         self.reminderRX   = Globals.kaReminderRX.new(owner=self, onRun=Portal.handleRemindRX, enabled=False)
         self.reminderTX   = Globals.kaReminderTX.new(owner=self, onRun=Portal.handleRemindTX, enabled=True)
         self.log(Etypes.Inited, portalID, serverPort, serverAddr, port, address)
 
     def teardown(self):
+        self.promises.dropAll()
         for link in self.links:
             link.teardown()
         self.links    = None
         self.connect  = None
-        self.promises = None
 
 # Main
 
@@ -167,11 +167,7 @@ class Portal:
         repl += b'REPL'
         if   cmd == b'REPL':
             # Reply
-            # Find the promise of the reqID and resolve it
-            p = self.promises[reqID]
-            if p:
-                self.promises[reqID] = None
-                p(data[ 8:])
+            self.promises.fire(reqID, (data[ 8:],))
             return None
         elif cmd == b'CLKR':
             # Create link via relay
@@ -203,8 +199,8 @@ class Portal:
             assert False
 
     async def requestRelay(self, otherID):
-        p      = Promise(self.requestRelayRR)
-        reqID  = self.promises.append(p)
+        p      = self.promises.new(self.requestRelayRR)
+        reqID  = p.myID
         data   = reqID.to_bytes(4, 'little')
         data  += b'RQRL'
         data  += otherID
@@ -212,8 +208,8 @@ class Portal:
         return await loop.watch(p)
 
     async def requestKA(self):
-        p      = Promise()
-        reqID  = self.promises.append(p)
+        p      = self.promises.new()
+        reqID  = p.myID
         data   = reqID.to_bytes(4, 'little')
         data  += b'.KA.'
         if not await self.send(data): return None
