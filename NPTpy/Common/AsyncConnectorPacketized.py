@@ -15,6 +15,8 @@ class AsyncConnectorPacketized(AsyncConnector):
     async def bufferAsync(self, size):
         while len(self.recvBuffer) < size:
             data = await self.tryRecvAsync(32768)
+            if data is None:
+                return None
             if not data:
                 self.recvBuffer = b''
                 return False
@@ -23,12 +25,14 @@ class AsyncConnectorPacketized(AsyncConnector):
 
     async def recvPacketAsync(self):
         async with self.lock:
-            if not await self.bufferAsync(4):
-                return None
+            ret = await self.bufferAsync(4)
+            if not ret:
+                return ret
             header   = self.recvBuffer[0:4]
             totalLen = int.from_bytes(header[0:2], 'little') + 4
-            if not await self.bufferAsync(totalLen):
-                return None
+            ret = await self.bufferAsync(totalLen)
+            if not ret:
+                return ret
             packet          = self.recvBuffer[4:totalLen]
             self.recvBuffer = self.recvBuffer[totalLen:]
             return packet

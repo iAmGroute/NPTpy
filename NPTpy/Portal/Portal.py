@@ -141,6 +141,7 @@ class Portal:
     async def rtask(self):
         while True:
             packet = await self.conST.recvPacketAsync()
+            if packet is None: continue
             if not packet:
                 log.warn('Server disconnected us')
                 break
@@ -182,6 +183,8 @@ class Portal:
         return repl
 
     def requestRelayRR(self, data):
+        if not data:
+            return None
         assert len(data) >= 4
         ok = data[ 0: 4]
         if   ok == b'.OK.':

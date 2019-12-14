@@ -85,6 +85,8 @@ class AsyncConnector(Connector):
     async def tryRecvAsync(self, bufferSize, maxLoops=8):
         try:
             return await self.recvAsync(bufferSize, maxLoops)
+        except socket.timeout:
+            return None
         except OSError as e:
             self.log(Etypes.Error, e)
             return b''
