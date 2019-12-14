@@ -100,7 +100,7 @@ class AsyncConnector(Connector):
 
     async def tryDoHandshakeAsync(self, maxLoops=8):
         try:
-            return await self.doHandshakeAsync(self, maxLoops)
+            return await self.doHandshakeAsync(maxLoops)
         except OSError as e:
             self.log(Etypes.Error, e)
             return b''
