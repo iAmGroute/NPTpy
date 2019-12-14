@@ -61,7 +61,7 @@ class SelectablesDelegate:
         self.myModule._remove(self.myID)
 
     def onSelect(self):
-        assert self.promise is None
+        # TODO: keep ID instead
         self.promise = self.myModule._onSelect()
         return self.promise
 
