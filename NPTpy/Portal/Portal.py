@@ -139,9 +139,6 @@ class Portal:
 # Receive task
 
     async def rtask(self):
-        # wait for connect() to finish first,
-        # because _connect() can call task() before it finishes
-        await self.connect()
         while True:
             packet = await self.conST.recvPacketAsync()
             if not packet:
