@@ -35,9 +35,10 @@ class Promises:
         return p
 
     def fire(self, promiseID, params=()):
-        p = self.items[promiseID]
-        if p:
-            p.fire(params)
+        item = self.items[promiseID]
+        if item:
+            promise, _, _ = item
+            promise.fire(params)
             return True
         return False
 
