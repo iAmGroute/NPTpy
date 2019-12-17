@@ -44,7 +44,7 @@ class Promises:
 
     def dropAll(self):
         for k, v in self.items.iterKV():
-            promise, _, _ = v
+            promise, _, meta = v
             try:
                 params = self.timeoutFunction(meta)
             except AssertionError:
