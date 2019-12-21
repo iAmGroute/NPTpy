@@ -106,6 +106,7 @@ class Portal:
         reply = await conST.recvPacketAsync()
         return reply == b'V0.1REPL.OK.'
 
+    # To be called only by rtask()
     def disconnect(self):
         assert self.connect.isComplete() # TODO: remove
         self.log(Etypes.Disconnect)
@@ -119,7 +120,7 @@ class Portal:
     def handleRemindRX(self):
         if self.connect.isComplete():
             log.warn('RX keepalive timeout')
-            self.disconnect()
+            self.conST.tryClose()
 
     def handleRemindTX(self):
         if self.connect.isComplete():
