@@ -47,8 +47,8 @@ class Portal:
 
     def main(self):
         Globals.logPrint('.', end='')
-        # self.runConnect()
         Globals.runReminders()
+        self.runConnect()
         activeR, canWakeR = Globals.readables.get()
         activeW, canWakeW = Globals.writables.get()
         wokeR,  wokeW,  _ = select.select(canWakeR, canWakeW, [], 5)
@@ -125,8 +125,6 @@ class Portal:
     def handleRemindTX(self):
         if self.connect.isComplete():
             loop.run(self.requestKA())
-        else:
-            loop.run(self.connect())
 
 # Send
 
