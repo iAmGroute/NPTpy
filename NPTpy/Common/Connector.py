@@ -84,6 +84,12 @@ class Connector:
             return False
         return True
 
+    def shutdown(self, read, write):
+        self.log(Etypes.Shutdown, read, write)
+        if   read and write: self.socket.shutdown(socket.SHUT_RDWR)
+        elif read:           self.socket.shutdown(socket.SHUT_RD)
+        elif write:          self.socket.shutdown(socket.SHUT_WR)
+
     # Needed for select()
     def fileno(self):
         return self.socket.fileno()
