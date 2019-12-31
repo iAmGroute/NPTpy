@@ -1,7 +1,7 @@
 
 import socket
 from errno import errorcode
-from ssl   import SSLWantReadError
+from ssl   import SSLWantReadError, SSLWantWriteError
 
 from .Loop          import loop
 from .Connector     import Connector
