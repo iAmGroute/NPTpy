@@ -25,7 +25,7 @@ class DataEndpoint(Endpoint):
 
     def acceptMessage(self, data):
         try:
-            self.con.socket.settimeout(None)
+            self.con.socket.settimeout(1)
             self.con.sendall(data)
             self.con.socket.settimeout(0)
         except OSError:
@@ -39,7 +39,7 @@ class DataEndpoint(Endpoint):
         data = self.con.tryRecv(4088)
         if data is None:
             return b''
-        if len(data) < 1:
+        if not data:
             self.remove()
             return b''
         return self.formMessage(data)
