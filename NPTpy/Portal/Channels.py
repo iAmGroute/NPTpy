@@ -44,7 +44,7 @@ class Channels:
         if turn >= len(eps):
             turn = 0
         self.epTurn = turn + 1
-        for ep in itertools.chain(self.eps[turn:], self.eps[:turn]):
+        for ep in itertools.chain(eps[turn:], eps[:turn]):
             if ep in readables:
                 result += ep.getMessages()
         return result
