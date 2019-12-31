@@ -1,5 +1,6 @@
 
 import socket
+import itertools
 
 import Globals
 
@@ -18,8 +19,9 @@ class Channels:
         self.ltPort    = ltPort
         self.ltAddr    = ltAddr
         self.epControl = ControlEndpoint(0, 0, self, Globals.timeoutReminder)
-        self.eps       = SlotList([self.epControl])
+        self.eps       = SlotMap([self.epControl])
         assert self.eps[0] is self.epControl
+        self.epTurn    = 0
 
     def teardown(self):
         self.epControl = None
@@ -37,7 +39,12 @@ class Channels:
 
     def readAll(self, readables):
         result = b''
-        for ep in self.eps:
+        eps    = list(self.eps)
+        turn   = self.epTurn
+        if turn >= len(eps):
+            turn = 0
+        self.epTurn = turn + 1
+        for ep in itertools.chain(self.eps[turn:], self.eps[:turn]):
             if ep in readables:
                 result += ep.getMessages()
         return result
