@@ -4,7 +4,7 @@ import itertools
 
 import Globals
 
-from Common.SlotList       import SlotList
+from Common.SlotMap        import SlotMap
 from Common.Connector      import Connector
 from Common.AsyncConnector import AsyncConnector
 from Common.Loop           import loop
