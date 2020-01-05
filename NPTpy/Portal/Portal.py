@@ -120,7 +120,7 @@ class Portal:
     def handleRemindRX(self):
         if self.connect.isComplete():
             log.warn('RX keepalive timeout')
-            self.conST.shutdown(True, True)
+            self.conST.tryShutdown(True, True)
 
     def handleRemindTX(self):
         if self.connect.isComplete():
