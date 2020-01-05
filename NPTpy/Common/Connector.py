@@ -67,8 +67,6 @@ class Connector:
         return self
 
     def __exit__(self, type=None, value=None, traceback=None):
-        # if self.socket.type == socket.SOCK_STREAM:
-        #     self.socket.shutdown(socket.SHUT_RDWR)
         self.tryClose()
 
     def close(self):
@@ -89,6 +87,15 @@ class Connector:
         if   read and write: self.socket.shutdown(socket.SHUT_RDWR)
         elif read:           self.socket.shutdown(socket.SHUT_RD)
         elif write:          self.socket.shutdown(socket.SHUT_WR)
+        self.log(Etypes.ShutdownDone)
+
+    def tryShutdown(self, read, write):
+        try:
+            self.shutdown(read, write)
+        except OSError as e:
+            self.log(Etypes.Error, e)
+            return False
+        return True
 
     # Needed for select()
     def fileno(self):
