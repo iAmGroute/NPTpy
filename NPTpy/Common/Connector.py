@@ -26,16 +26,18 @@ class Connector:
 
     def __init__(self, fromSocket=None, new=None, fromConnector=None):
         if fromConnector:
-            self.log       = fromConnector.log.upgrade(LogClass)
-            self.listening = fromConnector.listening
-            self.incoming  = fromConnector.incoming
-            self.socket    = fromConnector.socket
+            self.log          = fromConnector.log.upgrade(LogClass)
+            self.listening    = fromConnector.listening
+            self.incoming     = fromConnector.incoming
+            self.peerHostname = fromConnector.peerHostname
+            self.socket       = fromConnector.socket
         else:
-            self.log       = Globals.logger.new(LogClass)
-            self.listening = False
-            self.incoming  = True
+            self.log          = Globals.logger.new(LogClass)
+            self.listening    = False
+            self.incoming     = True
+            self.peerHostname = None
             self.log(Etypes.Initing, fromSocket, new)
-            self.socket    = fromSocket if fromSocket else _newSocket(new)
+            self.socket       = fromSocket if fromSocket else _newSocket(new)
             s = self.socket
             if s.type == socket.SOCK_STREAM:
                 s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -232,6 +234,44 @@ class Connector:
         ctx.load_cert_chain(certFilename, keyFilename, keyPassword)
         self.socket  = ctx.wrap_socket(self.socket, server_side=True, do_handshake_on_connect=False)
 
+    # A more flexible secure() method to allow for both server and client authentication
+    def secure(
+            self,
+            serverSide   = False, requireCert = True, peerHostname = None,
+            certFilename = None,  keyFilename = None, keyPassword  = None,
+            caFilename   = None,  caDirpath   = None, caData       = None
+        ):
+        self.peerHostname = peerHostname
+        if peerHostname:
+            requireCert = True
+        # https://docs.python.org/3/library/ssl.html#ssl.SSLContext
+        ctx          = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        ctx.options |= ssl.OP_NO_TLSv1
+        ctx.options |= ssl.OP_NO_TLSv1_1
+        # If we have a certificate
+        if certFilename or keyFilename or keyPassword:
+            # `certFilename` is always needed
+            # and unless the key is in the certificate, `keyFilename` is also needed
+            # and if the file with the key is encrypted, `keyPassword` is needed or a prompt will appear
+            ctx.load_cert_chain(certfile=certFilename, keyfile=keyFilename, password=keyPassword)
+        # If we want to verify the peer's certificate
+        if requireCert:
+            ctx.verify_mode = ssl.CERT_REQUIRED
+            if caFilename or caDirpath or caData:
+                # Verify against a local self-signed or CA certificate
+                # Either one of these parameters is sufficient
+                ctx.load_verify_locations(cafile=caFilename, capath=caDirpath, cadata=caData)
+            else:
+                # Verify against system's default CAs
+                purpose = ssl.Purpose.CLIENT_AUTH if serverSide else ssl.Purpose.SERVER_AUTH
+                ctx.load_default_certs(purpose=purpose)
+        self.socket = ctx.wrap_socket(
+            self.socket,
+            server_side             = serverSide,
+            server_hostname         = None if serverSide else peerHostname,
+            do_handshake_on_connect = False
+        )
+
     class HandshakeStatus(Enum):
         OK = 0
         WantRead = 1
@@ -243,6 +283,8 @@ class Connector:
         result = None
         try:
             self.socket.do_handshake()
+            if self.peerHostname:
+                ssl.match_hostname(self.socket.getpeercert(), self.peerHostname)
             result = Connector.HandshakeStatus.OK
         except ssl.SSLWantReadError:
             result = Connector.HandshakeStatus.WantRead
