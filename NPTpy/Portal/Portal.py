@@ -231,6 +231,11 @@ class Portal:
 
     def createLink(self, isClient, otherID, otherIDV=b'', otherUser=b'', otherUserV=b''):
         l = find(self.links, lambda lk: lk.otherID == otherID)
+        if l:
+            # Remove existing link, if it has different security info
+            if l.otherIDV != otherIDV or l.otherUser != otherUser or l.otherUserV != otherUserV:
+                self.removeLink(l.myID)
+                l = None
         if not l:
             # TODO: allow for different binding port & address than self.port, self.address
             lID = self.links.append(0)
@@ -239,7 +244,9 @@ class Portal:
         return l
 
     def removeLink(self, linkID):
-        del self.links[linkID]
+        l = self.links.pop(linkID)
+        if l:
+            l.teardown()
 
 # API
 
