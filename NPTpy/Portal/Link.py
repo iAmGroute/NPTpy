@@ -18,24 +18,27 @@ logEP = logging.getLogger(__name__ + ' :EP')
 
 class Link:
 
-    def __init__(self, isClient, myID, myPortal, otherID, rtPort, rtAddr, ltPort, ltAddr):
-        self.log           = Globals.logger.new(LogClass)
-        self.isClient      = isClient
-        self.myID          = myID
-        self.myPortal      = myPortal
-        self.otherID       = otherID
-        self.rtPort        = rtPort
-        self.rtAddr        = rtAddr
-        self.listeners     = SlotList()
-        self.channels      = Channels(self, ltPort, ltAddr)
-        self.buffer        = b''
-        self.connect       = EventAsync(self._connect)
-        self.conRT         = None
-        self.reminderRX    = Globals.kaReminderRX.new(owner=self, onRun=Link.handleRemindRX, enabled=False)
-        self.reminderTX    = Globals.kaReminderTX.new(owner=self, onRun=Link.handleRemindTX, enabled=False)
-        self.kaCountIdle   = 0
-        self.readable      = Globals.readables.new(self, isActive=False, canWake=True)
-        self.writable      = Globals.writables.new(self, isActive=False, canWake=False)
+    def __init__(self, isClient, myID, myPortal, otherID, otherIDV, otherUser, otherUserV, rtPort, rtAddr, ltPort, ltAddr):
+        self.log         = Globals.logger.new(LogClass)
+        self.isClient    = isClient
+        self.myID        = myID
+        self.myPortal    = myPortal
+        self.otherID     = otherID
+        self.otherIDV    = otherIDV
+        self.otherUser   = otherUser
+        self.otherUserV  = otherUserV
+        self.rtPort      = rtPort
+        self.rtAddr      = rtAddr
+        self.listeners   = SlotList()
+        self.channels    = Channels(self, ltPort, ltAddr)
+        self.buffer      = b''
+        self.connect     = EventAsync(self._connect)
+        self.conRT       = None
+        self.reminderRX  = Globals.kaReminderRX.new(owner=self, onRun=Link.handleRemindRX, enabled=False)
+        self.reminderTX  = Globals.kaReminderTX.new(owner=self, onRun=Link.handleRemindTX, enabled=False)
+        self.kaCountIdle = 0
+        self.readable    = Globals.readables.new(self, isActive=False, canWake=True)
+        self.writable    = Globals.writables.new(self, isActive=False, canWake=False)
         self.log(Etypes.Inited, isClient, myID, otherID, rtPort, rtAddr, ltPort, ltAddr)
 
     def teardown(self):
@@ -58,6 +61,11 @@ class Link:
             info = await self.myPortal.requestRelay(self.otherID)
             if not info:
                 return False
+            otherIDV, otherUser, otherUserV, token, relayPort, relayAddr = info
+            self.otherIDV   = otherIDV
+            self.otherUser  = otherUser
+            self.otherUserV = otherUserV
+            info = token, relayPort, relayAddr
         conRT = await self._connectViaRelay(*info)
         if not conRT:
             return False
@@ -104,11 +112,21 @@ class Link:
         return conRT
 
     async def _secureForward(self, conRT, clientSide):
+        peerHostname = '|'.join([
+            self.otherID.hex().upper(),
+            self.otherIDV.hex().upper(),
+            self.otherUser.hex().upper(),
+            self.otherUserV.hex().upper()
+        ])
         try:
-            if clientSide:
-                conRT.secureClient(serverHostname='portal', caFilename='portal.cer')
-            else:
-                conRT.secureServer(certFilename='portal.cer', keyFilename='portal.key')
+            conRT.secure(
+                serverSide   = not clientSide,
+                requireCert  = True,
+                peerHostname = peerHostname,
+                certFilename = 'portal_cer.pem',
+                keyFilename  = 'portal_key.pem',
+                caFilename   = 'ca_cer.pem'
+            )
             ok = await conRT.tryDoHandshakeAsync()
             if ok:
                 return conRT

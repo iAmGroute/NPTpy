@@ -146,7 +146,7 @@ class Portal:
                 break
             self.reminderRX.skipNext = True
             try:
-                reply = self.process(bytearray(packet))
+                reply = self.process(packet)
             except AssertionError:
                 log.warn('Bad packet')
                 break
@@ -154,32 +154,42 @@ class Portal:
                 if not await self.send(reply): break
         self.disconnect()
 
-    def process(self, data):
-        l = len(data)
-        assert l >= 8
-        ref   = data[ 0: 4]
+    def process(self, packet):
+        assert len(packet) >= 8
+        ref   = packet[0:4]
         reqID = int.from_bytes(ref, 'little')
-        cmd   = data[ 4: 8]
+        cmd   = packet[4:8]
+        data  = packet[8:]
         repl  = ref
         repl += b'REPL'
         if   cmd == b'REPL':
             # Reply
-            self.promises.fire(reqID, (data[ 8:],))
+            self.promises.fire(reqID, (data,))
             return None
         elif cmd == b'CLKR':
-            # Create link via relay
-            assert l > 22
-            otherID   = data[ 8:12]
-            token     = data[12:20]
-            relayPort = int.from_bytes(data[20:22], 'little')
-            relayAddr = str(data[22:], 'utf-8')
-            link      = self.createLink(False, otherID)
-            ok        = link.connectToRelay(token, relayPort, relayAddr)
-            # data[ 8:] = b'.OK.' if ok else b'.NK.'
-            return None
+            ret = self.processCLKR(data)
+            if ret is None:
+                return None
+            else:
+                repl += ret
         else:
             assert False
         return repl
+
+    # Create link via relay
+    def processCLKR(self, data):
+        assert len(data) > 26
+        otherID    = data[ 0: 4]
+        otherIDV   = data[ 4: 8]
+        otherUser  = data[ 8:12]
+        otherUserV = data[12:16]
+        token      = data[16:24]
+        relayPort  = int.from_bytes(data[24:26], 'little')
+        relayAddr  = str(data[26:], 'utf-8')
+        link       = self.createLink(False, otherID, otherIDV, otherUser, otherUserV)
+        ok         = link.connectToRelay(token, relayPort, relayAddr)
+        # data[ 8:] = b'.OK.' if ok else b'.NK.'
+        return None
 
     def requestRelayRR(self, data):
         if not data:
@@ -187,11 +197,14 @@ class Portal:
         assert len(data) >= 4
         ok = data[ 0: 4]
         if   ok == b'.OK.':
-            assert len(data) > 14
-            token     = data[ 4:12]
-            relayPort = int.from_bytes(data[12:14], 'little')
-            relayAddr = str(data[14:], 'utf-8')
-            return token, relayPort, relayAddr
+            assert len(data) > 26
+            otherIDV   = data[ 4: 8]
+            otherUser  = data[ 8:12]
+            otherUserV = data[12:16]
+            token      = data[16:24]
+            relayPort  = int.from_bytes(data[24:26], 'little')
+            relayAddr  = str(data[26:], 'utf-8')
+            return otherIDV, otherUser, otherUserV, token, relayPort, relayAddr
         elif ok == b'NFND' or ok == b'NORL':
             return None
         else:
@@ -216,12 +229,12 @@ class Portal:
 
 # Links
 
-    def createLink(self, isClient, otherID):
+    def createLink(self, isClient, otherID, otherIDV=b'', otherUser=b'', otherUserV=b''):
         l = find(self.links, lambda lk: lk.otherID == otherID)
         if not l:
             # TODO: allow for different binding port & address than self.port, self.address
             lID = self.links.append(0)
-            l   = Link(isClient, lID, self, otherID, self.port, self.address, self.port, self.address)
+            l   = Link(isClient, lID, self, otherID, otherIDV, otherUser, otherUserV, self.port, self.address, self.port, self.address)
             self.links[lID] = l
         return l
 
