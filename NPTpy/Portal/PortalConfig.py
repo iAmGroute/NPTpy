@@ -13,6 +13,7 @@ configTemplate = {
         'You can read more about it here: https://netport.io/portal'
     ],
     'PortalID': CF.PortalID('00000000'),
+    'UserID': CF.PortalID('00000000'),
     'Links': [{
         'OtherID': CF.PortalID('00000000'),
         'Listeners': [{'RP': CF.Port(0), 'RA': CF.Address(''), 'LP': CF.Port(0), 'LA': CF.Address('')}]
@@ -78,10 +79,11 @@ class PortalConfig:
         config = self.config
 
         portalID   = bytes.fromhex(config['PortalID'])
+        userID     = bytes.fromhex(config['UserID'])
         serverPort = config['PortsToTry'][0]
         serverAddr = config['Servers'][0]
 
-        p = Portal(portalID, serverPort, serverAddr)
+        p = Portal(portalID, userID, serverPort, serverAddr)
 
         for linkConf in config['Links']:
 
@@ -100,6 +102,7 @@ class PortalConfig:
         config = {}
 
         config['PortalID']   = portal.portalID.hex().upper()
+        config['UserID']     = portal.userID.hex().upper()
         config['PortsToTry'] = [portal.serverPort]
         config['Servers']    = [portal.serverAddr]
 

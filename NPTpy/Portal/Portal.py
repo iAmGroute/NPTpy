@@ -20,9 +20,10 @@ log = logging.getLogger(__name__ + '  ')
 
 class Portal:
 
-    def __init__(self, portalID, serverPort, serverAddr, port=0, address='0.0.0.0'):
+    def __init__(self, portalID, userID, serverPort, serverAddr, port=0, address='0.0.0.0'):
         self.log          = Globals.logger.new(LogClass)
         self.portalID     = portalID
+        self.userID       = userID
         self.serverPort   = serverPort
         self.serverAddr   = serverAddr
         self.port         = port
@@ -34,7 +35,7 @@ class Portal:
         self.waitingSince = 0
         self.reminderRX   = Globals.kaReminderRX.new(owner=self, onRun=Portal.handleRemindRX, enabled=False)
         self.reminderTX   = Globals.kaReminderTX.new(owner=self, onRun=Portal.handleRemindTX, enabled=True)
-        self.log(Etypes.Inited, portalID, serverPort, serverAddr, port, address)
+        self.log(Etypes.Inited, portalID, userID, serverPort, serverAddr, port, address)
 
     def teardown(self):
         self.promises.dropAll()
@@ -94,7 +95,14 @@ class Portal:
                     new=(socket.SOCK_STREAM, 0, self.port, self.address)
                 )
         if not await conST.tryConnectAsync((self.serverAddr, self.serverPort)): return None
-        conST.secureClient(serverHostname='server', caFilename='server.cer')
+        conST.secure(
+            serverSide   = False,
+            requireCert  = True,
+            peerHostname = 'server',
+            certFilename = 'portal_cer.pem',
+            keyFilename  = 'portal_key.pem',
+            caFilename   = 'server_cer.pem'
+        )
         if not await conST.tryDoHandshakeAsync():                               return None
         return conST
 
@@ -102,6 +110,7 @@ class Portal:
         data  = b'V0.1'
         data += b'AUTH'
         data += self.portalID
+        data += self.userID
         if not await conST.sendPacketAsync(data): return False
         reply = await conST.recvPacketAsync()
         return reply == b'V0.1REPL.OK.'
@@ -253,6 +262,7 @@ class Portal:
     fields = [
         # Name,         Type,          Readable, Writable
         ('portalID',    CF.PortalID(), True,     False),
+        ('userID',      CF.PortalID(), True,     False),
         ('serverPort',  CF.Port(),     True,     True),
         ('serverAddr',  CF.Address(),  True,     True),
         ('port',        CF.Port(),     True,     True),
