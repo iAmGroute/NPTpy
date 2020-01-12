@@ -197,7 +197,6 @@ class Portal:
         relayAddr  = str(data[26:], 'utf-8')
         link       = self.createLink(False, otherID, otherIDV, otherUser, otherUserV)
         ok         = link.connectToRelay(token, relayPort, relayAddr)
-        # data[ 8:] = b'.OK.' if ok else b'.NK.'
         return None
 
     def requestRelayRR(self, data):
@@ -215,6 +214,7 @@ class Portal:
             relayAddr  = str(data[26:], 'utf-8')
             return otherIDV, otherUser, otherUserV, token, relayPort, relayAddr
         elif ok == b'NFND' or ok == b'NORL':
+            self.log(Etypes.ReplyNotOK, ok)
             return None
         else:
             assert False
