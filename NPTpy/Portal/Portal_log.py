@@ -7,6 +7,7 @@ class Etypes:     # (Enabled, Displayed)
     Connect       = (   True,      True)
     ConnectResult = (   True,      True)
     Disconnect    = (   True,      True)
+    ReplyNotOK    = (   True,      True)
 
 
 LogClass = newClass('Portal', Etypes)

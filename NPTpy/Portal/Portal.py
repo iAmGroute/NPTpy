@@ -213,7 +213,7 @@ class Portal:
             relayPort  = int.from_bytes(data[24:26], 'little')
             relayAddr  = str(data[26:], 'utf-8')
             return otherIDV, otherUser, otherUserV, token, relayPort, relayAddr
-        elif ok == b'NFND' or ok == b'NORL':
+        elif ok == b'DENY' or ok == b'NFND' or ok == b'NORL':
             self.log(Etypes.ReplyNotOK, ok)
             return None
         else:
