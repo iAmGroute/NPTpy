@@ -3,6 +3,7 @@ import time
 import logging
 import socket
 import select
+import os
 
 import Globals
 import ConfigFields as CF
@@ -187,16 +188,17 @@ class Portal:
 
     # Create link via relay
     def processCLKR(self, data):
-        assert len(data) > 26
+        assert len(data) > 34
         otherID    = data[ 0: 4]
         otherIDV   = data[ 4: 8]
         otherUser  = data[ 8:12]
         otherUserV = data[12:16]
-        token      = data[16:24]
-        relayPort  = int.from_bytes(data[24:26], 'little')
-        relayAddr  = str(data[26:], 'utf-8')
+        tokenP     = data[16:24]
+        tokenR     = data[24:32]
+        relayPort  = int.from_bytes(data[32:34], 'little')
+        relayAddr  = str(data[34:], 'utf-8')
         link       = self.createLink(False, otherID, otherIDV, otherUser, otherUserV)
-        ok         = link.connectToRelay(token, relayPort, relayAddr)
+        ok         = link.connectToRelay(tokenP, tokenR, relayPort, relayAddr)
         return None
 
     def requestRelayRR(self, data):
@@ -205,14 +207,15 @@ class Portal:
         assert len(data) >= 4
         ok = data[ 0: 4]
         if   ok == b'.OK.':
-            assert len(data) > 26
+            assert len(data) > 34
             otherIDV   = data[ 4: 8]
             otherUser  = data[ 8:12]
             otherUserV = data[12:16]
-            token      = data[16:24]
-            relayPort  = int.from_bytes(data[24:26], 'little')
-            relayAddr  = str(data[26:], 'utf-8')
-            return otherIDV, otherUser, otherUserV, token, relayPort, relayAddr
+            tokenP     = data[16:24]
+            tokenR     = data[24:32]
+            relayPort  = int.from_bytes(data[32:34], 'little')
+            relayAddr  = str(data[34:], 'utf-8')
+            return otherIDV, otherUser, otherUserV, tokenP, tokenR, relayPort, relayAddr
         elif ok == b'DENY' or ok == b'NFND' or ok == b'NORL':
             self.log(Etypes.ReplyNotOK, ok)
             return None
@@ -225,6 +228,7 @@ class Portal:
         data   = reqID.to_bytes(4, 'little')
         data  += b'RQRL'
         data  += otherID
+        data  += os.urandom(8) # seed for tokenP
         if not await self.send(data): return None
         return await loop.watch(p)
 

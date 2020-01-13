@@ -61,15 +61,16 @@ class Link:
             info = await self.myPortal.requestRelay(self.otherID)
             if not info:
                 return False
-            otherIDV, otherUser, otherUserV, token, relayPort, relayAddr = info
+            otherIDV, otherUser, otherUserV, tokenP, tokenR, relayPort, relayAddr = info
             self.otherIDV   = otherIDV
             self.otherUser  = otherUser
             self.otherUserV = otherUserV
-            info = token, relayPort, relayAddr
-        conRT = await self._connectViaRelay(*info)
+        else:
+            tokenP, tokenR, relayPort, relayAddr = info
+        conRT = await self._connectViaRelay(tokenR, relayPort, relayAddr)
         if not conRT:
             return False
-        conRT = await self._secureForward(conRT, clientSide)
+        conRT = await self._secureForward(conRT, clientSide, tokenP)
         if not conRT:
             return False
         self.conRT = Connector(fromConnector=conRT)
@@ -87,17 +88,17 @@ class Link:
         self.log(Etypes.ConnectResult, result)
         return result
 
-    def connectToRelay(self, token, relayPort, relayAddr):
+    def connectToRelay(self, tokenP, tokenR, relayPort, relayAddr):
         # Todo: uncomment isIdle() condition
         # if self.isIdle():
         self.disconnect()
-        loop.run(self.connect(info=(token, relayPort, relayAddr)))
+        loop.run(self.connect(info=(tokenP, tokenR, relayPort, relayAddr)))
         return True
         # else:
         #     return False
 
-    async def _connectViaRelay(self, token, relayPort, relayAddr):
-        data = token + b'0' * 56
+    async def _connectViaRelay(self, tokenR, relayPort, relayAddr):
+        data = tokenR + b'0' * 56
         conRT = AsyncConnector(
             Globals.readables,
             Globals.writables,
@@ -111,7 +112,7 @@ class Link:
         if reply != b'Ready !\n':                                   return None
         return conRT
 
-    async def _secureForward(self, conRT, clientSide):
+    async def _secureForward(self, conRT, clientSide, tokenP):
         peerHostname = '|'.join([
             self.otherID.hex().upper(),
             self.otherIDV.hex().upper(),
@@ -127,9 +128,17 @@ class Link:
                 keyFilename  = 'portal_key.pem',
                 caFilename   = 'ca_cer.pem'
             )
-            ok = await conRT.tryDoHandshakeAsync()
-            if ok:
-                return conRT
+            if not await conRT.tryDoHandshakeAsync(): return None
+            # Split the token in two, one for each side.
+            # Send your part and expect to receive the other.
+            tA = tokenP[0:4]
+            tB = tokenP[4:8]
+            if clientSide:
+                tA, tB = tB, tA
+            if not await conRT.trySendallAsync(tA):   return None
+            reply = await conRT.tryRecvAsync(4)
+            if reply != tB:                           return None
+            return conRT
         except OSError as e:
             log.error(e)
         return None
