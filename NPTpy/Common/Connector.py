@@ -273,10 +273,10 @@ class Connector:
         )
 
     class HandshakeStatus(Enum):
-        OK = 0
-        WantRead = 1
+        OK        = 0
+        WantRead  = 1
         WantWrite = 2
-        Error = 3
+        Error     = 3
 
     def doHandshake(self):
         self.log(Etypes.Handshake)
@@ -291,7 +291,7 @@ class Connector:
         except ssl.SSLWantWriteError:
             result = Connector.HandshakeStatus.WantWrite
         # except ssl.SSLError:
-        except OSError as e:
+        except (OSError, ssl.CertificateError) as e:
             self.log(Etypes.Error, e)
             result = Connector.HandshakeStatus.Error
         self.log(Etypes.HandshakeResult, result)
