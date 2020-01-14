@@ -1,12 +1,12 @@
 import weakref
 
-from .SlotList import SlotList
+from .SlotMap  import SlotMap
 from .Promises import Promises
 
 class Selectables:
 
     def __init__(self, timeoutReminder):
-        self.delegates = SlotList()
+        self.delegates = SlotMap()
         self.promises  = Promises(timeoutReminder)
 
     def _onSelect(self):

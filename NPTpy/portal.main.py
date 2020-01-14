@@ -38,7 +38,7 @@ while True:
             # For some reason gc doesn't handle deletions
             # initiated by the other (API) thread,
             # so we'll periodically check here, to gc deleted sockets.
-            gc.collect()
+            # gc.collect()
 
     except KeyboardInterrupt:
         break
@@ -46,6 +46,7 @@ while True:
     except Exception as e:
         logging.exception(e)
 
+    gc.collect()
     try:
         loop.stop()
         server.stop()

@@ -5,7 +5,7 @@ import socket
 import Globals
 import ConfigFields as CF
 
-from Common.SlotList       import SlotList
+from Common.SlotMap        import SlotMap
 from Common.Connector      import Connector
 from Common.AsyncConnector import AsyncConnector
 from Common.Loop           import EventAsync, loop
@@ -29,7 +29,7 @@ class Link:
         self.otherUserV  = otherUserV
         self.rtPort      = rtPort
         self.rtAddr      = rtAddr
-        self.listeners   = SlotList()
+        self.listeners   = SlotMap()
         self.channels    = Channels(self, ltPort, ltAddr)
         self.buffer      = b''
         self.connect     = EventAsync(self._connect)
