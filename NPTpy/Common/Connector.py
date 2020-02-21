@@ -121,9 +121,14 @@ class Connector:
 
     # Mainly TCP
 
-    def listen(self):
-        self.log(Etypes.Listen)
-        self.socket.listen()
+    def listen(self, backlog=None, reusePort=False):
+        self.log(Etypes.Listen, reusePort)
+        if reusePort:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        if backlog is None:
+            self.socket.listen()
+        else:
+            self.socket.listen(backlog)
         self.listening = True
 
     def accept(self):
