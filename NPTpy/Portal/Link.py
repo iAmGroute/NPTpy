@@ -37,8 +37,7 @@ class Link:
         self.reminderRX  = Globals.kaReminderRX.new(owner=self, onRun=Link.handleRemindRX, enabled=False)
         self.reminderTX  = Globals.kaReminderTX.new(owner=self, onRun=Link.handleRemindTX, enabled=False)
         self.kaCountIdle = 0
-        self.readable    = Globals.readables.new(self, isActive=False, canWake=True)
-        self.writable    = Globals.writables.new(self, isActive=False, canWake=False)
+        self.readable    = Globals.readables.new(self, False)
         self.log(Etypes.Inited, isClient, myID, otherID, rtPort, rtAddr, ltPort, ltAddr)
 
     def teardown(self):
@@ -75,7 +74,6 @@ class Link:
             return False
         self.conRT = Connector(fromConnector=conRT)
         self.readable.on()
-        self.writable.on()
         self.kaCountIdle         = 0
         self.reminderRX.skipNext = True
         self.reminderRX.enabled  = True
@@ -149,7 +147,6 @@ class Link:
             self.connect.reset()
             self.conRT = None
             self.readable.off()
-            self.writable.off()
             self.channels.reset()
             self.reminderRX.enabled = False
             self.reminderTX.enabled = False
@@ -167,12 +164,12 @@ class Link:
             )
 
     def connectionLost(self, reason='N/A'):
-        log.warn('Connection lost, reason: {0}'.format(reason))
+        log.info('Connection lost, reason: {0}'.format(reason))
         if self.isIdle():
-            log.warn('Disconnecting')
+            log.info('Disconnecting')
             self.disconnect()
         else:
-            log.warn('Reconnecting')
+            log.info('Reconnecting')
             loop.run(self.reconnect())
 
 # Keepalives
@@ -215,20 +212,20 @@ class Link:
 
 # Task
 
-    def yesWakeW(self):
-        self.writable.yesWake()
-        # self.channels.noWake() ?
-    def noWakeW(self):
-        self.writable.noWake()
-        # self.channels.yesWake() ?
+    # def yesWakeW(self):
+    #     self.writable.yesWake()
+    #     # self.channels.noWake() ?
+    # def noWakeW(self):
+    #     self.writable.noWake()
+    #     # self.channels.yesWake() ?
 
     def task(self, readyR, readyW):
         if self in readyR:
             self.rtask(readyW)
         if self in readyW:
             self.wtask(readyR)
-        else:
-            self.yesWakeW()
+        # else:
+            # self.yesWakeW()
         for listener in self.listeners:
             if listener in readyR:
                 listener.rtask()
@@ -271,8 +268,8 @@ class Link:
             data = self.channels.readAll(readyR)
             if data:
                 self.send(data)
-            else:
-                self.noWakeW()
+            # else:
+                # self.noWakeW()
 
 
     fields = [

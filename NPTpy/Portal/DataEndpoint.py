@@ -6,7 +6,7 @@ import Globals
 
 from .Endpoint     import Endpoint
 # TODO: create DataEndpoint log
-from .Endpoint_log import LogClass, Etypes
+from .Endpoint_log import LogClass
 
 class DataEndpoint(Endpoint):
 
@@ -20,8 +20,7 @@ class DataEndpoint(Endpoint):
             self.parent = fromEndpoint.parent
         self.log.upgrade(LogClass)
         self.con      = con
-        self.readable = Globals.readables.new(self, isActive=True, canWake=True)
-        self.writable = Globals.writables.new(self, isActive=True, canWake=False)
+        self.readable = Globals.readables.new(self, True)
 
     def acceptMessage(self, data):
         try:

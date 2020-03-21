@@ -39,6 +39,8 @@ class ReminderDelegate:
         self.myModule._remove(self.myID)
 
     def run(self):
+        # pylint: disable=assignment-from-none
+        # pylint: disable=not-callable
         if self.enabled:
             owner = self.getOwner()
             if not owner:
@@ -48,8 +50,8 @@ class ReminderDelegate:
                 if self.skipNext:
                     self.skipNext = False
                     f = self.getOnSkip()
-                    if f: f(owner)
+                    if f is not None: f(owner)
                 else:
                     f = self.getOnRun()
-                    if f: f(owner)
+                    if f is not None: f(owner)
 

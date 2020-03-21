@@ -30,6 +30,7 @@ class Endpoint:
         return header + data
 
     def getMessages(self):
+        # pylint: disable=no-self-use
         return b''
 
     def acceptMessage(self, data):

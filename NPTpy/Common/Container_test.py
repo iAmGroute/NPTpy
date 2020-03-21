@@ -2,7 +2,7 @@
 import random
 
 
-def test(Container):
+def runContainer(Container):
 
     sl = Container()
 
@@ -64,7 +64,7 @@ def test(Container):
     del sl
 
     # Initial values as constructor parameter
-    ivs = ['World 0' 'World 1', 'World 2', 'World 3']
+    ivs = ['World 0', 'World 1', 'World 2', 'World 3']
     sl  = Container(ivs)
     assert list(sl) == ivs
 
@@ -190,9 +190,12 @@ def test(Container):
     print('OK')
 
 
-import importlib
-for name in ['SlotList', 'SlotMap']:
-    print(f'Testing {name:12} ', end='', flush=True)
-    m = importlib.import_module(name)
-    test(getattr(m, name))
+def testSlotList():
+    from .SlotList import SlotList
+    runContainer(SlotList)
+
+
+def testSlotMap():
+    from .SlotMap import SlotMap
+    runContainer(SlotMap)
 

@@ -1,6 +1,7 @@
 
 def nop(*args, **kwargs):
-    pass
+    # pylint: disable=unused-argument
+    return None
 
 def identity(v):
     return v

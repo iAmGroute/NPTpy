@@ -33,7 +33,7 @@ class Listener:
         self.localAddr   = localAddr
         self.con         = Connector(new=(socket.SOCK_STREAM, 0, localPort, localAddr))
         self.con.listen()
-        self.readable    = Globals.readables.new(self, isActive=True, canWake=True)
+        self.readable    = Globals.readables.new(self, True)
         self.log(Etypes.Inited, myID, remotePort, remoteAddr, localPort, localAddr)
 
     # Needed for select()
@@ -55,7 +55,7 @@ class Listener:
 
     def accept(self, channelID, channelIDF):
         self.log(Etypes.Accept, channelID, channelIDF)
-        connSocket, addr = self.con.tryAccept()
+        connSocket, _ = self.con.tryAccept()
         if connSocket:
             connSocket.settimeout(0)
             self.myLink.upgradeChannel(channelID, channelIDF, connSocket)
@@ -64,5 +64,5 @@ class Listener:
 
     def decline(self):
         self.log(Etypes.Decline)
-        addr = self.con.tryDecline()
+        self.con.tryDecline()
 

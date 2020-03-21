@@ -1,6 +1,5 @@
 
 import socket
-import itertools
 
 import Globals
 
@@ -21,7 +20,6 @@ class Channels:
         self.epControl = ControlEndpoint(0, 0, self, Globals.timeoutReminder)
         self.eps       = SlotMap([self.epControl])
         assert self.eps[0] is self.epControl
-        self.epTurn    = 0
 
     def teardown(self):
         self.epControl = None
@@ -39,12 +37,7 @@ class Channels:
 
     def readAll(self, readables):
         result = b''
-        eps    = list(self.eps)
-        turn   = self.epTurn
-        if turn >= len(eps):
-            turn = 0
-        self.epTurn = turn + 1
-        for ep in itertools.chain(eps[turn:], eps[:turn]):
+        for ep in self.eps:
             if ep in readables:
                 result += ep.getMessages()
         return result
@@ -100,7 +93,7 @@ class Channels:
         return True
 
     async def newChannel(self, channelIDF, devicePort, deviceAddr):
-        for i in range(3):
+        for _ in range(3):
             conn = AsyncConnector(
                 Globals.readables,
                 Globals.writables,
@@ -118,4 +111,6 @@ class Channels:
                 return True
             except (IndexError, AttributeError):
                 return False
+        else:
+            return False
 

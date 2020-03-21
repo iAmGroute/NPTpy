@@ -51,10 +51,9 @@ class Portal:
         Globals.logPrint('.', end='')
         Globals.runReminders()
         self.runConnect()
-        activeR, canWakeR = Globals.readables.get()
-        activeW, canWakeW = Globals.writables.get()
-        wokeR,  wokeW,  _ = select.select(canWakeR, canWakeW, [], 5)
-        readyR, readyW, _ = select.select(activeR,  activeW,  [], 0)
+        activeR = Globals.readables.get()
+        activeW = Globals.writables.get()
+        readyR, readyW, _ = select.select(activeR,  activeW,  [], 5)
         Globals.readables.selected(readyR, (readyR, readyW))
         Globals.writables.selected(readyW, (readyR, readyW))
         for link in self.links:
@@ -129,7 +128,7 @@ class Portal:
 
     def handleRemindRX(self):
         if self.connect.isComplete():
-            log.warn('RX keepalive timeout')
+            log.info('RX keepalive timeout')
             self.conST.tryShutdown(True, True)
 
     def handleRemindTX(self):
@@ -152,39 +151,31 @@ class Portal:
             packet = await self.conST.recvPacketAsync()
             if packet is None: continue
             if not packet:
-                log.warn('Server disconnected us')
+                log.info('Server disconnected us')
                 break
             self.reminderRX.skipNext = True
             try:
-                reply = self.process(packet)
+                self.process(packet)
             except AssertionError:
-                log.warn('Bad packet')
+                log.info('Bad packet')
                 break
-            if reply:
-                if not await self.send(reply): break
         self.disconnect()
 
     def process(self, packet):
         assert len(packet) >= 8
-        ref   = packet[0:4]
-        reqID = int.from_bytes(ref, 'little')
-        cmd   = packet[4:8]
-        data  = packet[8:]
-        repl  = ref
-        repl += b'REPL'
+        ref  = packet[0:4]
+        cmd  = packet[4:8]
+        data = packet[8:]
         if   cmd == b'REPL':
             # Reply
+            reqID = int.from_bytes(ref, 'little')
             self.promises.fire(reqID, (data,))
-            return None
+        elif cmd == b'.KA.':
+            pass
         elif cmd == b'CLKR':
-            ret = self.processCLKR(data)
-            if ret is None:
-                return None
-            else:
-                repl += ret
+            self.processCLKR(data)
         else:
             assert False
-        return repl
 
     # Create link via relay
     def processCLKR(self, data):
@@ -198,7 +189,7 @@ class Portal:
         relayPort  = int.from_bytes(data[32:34], 'little')
         relayAddr  = str(data[34:], 'utf-8')
         link       = self.createLink(False, otherID, otherIDV, otherUser, otherUserV)
-        ok         = link.connectToRelay(tokenP, tokenR, relayPort, relayAddr)
+        link.connectToRelay(tokenP, tokenR, relayPort, relayAddr)
         return None
 
     def requestRelayRR(self, data):
@@ -216,11 +207,12 @@ class Portal:
             relayPort  = int.from_bytes(data[32:34], 'little')
             relayAddr  = str(data[34:], 'utf-8')
             return otherIDV, otherUser, otherUserV, tokenP, tokenR, relayPort, relayAddr
-        elif ok == b'DENY' or ok == b'NFND' or ok == b'NORL':
+        elif ok in [b'DENY', b'NFND', b'NORL']:
             self.log(Etypes.ReplyNotOK, ok)
             return None
         else:
             assert False
+            return None
 
     async def requestRelay(self, otherID):
         p      = self.promises.new(self.requestRelayRR)
@@ -233,12 +225,9 @@ class Portal:
         return await loop.watch(p)
 
     async def requestKA(self):
-        p      = self.promises.new()
-        reqID  = p.myID
-        data   = reqID.to_bytes(4, 'little')
-        data  += b'.KA.'
-        if not await self.send(data): return None
-        return await loop.watch(p)
+        data  = b'....'
+        data += b'.KA.'
+        await self.send(data)
 
 # Links
 

@@ -4,7 +4,7 @@ import traceback
 import json
 import mimetypes
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 if not mimetypes.inited:
     mimetypes.init()
@@ -38,6 +38,12 @@ def scanDir(path, maxDepth=4):
             result.append(fullname)
     return result
 
+def guessContentType(path):
+    ext = path[path.rfind('.'):][1:]
+    ext = ext.lower()
+    result = fileExtMap.get(ext, fileExtMap[''])
+    return result
+
 def tryReadFile(path):
     content = None
     try:
@@ -66,12 +72,6 @@ class FileRefPage(Page):
         self.contentPath = contentPath
     def getContent(self):
         return tryReadFile(self.contentPath)
-
-def guessContentType(path):
-    ext = path[path.rfind('.'):][1:]
-    ext = ext.lower()
-    result = fileExtMap.get(ext, fileExtMap[''])
-    return result
 
 def consumeDir(dirName):
     try:
@@ -118,6 +118,7 @@ class SimpleServerHandler(BaseHTTPRequestHandler):
             self.sendNotImplemented()
 
     def do_POST(self):
+        # pylint: disable=broad-except
         if self.api:
             try:
                 size    = int(self.headers['Content-Length'])
@@ -131,7 +132,7 @@ class SimpleServerHandler(BaseHTTPRequestHandler):
                 _, _, tb = sys.exc_info()
                 traceback.print_tb(tb)
                 filename, line, func, text = traceback.extract_tb(tb)[-1]
-                info = '{} | {} | @{}() {}:{}'.format(repr(e), text, func, filename, line)
+                info = f'{repr(e)} | {text} | @{func}() {filename}:{line}'
                 self.send400(info)
         else:
             self.sendNotImplemented()
@@ -185,7 +186,7 @@ class SimpleServer:
         self.server = None
 
     def run(self, port=0, address='0.0.0.0'):
-        with HTTPServer((address, port), self.handlerClass) as a:
+        with ThreadingHTTPServer((address, port), self.handlerClass) as a:
             print('Listening on ' + str(a.server_address))
             self.server = a
             a.allow_reuse_address = True

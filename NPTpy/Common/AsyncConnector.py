@@ -1,5 +1,6 @@
 
 import socket
+
 from errno import errorcode
 from ssl   import SSLWantReadError, SSLWantWriteError
 
@@ -8,9 +9,9 @@ from .Connector     import Connector
 from .Connector_log import Etypes
 
 async def wait(selectable):
-    selectable.yesWake()
+    selectable.on()
     result = await loop.watch(selectable.onSelect())
-    selectable.noWake()
+    selectable.off()
     if result is None:
         raise socket.timeout()
 
@@ -18,16 +19,11 @@ class AsyncConnector(Connector):
 
     def __init__(self, readables, writables, **kwargs):
         Connector.__init__(self, **kwargs)
-        self.readable = readables.new(self, True, False)
-        self.writable = writables.new(self, True, False)
+        self.readable = readables.new(self, False)
+        self.writable = writables.new(self, False)
 
     def __repr__(self):
         return f'<AsyncConnector {self.reprEndpoints()}>'
-
-    def close(self):
-        self.readable.off()
-        self.writable.off()
-        Connector.close(self)
 
     async def connectAsync(self, endpoint):
         self.log(Etypes.Connecting, endpoint)
@@ -52,7 +48,7 @@ class AsyncConnector(Connector):
     async def sendallAsync(self, data, maxLoops=8):
         self.log(Etypes.Sending, len(data))
         self.log(Etypes.Content, data)
-        for i in range(maxLoops):
+        for _ in range(maxLoops):
             try:
                 self.socket.sendall(data)
             except (BlockingIOError, SSLWantWriteError):
@@ -71,7 +67,7 @@ class AsyncConnector(Connector):
 
     async def recvAsync(self, bufferSize, maxLoops=8):
         self.log(Etypes.Receiving, bufferSize)
-        for i in range(maxLoops):
+        for _ in range(maxLoops):
             try:
                 data = self.socket.recv(bufferSize)
             except (BlockingIOError, SSLWantReadError):
@@ -92,7 +88,7 @@ class AsyncConnector(Connector):
             return b''
 
     async def doHandshakeAsync(self, maxLoops=8):
-        for i in range(maxLoops):
+        for _ in range(maxLoops):
             result = self.doHandshake()
             if   result == Connector.HandshakeStatus.WantRead:  await wait(self.readable)
             elif result == Connector.HandshakeStatus.WantWrite: await wait(self.writable)

@@ -1,8 +1,6 @@
 
 import time
 
-from enum import Enum
-
 from .SmartTabs import t
 
 
@@ -104,6 +102,7 @@ def parseEtypeValue(enabled=False, displayed=False):
 # The variables in `etypes` are replaced with the index they got in `res`.
 # `res` is also saved in `etypes` as `_processed`.
 def parseEtypes(etypes):
+    # pylint: disable=protected-access
     if not hasattr(etypes, '_processed'):
         res = []
         for etName in etypes.__dict__:

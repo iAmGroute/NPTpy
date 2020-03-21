@@ -68,7 +68,7 @@ class Connector:
     def __enter__(self):
         return self
 
-    def __exit__(self, type=None, value=None, traceback=None):
+    def __exit__(self, exc_type=None, exc_value=None, traceback=None):
         self.tryClose()
 
     def close(self):
@@ -123,8 +123,9 @@ class Connector:
 
     def listen(self, backlog=None, reusePort=False):
         self.log(Etypes.Listen, reusePort)
-        if reusePort:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        if reusePort and this_OS == OS.linux:
+            # pylint: disable=no-member
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         if backlog is None:
             self.socket.listen()
         else:
@@ -141,13 +142,11 @@ class Connector:
     def decline(self):
         self.log(Etypes.Declining)
         conn, addr = self.socket.accept()
-        del conn
+        try:
+            conn.close()
+        except OSError:
+            pass
         self.log(Etypes.Declined, *addr)
-        # try:
-        #     conn.settimeout(0)
-        #     conn.close()
-        # except OSError:
-        #     pass
         return addr
 
     def tryAccept(self):
@@ -214,6 +213,7 @@ class Connector:
                 return b''
 
     def setKeepAlive(self, idleTimer=10, interval=10, probeCount=10):
+        # pylint: disable=no-member
         try:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             if   this_OS == OS.linux:

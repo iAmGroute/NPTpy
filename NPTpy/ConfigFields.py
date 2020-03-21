@@ -1,5 +1,3 @@
-import sys
-import traceback
 
 def serialize(thing):
     r = {}

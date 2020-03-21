@@ -29,6 +29,7 @@ class PortalAPI:
             self.portalConfig.scanAndSave(self.myPortal)
 
     def process(self, context, data):
+        # pylint: disable=unused-argument
         if isinstance(data, dict) and data:
             self.update(data)
         return self.get()

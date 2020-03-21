@@ -65,10 +65,10 @@ class SlotMap:
                 self.append(value)
 
     def __len__(self):
-        return self.slots.__len__()
+        return len(self.slots)
 
     def __bool__(self):
-        return self.slots.__bool__()
+        return bool(self.slots)
 
     def __iter__(self):
         return Iterator(self)

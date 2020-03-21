@@ -16,7 +16,7 @@ class AsyncQueue:
         else:
             self.queue.append(0) # placeholder
 
-    async def __aexit__(self, type=None, value=None, traceback=None):
+    async def __aexit__(self, exc_type=None, exc_value=None, traceback=None):
         self.queue.popleft()
         if self.queue:
             p = self.queue[0]

@@ -43,7 +43,7 @@ class Promises:
         return False
 
     def dropAll(self):
-        for k, v in self.items.iterKV():
+        for _, v in self.items.iterKV():
             promise, _, meta = v
             try:
                 params = self.timeoutFunction(meta)

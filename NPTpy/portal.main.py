@@ -4,7 +4,7 @@ import logging
 import threading
 import gc
 import sys
-import webbrowser
+# import webbrowser
 
 from Portal.PortalConfig import PortalConfig
 from Portal.PortalAPI    import PortalAPI

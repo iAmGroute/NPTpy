@@ -3,10 +3,8 @@
 # it is used for managing the portal-client link
 # and the other channels.
 
-from Common.SmartTabs import t
-from Common.SlotList  import SlotList
-from Common.Promises  import Promises
-from Common.Loop      import loop
+from Common.Promises import Promises
+from Common.Loop     import loop
 
 from .Endpoint            import Endpoint
 from .ControlEndpoint_log import LogClass, Etypes
@@ -25,6 +23,7 @@ class ControlEndpoint(Endpoint):
         self.parent.send(self.formMessage(data), untracked)
 
     def acceptMessage(self, data):
+        # pylint: disable=consider-using-in
         try:
             action = data[0:1]
             if   action == b'\x00' \

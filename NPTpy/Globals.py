@@ -1,7 +1,5 @@
-from enum import Enum
 
 from Common.Log           import Logger
-from Common.Reminder      import Reminder
 from Common.TimedReminder import TimedReminder
 from Common.Selectables   import Selectables
 

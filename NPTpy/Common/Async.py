@@ -48,9 +48,11 @@ class Promise:
     #     return self.attach(PromiseTee(callback))
 
     def detach(self):
+        # pylint: disable=assignment-from-none
         prev = self.getPrev()
         if prev:
             self.log(Etypes.Detach)
+            # pylint: disable=protected-access
             prev._cancel(self.myID)
 
     def cancel(self):
