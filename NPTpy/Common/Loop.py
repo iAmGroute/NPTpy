@@ -79,20 +79,22 @@ class Loop:
                 self.log(Etypes.Running, ID, reprCoroutine(c))
                 try:
                     # while c.send(None).done(): pass
-                    while True:
-                        future = c.send(None)
-                        if not future.done():
-                            break
+                    # while True:
+                    #     future = c.send(None)
+                    #     if future.done():
+                    #         self.queue.popright()
+                    #     else:
+                    #         break
+                    c.send(None)
                 except StopIteration:
                     self.log(Etypes.Finished, ID)
                 # except Exception as e:
                     # self.log(Etypes.RunError, e)
                 else:
                     # We assume that the returned future is the last watched future
-                    assert self.lastID >= 0 # debug
                     self.coroutines[self.lastID] = c
                     self.log(Etypes.Paused, ID, self.lastID, reprCoroutine(c))
-                    self.lastID = -1        # debug
+                    self.lastID = 'dummy' # debug
             self.queue.popleft()
 
 
