@@ -212,23 +212,13 @@ class Link:
 
 # Task
 
-    # def yesWakeW(self):
-    #     self.writable.yesWake()
-    #     # self.channels.noWake() ?
-    # def noWakeW(self):
-    #     self.writable.noWake()
-    #     # self.channels.yesWake() ?
-
     def task(self, readyR, readyW):
         if self in readyR:
             self.rtask(readyW)
-        if self in readyW:
-            self.wtask(readyR)
-        # else:
-            # self.yesWakeW()
         for listener in self.listeners:
             if listener in readyR:
                 listener.rtask()
+        self.wtask(readyR)
 
     def rtask(self, readyW):
         self.reminderRX.skipNext = True
@@ -268,8 +258,6 @@ class Link:
             data = self.channels.readAll(readyR)
             if data:
                 self.send(data)
-            # else:
-                # self.noWakeW()
 
 
     fields = [
