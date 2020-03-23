@@ -22,11 +22,10 @@ def logPrint(*args, **kwargs):
     if 'end' in kwargs:
         if logPrintLF:
             logPrintLF = False
-            print(flush=True)
+            print(end='', flush=True)
     else:
         if not logPrintLF:
             logPrintLF = True
-            print()
             print()
     print(*args, **kwargs)
 
