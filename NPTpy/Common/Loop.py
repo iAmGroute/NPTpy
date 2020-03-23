@@ -41,10 +41,13 @@ class Loop:
         if self.stopped:
             return None
         future = asyncio.Future()
-        ID     = self.coroutines.append(0)
-        self.log(Etypes.Watching, id(promise), ID)
-        promise.then(lambda *v: self._resolve(ID, future, v))
-        self.lastID = ID # don't use self.lastID in the lambda
+        if promise.hasFired:
+            future.set_result(promise.value)
+        else:
+            ID = self.coroutines.append(0)
+            self.log(Etypes.Watching, id(promise), ID)
+            self.lastID = ID # don't use self.lastID in the lambda
+            promise.then(lambda *v: self._resolve(ID, future, v))
         return future
 
     def _resolve(self, ID, future, v):
@@ -109,18 +112,18 @@ class EventAsync:
         self.complete = False
         self.pending  = False
 
-    async def run(self, *args, **kwargs):
-        if not self.pending and not self.complete:
-            self.pending  = True
-            result = await self.f(*args, **kwargs)
-            self.pending  = False
-            self.complete = bool(result)
-            self.promise(result)
-            if not self.complete:
-                self.promise.reset()
+    async def _run(self, *args, **kwargs):
+        self.pending  = True
+        result = await self.f(*args, **kwargs)
+        self.pending  = False
+        self.complete = bool(result)
+        self.promise(result)
+        if not self.complete:
+            self.promise.reset()
 
     async def __call__(self, *args, **kwargs):
-        loop.run(self.run(*args, **kwargs))
+        if not self.pending and not self.complete:
+            loop.run(self._run(*args, **kwargs))
         return await loop.watch(self.promise)
 
     def isPending(self):
