@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use
 
 def serialize(thing):
     r = {}
@@ -195,7 +196,7 @@ class Int(Field):
 class Float(Field):
 
     def verify(self, val):
-        assert type(val) is float or val is 0
+        assert type(val) is float or val == 0
         return val
 
 

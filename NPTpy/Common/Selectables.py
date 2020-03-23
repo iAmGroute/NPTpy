@@ -35,7 +35,7 @@ class Selectables:
         for delegateRef in self.delegates:
             d = delegateRef()
             if d and d.isActive:
-                ds.append(d)
+                ds.append(d.getOwner())
         return ds
 
 

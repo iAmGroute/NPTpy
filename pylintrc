@@ -1,0 +1,23 @@
+
+[MESSAGES CONTROL]
+
+disable=
+    C,
+    too-few-public-methods,
+    duplicate-code,
+    too-many-function-args,
+    too-many-arguments,
+    too-many-locals,
+    too-many-statements,
+    too-many-public-methods,
+    too-many-instance-attributes,
+    global-statement,
+    no-else-return,
+    useless-return,
+    protected-access,
+    logging-format-interpolation,
+    logging-not-lazy,
+    fixme
+
+enable=
+    unused-import
