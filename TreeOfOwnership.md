@@ -1,8 +1,8 @@
 
-# This document describes the Tree Of Ownership (.too) code description format.
+# This document describes the Tree Of Ownership (.too) code description file.
 
 ## What is it ?
-The TOO shows an ownership diagram: a graph where each node/vertex represents an object and each link/edge shows that one object is owned by the other.  
+The TOO is an ownership diagram: a graph where each node/vertex represents an object and each link/edge shows that one object is owned by the other.  
 An ownership diagram is directed, with the links starting from a parent object and pointing to the objects that it owns.  
 The TOO specifically assumes that the object graph is (almost) a tree and has a single root.  
 
@@ -39,7 +39,7 @@ When executed, 6 objects (that we are interested in) are created:
         * `a.c.counter` of type `int`
 This object graph is a tree with `a` as its root.
 
-In the TOO format it would be respresented as:
+In the TOO format it would be represented as:
 ```makefile
 a               = A
     b           = B
@@ -49,7 +49,7 @@ a               = A
         counter = int
 ```
 As you can see, the object's name is added on the left, then spaces the `=` followed by 1 space, then the object's type.  
-The objects that are owned by an object, are idented using 4 spaces.  
+The objects that are owned by an object, are indented using 4 spaces.  
 
 However, usually, we do not care about trivial objects and so omit them from the TOO.  
 Which objects are considered trivial depends on the application, in this case, we could consider primitive types to be trivial.  
@@ -93,16 +93,17 @@ while True:
     pass
 ```
 If we assume that having a reference to an object is the same as owning it, the above code results in an ownership graph that has a cycle:  
-`a` owns `a.b` and `a.b` owns `a`  
+`a` owns `a.c` and `a.c` owns `a`  
 **or** one could say:  
-`b` owns `b.parent` and `b.parent` owns `b`  
-Programmatically, it makes no difference as a result of *owning* being the same as *having a referece to*.  
+`c` owns `c.parent` and `c.parent` owns `c`  
+Programmatically, it makes no difference as a result of *owning* being the same as *having a reference to*.  
 (In some other languages, like Rust, the concept of ownership is stricter and the above doesn't apply.)  
 However, when looking at the code as humans, we see a (clear) distinction: `a` owns `a.b` and not the other way around.  
 This could mean a few things, such as:
-* there is a problem with the code, a bug, an issue waiting to happend, perhaps a memory leak
+* there is a problem with the code, a bug, an issue waiting to happen, perhaps a memory leak
 * the parent reference should actually be a weak reference (see [weakref](https://docs.python.org/3/library/weakref.html))
 * the code is fine, but we need to be aware of this reference cycle and deal with it
+
 There are cases where the cycle can be removed, but there are also some where it is there intentionally.  
 In the format we are describing, we will chose to allow these back-references and depict them in a prominent way:
 ```makefile
@@ -112,8 +113,8 @@ root  = A
     d = D
 ```
 We use the `|`, `'` and `-` characters to mark a line that begins from the object that contains the back-edge (here it's `c`) and ends at the object it is referencing (here it's `root` or `a`).  
-There is 1 space between the last `-` and the name of the object and the vetrical line is idented by 1 space from the level of the referenced object.  
-Note that the line starts from the name of the object that *contains* the refernce (`c`), not the name of the reference (`parent`, which is not shown in the TOO).  
+There is 1 space between the last `-` and the name of the object and the vertical line is indented by 1 space from the level of the referenced object.  
+Note that the line starts from the name of the object that *contains* the reference (`c`), not the name of the reference (`parent`, which is not shown in the TOO).  
 Also note that weak references are not depicted at all.
 
 #### A more extensive example:
@@ -165,7 +166,7 @@ root          = A
     d         = D
 ```
 *For a more complete and realistic example, see [Portal.too](./NPTpy/Portal/Portal.too)*  
-*The term `item` is used for an item inside a list (for no reason other than it seems ok :smiley:)*  
+*The term `item` is used here for an item inside a list*  
 
 #### teardown()
 Noting these back-edges is important, as it can lead to memory leaks, and worse, objects staying alive when we think they've been deleted,
@@ -186,7 +187,8 @@ In this repository, we make the agreement that every object that has incident ba
 
 Module delegates are objects that are created by (usually) top-level modules and are owned by regular objects.  
 The delegates can have references to their modules which are usually outside the TOO.  
-Any reference **to** delegates must be a weak reference, except for the reference that the host object holds to it.  
+Any reference **to**   a delegate must be a weak reference, except for the reference from its host object.  
+Any reference **from** a delegate must be a weak reference, except for the reference to its module.  
 Delegates are shown in the `.too` files with a `%` in front of their class name.  
 More on this topic in another document *(aka TODO)*.  
 
@@ -222,7 +224,7 @@ A few things to note here:
 * `pass` means there isn't anything there (empty line).
 * When there is a back-edge, there must be a corresponding line with the `<---` arrow, even if it's just `pass`.
 * The `--->` and `<---` lines that are otherwise identical have no empty line between their blocks, all other blocks are separated by an empty line.
-* The blocks that refer to the same class (on the left) are grouped together with a nice header comment on top with the class's name (`# A`). This comment has 1 empty line on top and 1 on the bottom. There is no compiler to complain about this but people might :cop:.
+* The blocks that refer to the same class (on the left of the arrow) are grouped together with a nice header comment on top with the class's name (`# A`). This comment has 1 empty line on top and 1 on the bottom. There is no compiler to complain about this missing but people might :cop:.
 * If the link/edge that the arrow represents is a weak reference, a `?` is used in place of the last `-`, like this:
     ```makefile
     A     ---> Something s:
@@ -239,14 +241,14 @@ A few things to note here:
     A     ---> EvenBetterSomething s:
         pass
     ```
-* The method declarations are to be copied from source with only those optional arguements that are used in the actual calls (with the default values removed, if any). A function without `self` as its first arguement will be considered a class function (and colorized differently), not an object method!
+* The method declarations are to be copied from source with only those optional arguments that are used in the actual calls (with the default values removed, if any). A function without `self` as its first argument will be considered a class function (and colorized differently), not an object method!
 * Keywords like `async` may be added after the `:` and a lot of spaces :wink:.
 * Sometimes you can use `*` together with letters like a glob to refer to many similar functions.
 
 #### Tips
 To get nice colorization, you can set your editor to interpret it as 'Makefile' (works well at least in Sublime Text 3).
 
-## This is still not set in stone, many things may be changed or added in the future :no_mouth:
+### This is still not set in stone, many things may be changed or added in the future :no_mouth:
 
-*(BTW, everything noted here is totally informal and may in some cases contradict 'real' theory. This format and ideas on interpretation of any piece of code are meant only for the contributors of this particular repository and might not apply that well in other cases.)*
+*(BTW, everything noted here is totally informal. This format and ideas on interpretation of any piece of code are meant only for this particular repository and might not apply that well in other cases.)*
 
