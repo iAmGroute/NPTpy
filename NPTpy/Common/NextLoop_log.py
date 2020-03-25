@@ -18,8 +18,8 @@ LogClassL = newClass('Loop', EtypesL)
 class EtypesF: # (Enabled, Displayed)
     Ready     = (   True,      True)
     Cancel    = (   True,      True)
+    Reset     = (   True,      True)
     Await     = (   True,      True)
-    AwaitDone = (   True,      True)
 
 
 LogClassF = newClass('Future', EtypesF)

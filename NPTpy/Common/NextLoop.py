@@ -72,7 +72,7 @@ class NextLoop:
             else:
                 self.log(EtypesL.Running, cID, reprCoro(c))
                 try:
-                    c.send(None).cIDs.append(cID)
+                    c.send(None).cID = cID
                     # f     = c.send(None)
                     # f.cID = cID
                 except StopIteration as e:
@@ -91,41 +91,67 @@ class NextFuture:
     def __init__(self, myLoop):
         self.log    = Globals.logger.new(LogClassF)
         self.myLoop = myLoop
-        self.cIDs   = []
+        self.tokens = []
         self.result = None
+
+    def __del__(self):
+        if self.tokens:
+            self.cancel()
+
+    def _resolve(self, result):
+        self.result = result
+        for token in self.tokens:
+            token.result = result
+            self.myLoop._enqueue(token.cID)
+        self.tokens = []
 
     def ready(self, *result):
         self.log(EtypesF.Ready, *result)
-        self.result = result
-        for cID in self.cIDs:
-            self.myLoop._enqueue(cID)
-        self.cIDs = []
+        self._resolve(result)
 
     def cancel(self, exception=CancelledError()):
         self.log(EtypesF.Cancel, exception)
-        self.result = exception
-        for cID in self.cIDs:
-            self.myLoop._enqueue(cID)
-        self.cIDs = []
+        self._resolve(exception)
+
+    def reset(self):
+        self.log(EtypesF.Reset)
+        self.result = None
 
     def __await__(self):
         self.log(EtypesF.Await)
-        while self.result is None:
-            yield self
-        # if self.result is None:
-        #     # Called twice with no result,
-        #     # so it has been reused or called without await.
-        #     raise RuntimeError('You should `await` this future and only once')
-        # Reset all our fields to avoid holding references
-        # result = self.result
-        # self.cID    = -1
-        # self.result = None
-        self.log(EtypesF.AwaitDone, self.result)
-        if type(self.result) is tuple:
-            return self.result
+        if self.result is None:
+            # Return a new token, which can be held by the coroutine
+            token = NextToken()
+            self.tokens.append(token)
+            return token.__await__()
         else:
-            # Result is exception
-            raise self.result
+            # Complete immediately, no token, no waiting
+            return _unpack(self.result)
+
+
+# One per await, owned by the NextFuture and also
+# held by the coroutine that awaits it.
+class NextToken:
+
+    def __init__(self):
+        self.result = None
+        self.cID    = -1
+
+    def __await__(self):
+        yield self
+        return _unpack(self.result)
+
+
+def _unpack(result):
+    if type(result) is tuple:
+        # The actual value to return has been packed by a foo(*result) call
+        l = len(result)
+        if   l == 0: return None
+        elif l == 1: return result[0]
+        else:        return result
+    else:
+        # Result is exception
+        raise result
 
 
 loop = NextLoop()
