@@ -3,8 +3,8 @@
 
 disable=
     C,
-    too-few-public-methods,
     duplicate-code,
+    too-few-public-methods,
     too-many-function-args,
     too-many-arguments,
     too-many-locals,
@@ -14,7 +14,6 @@ disable=
     global-statement,
     no-else-return,
     useless-return,
-    protected-access,
     logging-format-interpolation,
     logging-not-lazy,
     fixme

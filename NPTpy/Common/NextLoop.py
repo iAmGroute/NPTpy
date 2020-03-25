@@ -99,6 +99,7 @@ class NextFuture:
             self.cancel()
 
     def _resolve(self, result):
+        # pylint: disable=protected-access
         self.result = result
         for token in self.tokens:
             token.result = result

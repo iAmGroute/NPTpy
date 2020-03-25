@@ -21,6 +21,7 @@ class Endpoint:
         self.log(Etypes.Inited, myID, myIDF)
 
     def remove(self):
+        # pylint: disable=protected-access
         self.parent._remove(self.myID)
 
     def formMessage(self, data):

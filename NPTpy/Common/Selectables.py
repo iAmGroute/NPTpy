@@ -54,7 +54,7 @@ class SelectablesDelegate:
         self.myModule._remove(self.myID)
 
     def onSelect(self):
-        # TODO: keep ID instead
+        # pylint: disable=protected-access
         self.promise = self.myModule._onSelect()
         return self.promise
 
