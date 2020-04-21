@@ -9,5 +9,5 @@ class Etypes: # (Enabled, Displayed)
     NewToken  = (   True,      True)
 
 
-LogClass = newClass('Future', Etypes)
+LogClass = newClass('Future', Etypes, enabled=False)
 

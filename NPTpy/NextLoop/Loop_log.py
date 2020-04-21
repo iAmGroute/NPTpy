@@ -14,5 +14,5 @@ class Etypes: # (Enabled, Displayed)
     Paused    = (   True,      True)
 
 
-LogClass = newClass('Loop', Etypes)
+LogClass = newClass('Loop', Etypes, enabled=False)
 

@@ -9,5 +9,5 @@ class Etypes: # (Enabled, Displayed)
     Reset     = (   True,      True)
 
 
-LogClass = newClass('Event', Etypes)
+LogClass = newClass('Event', Etypes, enabled=False)
 

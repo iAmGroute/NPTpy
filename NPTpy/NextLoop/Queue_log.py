@@ -7,5 +7,5 @@ class Etypes: # (Enabled, Displayed)
     Cancel    = (   True,      True)
 
 
-LogClass = newClass('Queue', Etypes)
+LogClass = newClass('Queue', Etypes, enabled=False)
 

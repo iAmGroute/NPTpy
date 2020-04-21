@@ -6,5 +6,5 @@ class Etypes: # (Enabled, Displayed)
     AwaitPost = (   True,      True)
 
 
-LogClass = newClass('Token', Etypes)
+LogClass = newClass('Token', Etypes, enabled=False)
 
