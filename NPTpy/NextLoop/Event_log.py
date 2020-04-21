@@ -8,5 +8,6 @@ class Etypes: # (Enabled, Displayed)
     NewToken  = (   True,      True)
     Reset     = (   True,      True)
 
+
 LogClass = newClass('Event', Etypes)
 

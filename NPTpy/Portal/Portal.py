@@ -9,16 +9,19 @@ import Globals
 import ConfigFields as CF
 
 from LogPack         import logger, logPrint
+from NextLoop        import loop
 from Common.Generic  import find
 from Common.SlotList import SlotList
 from Common.AsyncConnectorPacketized \
     import  AsyncConnectorPacketized
 from Common.Futures  import Futures
-from NextLoop        import loop
+
 from .Link           import Link
 from .Portal_log     import LogClass, Etypes
 
+
 log = logging.getLogger(__name__ + '  ')
+
 
 class Portal:
 

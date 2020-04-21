@@ -6,5 +6,6 @@ class Etypes: # (Enabled, Displayed)
     Aexit     = (   True,      True)
     Cancel    = (   True,      True)
 
-LogClass = newClass('Event', Etypes)
+
+LogClass = newClass('Queue', Etypes)
 
