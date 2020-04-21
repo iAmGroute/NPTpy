@@ -10,7 +10,9 @@ def identityMany(*args):
     return args
 
 def toTuple(thing):
-    return thing if isinstance(thing, tuple) else (thing,)
+    if   thing is None:        return ()
+    elif type(thing) is tuple: return thing
+    else:                      return (thing,)
 
 def find(iterable, f):
     for item in iterable:

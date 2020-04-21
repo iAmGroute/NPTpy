@@ -1,5 +1,5 @@
 
-from Common.Log import newClass
+from LogPack import newClass
 
 class Etypes: # (Enabled, Displayed)
     Inited    = (   True,      True)

@@ -3,8 +3,8 @@
 # it is used for managing the portal-client link
 # and the other channels.
 
-from Common.Promises import Promises
-from Common.Loop     import loop
+from Common.Futures  import Futures
+from NextLoop        import loop
 
 from .Endpoint            import Endpoint
 from .ControlEndpoint_log import LogClass, Etypes
@@ -14,10 +14,10 @@ class ControlEndpoint(Endpoint):
     def __init__(self, myID, myIDF, parent, timeoutReminder):
         Endpoint.__init__(self, myID, myIDF, parent)
         self.log.upgrade(LogClass)
-        self.promises = Promises(timeoutReminder)
+        self.futures = Futures(loop, timeoutReminder)
 
     def reset(self):
-        self.promises.dropAll()
+        self.futures.cancelAll()
 
     def send(self, data, untracked=False):
         self.parent.send(self.formMessage(data), untracked)
@@ -52,15 +52,14 @@ class ControlEndpoint(Endpoint):
         self.log(Etypes.ReceivedKA, data)
 
     async def requestNewChannel(self, channelID, devicePort, deviceAddr):
-        p        = self.promises.new()
-        reqID    = p.myID
+        f, fID   = self.futures.new()
         request  = b'n...'
-        request += reqID.to_bytes(4, 'little')
+        request += fID.to_bytes(4, 'little')
         request += channelID.to_bytes(2, 'little')
         request += devicePort.to_bytes(2, 'little')
         request += bytes(deviceAddr, 'utf-8')
         self.send(request)
-        return await loop.watch(p)
+        return await f
 
     def actionNewChannel(self, data):
         assert len(data) > 12
@@ -89,17 +88,17 @@ class ControlEndpoint(Endpoint):
             result = channelID, channelIDF
         else:
             result = ()
-        self.promises.fire(reqID, result)
+        f = self.futures.pop(reqID)
+        f.ready(result)
 
     async def requestDeleteChannel(self, channelID, channelIDF):
-        p        = self.promises.new()
-        reqID    = p.myID
+        f, fID   = self.futures.new()
         request  = b'd...'
-        request += reqID.to_bytes(4, 'little')
+        request += fID.to_bytes(4, 'little')
         request += channelIDF.to_bytes(2, 'little')
         request += channelID.to_bytes(2, 'little')
         self.send(request)
-        return await loop.watch(p)
+        return await f
 
     def actionDeleteChannel(self, data):
         channelID  = int.from_bytes(data[ 8:10], 'little')
@@ -119,5 +118,6 @@ class ControlEndpoint(Endpoint):
         elif data[10:12] == b'\x01.': ok = True
         else:                         assert False
         self.log(Etypes.DeletedByUs, ok, channelID)
-        self.promises.fire(reqID, (ok, channelID))
+        f = self.futures.pop(reqID)
+        f.ready(ok, channelID)
 

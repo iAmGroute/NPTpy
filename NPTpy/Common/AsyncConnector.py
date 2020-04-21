@@ -4,16 +4,17 @@ import socket
 from errno import errorcode
 from ssl   import SSLWantReadError, SSLWantWriteError
 
-from .Loop          import loop
 from .Connector     import Connector
 from .Connector_log import Etypes
 
+
 async def wait(selectable):
     selectable.on()
-    result = await loop.watch(selectable.onSelect())
+    result = await selectable.onSelect()
     selectable.off()
     if result is None:
         raise socket.timeout()
+
 
 class AsyncConnector(Connector):
 
@@ -24,6 +25,11 @@ class AsyncConnector(Connector):
 
     def __repr__(self):
         return f'<AsyncConnector {self.reprEndpoints()}>'
+
+    def close(self):
+        self.readable.off()
+        self.writable.off()
+        Connector.close(self)
 
     async def connectAsync(self, endpoint):
         self.log(Etypes.Connecting, endpoint)

@@ -4,6 +4,20 @@ import time
 from .SmartTabs import t
 
 
+logPrintLF = True
+def logPrint(*args, **kwargs):
+    global logPrintLF
+    if 'end' in kwargs:
+        if logPrintLF:
+            logPrintLF = False
+            print(end='', flush=True)
+    else:
+        if not logPrintLF:
+            logPrintLF = True
+            print()
+    print(*args, **kwargs)
+
+
 def getAllowList(count, enabled):
     res = [False] * count
     for item in enabled:
@@ -26,47 +40,46 @@ def getPrefix(log):
 
 class Logger:
 
-    def __init__(self, logPrint):
+    def __init__(self):
         self.logCount = 0
-        self.logPrint = logPrint
 
     def new(self, logClass):
         logID = self.logCount
         self.logCount += 1
-        return Log(self, logID, logClass)
+        return Log(logID, logClass)
 
-    def logCreated(self, log):
-        prefix = getPrefix(log)
-        t(prefix)
-        self.logPrint(t.over(f'{prefix}[Log created]'))
 
-    def logDeleted(self, log):
-        prefix = getPrefix(log)
-        t(prefix)
-        self.logPrint(t.over(f'{prefix}[Log deleted]'))
+def logCreated(log):
+    prefix = getPrefix(log)
+    t(prefix)
+    logPrint(t.over(f'{prefix}[Log created]'))
 
-    def upgradeLog(self, log, newLogClass):
-        prefix = getPrefix(log)
-        log.setClass(newLogClass)
-        t(prefix)
-        self.logPrint(t.over(f'{prefix}[Upgrading to <{log.name}>]'))
-        return log
+def logDeleted(log):
+    prefix = getPrefix(log)
+    t(prefix)
+    logPrint(t.over(f'{prefix}[Log deleted]'))
 
-    def print(self, log, ename, data):
-        prefix = getPrefix(log)
-        data   = f'\t {repr(data)}' if data is not None else ''
-        self.logPrint(t(prefix + ename + data))
+def upgradeLog(log, newLogClass):
+    prefix = getPrefix(log)
+    log.setClass(newLogClass)
+    t(prefix)
+    logPrint(t.over(f'{prefix}[Upgrading to <{log.name}>]'))
+    return log
+
+def printEntry(log, ename, data):
+    prefix = getPrefix(log)
+    data   = f'\t {repr(data)}' if data is not None else ''
+    logPrint(t(prefix + ename + data))
 
 
 class Log:
 
-    def __init__(self, myLogger, myID, logClass):
-        self.myLogger = myLogger
+    def __init__(self, myID, logClass):
         self.myID     = myID
         self.entries  = []
         self.setClass(logClass)
         if self.enabled:
-            self.myLogger.logCreated(self)
+            logCreated(self)
 
     def setClass(self, logClass):
         self.name    = logClass.name
@@ -74,9 +87,8 @@ class Log:
         self.enabled = logClass.enabled
 
     def __del__(self):
-        if hasattr(self, 'myLogger'):
-            if self.enabled:
-                self.myLogger.logDeleted(self)
+        if self.enabled:
+            logDeleted(self)
 
     def __call__(self, etype, *data):
         if self.enabled:
@@ -85,10 +97,10 @@ class Log:
                 # self.entries.append((etype.value, repr(data)))
                 pass
             if displayed:
-                self.myLogger.print(self, ename, data)
+                printEntry(self, ename, data)
 
     def upgrade(self, newLogClass):
-        return self.myLogger.upgradeLog(self, newLogClass)
+        return upgradeLog(self, newLogClass)
 
 
 def parseEtypeValue(enabled=False, displayed=False):
@@ -116,7 +128,7 @@ def parseEtypes(etypes):
 
 def newClass(name, etypes, enabled=True):
     etypes = parseEtypes(etypes)
-    res = type(name + '_log', (), {
+    res    = type(name + '_log', (), {
         'name':    name,
         'etypes':  etypes,
         'enabled': enabled

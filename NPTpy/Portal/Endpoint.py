@@ -1,7 +1,8 @@
 # Base class for channel endpoints
 
-import Globals
 import ConfigFields as CF
+
+from LogPack    import logger
 
 from .Endpoint_log import LogClass, Etypes
 
@@ -14,7 +15,7 @@ class Endpoint:
     ]
 
     def __init__(self, myID, myIDF, parent):
-        self.log    = Globals.logger.new(LogClass)
+        self.log    = logger.new(LogClass)
         self.myID   = myID   # Local ID
         self.myIDF  = myIDF  # Foreign ID
         self.parent = parent

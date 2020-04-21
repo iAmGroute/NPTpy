@@ -1,14 +1,15 @@
 
-from .SlotMap  import SlotMap
-from .NextLoop import loop, CancelledError
+from .SlotMap        import SlotMap
+
+from NextLoop.Common import CancelledError
 
 
 class DummyFuture:
 
-    def ready(self, *params):
+    def ready(self, *result):
         pass
 
-    def cancel(self, *params):
+    def cancel(self, exception):
         pass
 
     def reset(self):
@@ -20,9 +21,10 @@ class DummyFuture:
 
 class Futures:
 
-    def __init__(self, timeoutReminder):
-        self.items    = SlotMap()
+    def __init__(self, loop, timeoutReminder):
+        self.loop     = loop
         self.reminder = timeoutReminder.new(owner=self, onRun=Futures.handleRemind)
+        self.items    = SlotMap()
 
     def handleRemind(self):
         for k, v in self.items.iterKV():
@@ -40,7 +42,7 @@ class Futures:
         self.items.deleteAll()
 
     def new(self):
-        f   = loop.newFuture()
+        f   = self.loop.newFuture()
         fID = self.items.append((f, False))
         return f, fID
 

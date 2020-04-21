@@ -5,10 +5,11 @@ import socket
 import Globals
 import ConfigFields as CF
 
+from LogPack               import logger
+from NextLoop              import loop
 from Common.SlotMap        import SlotMap
 from Common.Connector      import Connector
 from Common.AsyncConnector import AsyncConnector
-from Common.Loop           import EventAsync, loop
 from .Channels             import Channels
 from .Listener             import Listener
 from .Link_log             import LogClass, Etypes
@@ -19,7 +20,7 @@ logEP = logging.getLogger(__name__ + ' :EP')
 class Link:
 
     def __init__(self, isClient, myID, myPortal, otherID, otherIDV, otherUser, otherUserV, rtPort, rtAddr, ltPort, ltAddr):
-        self.log         = Globals.logger.new(LogClass)
+        self.log         = logger.new(LogClass)
         self.isClient    = isClient
         self.myID        = myID
         self.myPortal    = myPortal
@@ -32,7 +33,7 @@ class Link:
         self.listeners   = SlotMap()
         self.channels    = Channels(self, ltPort, ltAddr)
         self.buffer      = b''
-        self.connect     = EventAsync(self._connect)
+        self.connect     = loop.newEvent(self._connect)
         self.conRT       = None
         self.reminderRX  = Globals.kaReminderRX.new(owner=self, onRun=Link.handleRemindRX, enabled=False)
         self.reminderTX  = Globals.kaReminderTX.new(owner=self, onRun=Link.handleRemindTX, enabled=False)

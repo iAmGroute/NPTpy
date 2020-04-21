@@ -1,13 +1,15 @@
 
-from .AsyncQueue     import AsyncQueue
 from .AsyncConnector import AsyncConnector
+
+from NextLoop        import loop
+
 
 class AsyncConnectorPacketized(AsyncConnector):
 
     def __init__(self, *args, **kwargs):
         AsyncConnector.__init__(self, *args, **kwargs)
         self.recvBuffer = b''
-        self.lock       = AsyncQueue()
+        self.lock       = loop.newQueue()
 
     def __repr__(self):
         return f'<AsyncConnectorPacketized {self.reprEndpoints()}>'

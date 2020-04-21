@@ -1,9 +1,10 @@
 
 import socket
 import ssl
+
 from enum import Enum
 
-import Globals
+from LogPack        import logger
 
 from .this_OS       import OS, this_OS
 from .Connector_log import LogClass, Etypes
@@ -32,7 +33,7 @@ class Connector:
             self.peerHostname = fromConnector.peerHostname
             self.socket       = fromConnector.socket
         else:
-            self.log          = Globals.logger.new(LogClass)
+            self.log          = logger.new(LogClass)
             self.listening    = False
             self.incoming     = True
             self.peerHostname = None

@@ -8,12 +8,13 @@ import os
 import Globals
 import ConfigFields as CF
 
+from LogPack         import logger, logPrint
 from Common.Generic  import find
 from Common.SlotList import SlotList
 from Common.AsyncConnectorPacketized \
     import  AsyncConnectorPacketized
-from Common.Promises import Promises
-from Common.Loop     import EventAsync, loop
+from Common.Futures  import Futures
+from NextLoop        import loop
 from .Link           import Link
 from .Portal_log     import LogClass, Etypes
 
@@ -22,7 +23,7 @@ log = logging.getLogger(__name__ + '  ')
 class Portal:
 
     def __init__(self, portalID, userID, serverPort, serverAddr, port=0, address='0.0.0.0'):
-        self.log          = Globals.logger.new(LogClass)
+        self.log          = logger.new(LogClass)
         self.portalID     = portalID
         self.userID       = userID
         self.serverPort   = serverPort
@@ -30,16 +31,16 @@ class Portal:
         self.port         = port
         self.address      = address
         self.links        = SlotList()
-        self.connect      = EventAsync(self._connect)
+        self.connect      = loop.newEvent(self._connect)
         self.conST        = None
-        self.promises     = Promises(Globals.timeoutReminder)
+        self.futures      = Futures(loop, Globals.timeoutReminder)
         self.waitingSince = 0
         self.reminderRX   = Globals.kaReminderRX.new(owner=self, onRun=Portal.handleRemindRX, enabled=False)
         self.reminderTX   = Globals.kaReminderTX.new(owner=self, onRun=Portal.handleRemindTX, enabled=True)
         self.log(Etypes.Inited, portalID, userID, serverPort, serverAddr, port, address)
 
     def teardown(self):
-        self.promises.dropAll()
+        self.futures.cancelAll()
         for link in self.links:
             link.teardown()
         self.links    = None
@@ -48,12 +49,12 @@ class Portal:
 # Main
 
     def main(self):
-        Globals.logPrint('.', end='')
+        logPrint('.', end='')
         Globals.runReminders()
         self.runConnect()
         activeR = Globals.readables.get()
         activeW = Globals.writables.get()
-        readyR, readyW, _ = select.select(activeR,  activeW,  [], 5)
+        readyR, readyW, _ = select.select(activeR, activeW, [], 5)
         Globals.readables.selected(readyR, (readyR, readyW))
         Globals.writables.selected(readyW, (readyR, readyW))
         for link in self.links:
@@ -169,7 +170,8 @@ class Portal:
         if   cmd == b'REPL':
             # Reply
             reqID = int.from_bytes(ref, 'little')
-            self.promises.fire(reqID, (data,))
+            f     = self.futures.pop(reqID)
+            f.ready(data)
         elif cmd == b'.KA.':
             pass
         elif cmd == b'CLKR':
@@ -215,14 +217,14 @@ class Portal:
             return None
 
     async def requestRelay(self, otherID):
-        p      = self.promises.new(self.requestRelayRR)
-        reqID  = p.myID
-        data   = reqID.to_bytes(4, 'little')
+        f, fID = self.futures.new()
+        data   = fID.to_bytes(4, 'little')
         data  += b'RQRL'
         data  += otherID
         data  += os.urandom(8) # seed for tokenP
-        if not await self.send(data): return None
-        return await loop.watch(p)
+        await self.send(data)
+        reply  = await f
+        return self.requestRelayRR(reply)
 
     async def requestKA(self):
         data  = b'....'

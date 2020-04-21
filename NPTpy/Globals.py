@@ -1,5 +1,5 @@
 
-from Common.Log           import Logger
+from NextLoop             import loop
 from Common.TimedReminder import TimedReminder
 from Common.Selectables   import Selectables
 
@@ -12,22 +12,5 @@ def runReminders():
     kaReminderTX.run()
     timeoutReminder.run()
 
-readables = Selectables(timeoutReminder)
-writables = Selectables(timeoutReminder)
-
-
-logPrintLF = True
-def logPrint(*args, **kwargs):
-    global logPrintLF
-    if 'end' in kwargs:
-        if logPrintLF:
-            logPrintLF = False
-            print(end='', flush=True)
-    else:
-        if not logPrintLF:
-            logPrintLF = True
-            print()
-    print(*args, **kwargs)
-
-
-logger = Logger(logPrint)
+readables = Selectables(loop, timeoutReminder)
+writables = Selectables(loop, timeoutReminder)

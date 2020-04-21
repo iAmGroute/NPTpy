@@ -1,5 +1,5 @@
 
-from .Log import newClass
+from LogPack import newClass
 
 class Etypes:       # (Enabled, Displayed)
     Error           = (   True,      True)

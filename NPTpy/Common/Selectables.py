@@ -1,25 +1,27 @@
+
 import weakref
 
-from .SlotMap  import SlotMap
-from .Promises import Promises
+from .SlotMap import SlotMap
+from .Futures import Futures
+
 
 class Selectables:
 
-    def __init__(self, timeoutReminder):
+    def __init__(self, loop, timeoutReminder):
         self.delegates = SlotMap()
-        self.promises  = Promises(timeoutReminder)
+        self.futures   = Futures(loop, timeoutReminder)
 
     def _onSelect(self):
-        return self.promises.new()
+        return self.futures.new()
 
     def selected(self, selectables, params=()):
         for dRef in self.delegates:
             d = dRef()
             if d:
-                p = d.promise
-                if p and d.getOwner() in selectables:
-                    d.promise = None
-                    p.fire(params)
+                f = d.future
+                if f and d.getOwner() in selectables:
+                    d.future = None
+                    f.ready(*params)
 
     def new(self, owner, isActive):
         dID = self.delegates.append(0)
@@ -46,17 +48,17 @@ class SelectablesDelegate:
         self.myID     = myID
         self.getOwner = weakref.ref(owner)
         self.isActive = isActive
-        self.promise  = None
+        self.future   = None
 
     def __del__(self):
-        if self.promise:
-            self.promise.cancel()
         self.myModule._remove(self.myID)
+        if self.future:
+            self.future.cancel()
 
     def onSelect(self):
         # pylint: disable=protected-access
-        self.promise = self.myModule._onSelect()
-        return self.promise
+        self.future, _ = self.myModule._onSelect()
+        return self.future
 
     def on(self):
         self.isActive = True

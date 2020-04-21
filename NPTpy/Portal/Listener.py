@@ -5,8 +5,9 @@ import socket
 import Globals
 import ConfigFields as CF
 
+from LogPack          import logger
 from Common.Connector import Connector
-from Common.Loop      import loop
+from NextLoop         import loop
 
 from .Listener_log import LogClass, Etypes
 
@@ -24,7 +25,7 @@ class Listener:
     ]
 
     def __init__(self, myID, myLink, remotePort, remoteAddr, localPort, localAddr):
-        self.log         = Globals.logger.new(LogClass)
+        self.log         = logger.new(LogClass)
         self.myID        = myID
         self.myLink      = myLink
         self.remotePort  = remotePort
