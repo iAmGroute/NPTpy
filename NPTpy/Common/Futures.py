@@ -9,7 +9,7 @@ class DummyFuture:
     def ready(self, *result):
         pass
 
-    def cancel(self, exception):
+    def cancel(self, exception=None):
         pass
 
     def reset(self):
