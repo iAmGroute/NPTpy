@@ -23,7 +23,7 @@ class DataEndpoint(Endpoint):
         self.readable = Globals.readables.new(self, True)
 
     def close(self):
-        self.con.shutdown(read=False, write=True)
+        self.con.tryShutdown(read=False, write=True)
 
     def acceptMessage(self, data):
         try:
