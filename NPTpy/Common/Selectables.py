@@ -11,8 +11,8 @@ class Selectables:
         self.delegates = SlotMap()
         self.futures   = Futures(loop, timeoutReminder)
 
-    def _onSelect(self):
-        return self.futures.new()
+    def _onSelect(self, timeout):
+        return self.futures.new(timeout)
 
     def selected(self, selectables, params=()):
         # pylint: disable=protected-access
@@ -57,9 +57,9 @@ class SelectablesDelegate:
             f = self.myModule.futures.pop(self._fID)
             f.cancel()
 
-    def onSelect(self):
+    def onSelect(self, timeout=None):
         # pylint: disable=protected-access
-        f, self._fID = self.myModule._onSelect()
+        f, self._fID = self.myModule._onSelect(timeout)
         return f
 
     def on(self):

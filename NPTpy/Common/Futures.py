@@ -28,12 +28,13 @@ class Futures:
 
     def handleRemind(self):
         for k, v in self.items.iterKV():
-            f, stale = v
-            if not stale:
-                self.items[k] = f, True
-            else:
-                del self.items[k]
-                f.cancel()
+            f, timeout = v
+            if timeout is not None:
+                if timeout > 0:
+                    self.items[k] = f, timeout - 1
+                else:
+                    del self.items[k]
+                    f.cancel()
 
     def cancelAll(self):
         for v in self.items:
@@ -41,9 +42,9 @@ class Futures:
             f.cancel()
         self.items.deleteAll()
 
-    def new(self):
+    def new(self, timeout=None):
         f   = self.loop.newFuture()
-        fID = self.items.append((f, False))
+        fID = self.items.append((f, timeout))
         return f, fID
 
     def pop(self, fID):
