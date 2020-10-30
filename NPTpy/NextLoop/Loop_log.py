@@ -3,16 +3,16 @@ from LogPack import newClass
 
 class Etypes: # (Enabled, Displayed)
     Stop      = (   True,      True)
-    NewFuture = (   True,      True)
-    NewEvent  = (   True,      True)
-    NewQueue  = (   True,      True)
-    Enqueue   = (   True,      True)
+    NewFuture = (  False,     False)
+    NewEvent  = (  False,     False)
+    NewQueue  = (  False,     False)
+    Enqueue   = (  False,     False)
     NotFound  = (   True,      True)
-    Running   = (   True,      True)
-    Finished  = (   True,      True)
+    Running   = (  False,     False)
+    Finished  = (  False,     False)
     RunError  = (   True,      True)
-    Paused    = (   True,      True)
+    Paused    = (  False,     False)
 
 
-LogClass = newClass('Loop', Etypes, enabled=False)
+LogClass = newClass('Loop', Etypes, enabled=True)
 
