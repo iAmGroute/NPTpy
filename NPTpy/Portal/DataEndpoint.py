@@ -14,10 +14,11 @@ class DataEndpoint(Endpoint):
         if new:
             Endpoint.__init__(self, *new)
         elif fromEndpoint:
-            self.log    = fromEndpoint.log
-            self.myID   = fromEndpoint.myID
-            self.myIDF  = fromEndpoint.myIDF
-            self.parent = fromEndpoint.parent
+            self.log      = fromEndpoint.log
+            self.myID     = fromEndpoint.myID
+            self.myIDF    = fromEndpoint.myIDF
+            self.parent   = fromEndpoint.parent
+            self.finished = fromEndpoint.finished
         self.log.upgrade(LogClass)
         self.con      = con
         self.readable = Globals.readables.new(self, True)
