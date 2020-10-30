@@ -20,25 +20,26 @@ logEP = logging.getLogger(__name__ + ' :EP')
 class Link:
 
     def __init__(self, isClient, myID, myPortal, otherID, otherIDV, otherUser, otherUserV, rtPort, rtAddr, ltPort, ltAddr):
-        self.log         = logger.new(LogClass)
-        self.isClient    = isClient
-        self.myID        = myID
-        self.myPortal    = myPortal
-        self.otherID     = otherID
-        self.otherIDV    = otherIDV
-        self.otherUser   = otherUser
-        self.otherUserV  = otherUserV
-        self.rtPort      = rtPort
-        self.rtAddr      = rtAddr
-        self.listeners   = SlotMap()
-        self.channels    = Channels(self, ltPort, ltAddr)
-        self.buffer      = b''
-        self.connect     = loop.newEvent(self._connect)
-        self.conRT       = None
-        self.reminderRX  = Globals.kaReminderRX.new(owner=self, onRun=Link.handleRemindRX, enabled=False)
-        self.reminderTX  = Globals.kaReminderTX.new(owner=self, onRun=Link.handleRemindTX, enabled=False)
-        self.kaCountIdle = 0
-        self.readable    = Globals.readables.new(self, False)
+        self.log           = logger.new(LogClass)
+        self.isClient      = isClient
+        self.myID          = myID
+        self.myPortal      = myPortal
+        self.otherID       = otherID
+        self.otherIDV      = otherIDV
+        self.otherUser     = otherUser
+        self.otherUserV    = otherUserV
+        self.rtPort        = rtPort
+        self.rtAddr        = rtAddr
+        self.listeners     = SlotMap()
+        self.channels      = Channels(self, ltPort, ltAddr)
+        self.buffer        = b''
+        self.connect       = loop.newEvent(self._connect)
+        self.conRT         = None
+        self.reminderRX    = Globals.kaReminderRX.new(   owner=self, onRun=Link.handleRemindRX,    enabled=False)
+        self.reminderTX    = Globals.kaReminderTX.new(   owner=self, onRun=Link.handleRemindTX,    enabled=False)
+        self.reminderReset = Globals.timeoutReminder.new(owner=self, onRun=Link.handleRemindReset, enabled=False)
+        self.kaCountIdle   = 0
+        self.readable      = Globals.readables.new(self, False)
         self.log(Etypes.Inited, isClient, myID, otherID, rtPort, rtAddr, ltPort, ltAddr)
 
     def teardown(self):
@@ -85,6 +86,8 @@ class Link:
         self.log(Etypes.Connect, info)
         result = await self._connect_p1(info)
         self.log(Etypes.ConnectResult, result)
+        if not result:
+            self.reminderReset.enabled = True
         return result
 
     def connectToRelay(self, tokenP, tokenR, relayPort, relayAddr):
@@ -145,12 +148,13 @@ class Link:
     def disconnect(self):
         if self.connect.isComplete():
             self.log(Etypes.Disconnect)
-            self.connect.reset()
             self.conRT = None
             self.readable.off()
             self.channels.reset()
-            self.reminderRX.enabled = False
-            self.reminderTX.enabled = False
+            self.reminderRX.enabled    = False
+            self.reminderTX.enabled    = False
+            self.reminderReset.enabled = False
+        self.connect.reset()
 
     async def reconnect(self):
         self.disconnect()
@@ -183,6 +187,13 @@ class Link:
         self.kaCountIdle += 1
         if self.connect.isComplete():
             self.channels.sendKA()
+
+# Connection result reset
+
+    def handleRemindReset(self):
+        self.reminderReset.enabled = False
+        if not self.connect.isPending() and not self.connect.result:
+            self.connect.reset()
 
 # Listeners
 
