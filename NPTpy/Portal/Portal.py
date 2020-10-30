@@ -57,7 +57,7 @@ class Portal:
         self.runConnect()
         activeR = Globals.readables.get()
         activeW = Globals.writables.get()
-        readyR, readyW, _ = select.select(activeR, activeW, [], 5)
+        readyR, readyW, _ = select.select(activeR, activeW, [], 1)
         Globals.readables.selected(readyR, (readyR, readyW))
         Globals.writables.selected(readyW, (readyR, readyW))
         for link in self.links:
@@ -77,6 +77,7 @@ class Portal:
         if not conST:
             return False
         conST.setKeepAlive()
+        self.log(Etypes.ConnectAuth)
         ok = await self._authenticate(conST)
         if not ok:
             return False
@@ -99,6 +100,7 @@ class Portal:
                     new=(socket.SOCK_STREAM, 0, self.port, self.address)
                 )
         if not await conST.tryConnectAsync((self.serverAddr, self.serverPort)): return None
+        self.log(Etypes.ConnectHandshake)
         conST.secure(
             serverSide   = False,
             requireCert  = True,
