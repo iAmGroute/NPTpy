@@ -142,13 +142,16 @@ Listener        ---> %Selectable readable:
 
 Channels        ---> *Endpoint eps.item:
     getMessages(self)
+    close(self)
 Channels        <--- *Endpoint eps.item:
     _remove(self, channelID)
+    _finish(self, channelID)
 
 Channels        ---> ControlEndpoint epControl:
     reset(self)
     sendKA(self)
     requestNewChannel(self, channelID, devicePort, deviceAddr) async
+    requestCloseChannel(self, channelID, channelIDF)           async
     requestDeleteChannel(self, channelID, channelIDF)          async
 Channels        <--- ControlEndpoint epControl:
     send(self, data, untracked)

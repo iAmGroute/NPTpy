@@ -22,6 +22,9 @@ class DataEndpoint(Endpoint):
         self.con      = con
         self.readable = Globals.readables.new(self, True)
 
+    def close(self):
+        self.con.shutdown(read=False, write=True)
+
     def acceptMessage(self, data):
         try:
             self.con.socket.settimeout(1)
@@ -39,7 +42,7 @@ class DataEndpoint(Endpoint):
         if data is None:
             return b''
         if not data:
-            self.remove()
+            self.finish()
             return b''
         return self.formMessage(data)
 

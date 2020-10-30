@@ -25,11 +25,18 @@ class Endpoint:
         # pylint: disable=protected-access
         self.parent._remove(self.myID)
 
+    def finish(self):
+        # pylint: disable=protected-access
+        self.parent._finish(self.myID)
+
     def formMessage(self, data):
         header  = b''
         header += len(data).to_bytes(2, 'little')
         header += self.myIDF.to_bytes(2, 'little')
         return header + data
+
+    def close(self):
+        pass
 
     def getMessages(self):
         # pylint: disable=no-self-use

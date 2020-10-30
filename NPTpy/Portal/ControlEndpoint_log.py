@@ -11,6 +11,8 @@ class Etypes:      # (Enabled, Displayed)
     ReadyToAccept  = (   True,      True)
     DeletedByOther = (   True,      True)
     DeletedByUs    = (   True,      True)
+    ClosedByOther  = (   True,      True)
+    ClosedByUs     = (   True,      True)
 
 
 LogClass = newClass('ControlEndpoint', Etypes)

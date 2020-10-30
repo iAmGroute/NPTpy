@@ -33,6 +33,8 @@ class ControlEndpoint(Endpoint):
             elif action == b'N'    : self.actionNewChannelReply(data)
             elif action == b'd'    : self.actionDeleteChannel(data)
             elif action == b'D'    : self.actionDeleteChannelReply(data)
+            elif action == b'c'    : self.actionCloseChannel(data)
+            elif action == b'C'    : self.actionCloseChannelReply(data)
             else                   : assert False, f'Unknown action: {action}'
         except (AssertionError, IndexError) as e:
             self.log(Etypes.Corrupted, e)
@@ -43,6 +45,9 @@ class ControlEndpoint(Endpoint):
     #     and the task is done by the other portal.
     #   The prefix 'action' means we have received from the other portal,
     #     and the task is done by this portal.
+    #   The prefix 'action' with suffix 'Reply' means we have sent to the other portal,
+    #     and the task was done by the other portal,
+    #     and we now received a reply with the result.
 
     def sendKA(self):
         self.log(Etypes.SendingKA)
@@ -120,4 +125,35 @@ class ControlEndpoint(Endpoint):
         self.log(Etypes.DeletedByUs, ok, channelID)
         f = self.futures.pop(reqID)
         f.ready(ok, channelID)
+
+    async def requestCloseChannel(self, channelID, channelIDF):
+        f, fID   = self.futures.new()
+        request  = b'c...'
+        request += fID.to_bytes(4, 'little')
+        request += channelIDF.to_bytes(2, 'little')
+        request += channelID.to_bytes(2, 'little')
+        self.send(request)
+        return await f
+
+    def actionCloseChannel(self, data):
+        channelID  = int.from_bytes(data[ 8:10], 'little')
+        channelIDF = int.from_bytes(data[10:12], 'little')
+        ok = self.parent.closeChannel(channelID)
+        self.log(Etypes.ClosedByOther, ok, channelID, channelIDF)
+        reply  = b'C...'
+        reply += data[ 4: 8] # reqID
+        reply += data[10:12] # channelIDF
+        reply += b'\x01.' if ok else b'\x00.'
+        self.send(reply)
+
+    def actionCloseChannelReply(self, data):
+        reqID     = int.from_bytes(data[4: 8], 'little')
+        channelID = int.from_bytes(data[8:10], 'little')
+        if   data[10:12] == b'\x00.': ok = False
+        elif data[10:12] == b'\x01.': ok = True
+        else:                         assert False
+        self.log(Etypes.ClosedByUs, ok, channelID)
+        f = self.futures.pop(reqID)
+        f.ready(ok, channelID)
+
 

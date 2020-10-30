@@ -61,6 +61,11 @@ class Channels:
             del self.eps[channelID]
             loop.run(self.epControl.requestDeleteChannel(channelID, ep.myIDF))
 
+    def _finish(self, channelID):
+        ep = self.eps[channelID]
+        if ep:
+            loop.run(self.epControl.requestCloseChannel(channelID, ep.myIDF))
+
     def reserveChannel(self):
         cID = self.eps.append(0)
         ep  = Endpoint(cID, -1, self)
@@ -108,6 +113,17 @@ class Channels:
         if channelID > 0:
             try:
                 del self.eps[channelID]
+                return True
+            except (IndexError, AttributeError):
+                return False
+        else:
+            return False
+
+    def closeChannel(self, channelID):
+        if channelID > 0:
+            try:
+                ep = self.eps[channelID]
+                ep.close()
                 return True
             except (IndexError, AttributeError):
                 return False
