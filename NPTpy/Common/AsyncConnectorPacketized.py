@@ -39,7 +39,7 @@ class AsyncConnectorPacketized(AsyncConnector):
             self.recvBuffer = self.recvBuffer[totalLen:]
             return packet
 
-    async def sendPacketAsync(self, packet):
+    async def sendPacketAsync(self, packet, maxLoops=8, timeout=None):
         header  = b''
         header += len(packet).to_bytes(2, 'little')
         header += b'..'
