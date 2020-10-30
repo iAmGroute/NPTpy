@@ -85,9 +85,8 @@ class Link:
     async def _connect(self, info=None):
         self.log(Etypes.Connect, info)
         result = await self._connect_p1(info)
+        self.reminderReset.enabled = not result
         self.log(Etypes.ConnectResult, result)
-        if not result:
-            self.reminderReset.enabled = True
         return result
 
     def connectToRelay(self, tokenP, tokenR, relayPort, relayAddr):
@@ -192,7 +191,7 @@ class Link:
 
     def handleRemindReset(self):
         self.reminderReset.enabled = False
-        if not self.connect.isPending() and not self.connect.result:
+        if not self.connect.isPending():
             self.connect.reset()
 
 # Listeners
