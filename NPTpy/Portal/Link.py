@@ -7,9 +7,11 @@ import ConfigFields as CF
 
 from LogPack               import logger
 from NextLoop              import loop
+from NextLoop.Common       import CancelledError
 from Common.SlotMap        import SlotMap
 from Common.Connector      import Connector
 from Common.AsyncConnector import AsyncConnector
+
 from .Channels             import Channels
 from .Listener             import Listener
 from .Link_log             import LogClass, Etypes
@@ -54,6 +56,16 @@ class Link:
 
 # Connect
 
+    async def _connect(self, info=None):
+        self.log(Etypes.Connect, info)
+        try:
+            result = await self._connect_p1(info)
+        except CancelledError:
+            result = False
+        self.reminderReset.enabled = not result
+        self.log(Etypes.ConnectResult, result)
+        return result
+
     async def _connect_p1(self, info):
         clientSide = info is None
         if clientSide:
@@ -81,13 +93,6 @@ class Link:
         self.reminderRX.enabled  = True
         self.reminderTX.enabled  = True
         return True
-
-    async def _connect(self, info=None):
-        self.log(Etypes.Connect, info)
-        result = await self._connect_p1(info)
-        self.reminderReset.enabled = not result
-        self.log(Etypes.ConnectResult, result)
-        return result
 
     def connectToRelay(self, tokenP, tokenR, relayPort, relayAddr):
         # Todo: uncomment isIdle() condition

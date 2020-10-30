@@ -9,6 +9,7 @@ import ConfigFields as CF
 
 from LogPack         import logger, logPrint
 from NextLoop        import loop
+from NextLoop.Common import CancelledError
 from Common.Generic  import find
 from Common.SlotList import SlotList
 from Common.AsyncConnectorPacketized \
@@ -70,7 +71,10 @@ class Portal:
 
     async def _connect(self):
         self.log(Etypes.Connect)
-        result = await self._connect_p1()
+        try:
+            result = await self._connect_p1()
+        except CancelledError:
+            result = False
         self.reminderReset.enabled = not result
         self.log(Etypes.ConnectResult, result)
         self.futures.cancelAll()
