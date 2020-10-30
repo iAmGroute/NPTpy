@@ -124,6 +124,9 @@ class Channels:
             try:
                 ep = self.eps[channelID]
                 ep.close()
+                if ep.finished:
+                    # is also closed in the reverse direction
+                    del self.eps[channelID]
                 return True
             except (IndexError, AttributeError):
                 return False
