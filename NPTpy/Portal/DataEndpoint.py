@@ -45,6 +45,7 @@ class DataEndpoint(Endpoint):
         if data is None:
             return b''
         if not data:
+            self.readable.off()
             self.finish()
             return b''
         return self.formMessage(data)
