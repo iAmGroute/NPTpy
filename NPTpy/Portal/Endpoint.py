@@ -24,10 +24,12 @@ class Endpoint:
 
     def remove(self):
         # pylint: disable=protected-access
+        self.log(Etypes.Removing)
         self.parent._remove(self.myID)
 
     def finish(self):
         # pylint: disable=protected-access
+        self.log(Etypes.Finishing)
         self.finished = True
         self.parent._finish(self.myID)
 
