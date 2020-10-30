@@ -57,7 +57,7 @@ class Portal:
         self.runConnect()
         activeR = Globals.readables.get()
         activeW = Globals.writables.get()
-        readyR, readyW, _ = select.select(activeR, activeW, [], 1)
+        readyR, readyW, _ = select.select(activeR, activeW, [], 5)
         Globals.readables.selected(readyR, (readyR, readyW))
         Globals.writables.selected(readyW, (readyR, readyW))
         for link in self.links:
