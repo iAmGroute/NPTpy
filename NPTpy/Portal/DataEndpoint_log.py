@@ -5,7 +5,9 @@ class Etypes: # (Enabled, Displayed)
     Inited    = (   True,      True)
     Deleted   = (   True,      True)
     Removing  = (   True,      True)
+    Closing   = (   True,      True)
+    Finishing = (   True,      True)
 
 
-LogClass = newClass('Endpoint', Etypes)
+LogClass = newClass('DataEndpoint', Etypes)
 

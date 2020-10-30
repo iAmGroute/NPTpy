@@ -4,9 +4,8 @@
 
 import Globals
 
-from .Endpoint     import Endpoint
-# TODO: create DataEndpoint log
-from .Endpoint_log import LogClass
+from .Endpoint         import Endpoint
+from .DataEndpoint_log import LogClass, Etypes
 
 class DataEndpoint(Endpoint):
 
@@ -14,17 +13,26 @@ class DataEndpoint(Endpoint):
         if new:
             Endpoint.__init__(self, *new)
         elif fromEndpoint:
-            self.log      = fromEndpoint.log
-            self.myID     = fromEndpoint.myID
-            self.myIDF    = fromEndpoint.myIDF
-            self.parent   = fromEndpoint.parent
-            self.finished = fromEndpoint.finished
+            self.log    = fromEndpoint.log
+            self.myID   = fromEndpoint.myID
+            self.myIDF  = fromEndpoint.myIDF
+            self.parent = fromEndpoint.parent
         self.log.upgrade(LogClass)
+        self.closed   = False
+        self.finished = False
         self.con      = con
         self.readable = Globals.readables.new(self, True)
 
     def close(self):
+        self.log(Etypes.Closing)
+        self.closed = True
         self.con.tryShutdown(read=False, write=True)
+
+    def finish(self):
+        # pylint: disable=protected-access
+        self.log(Etypes.Finishing)
+        self.finished = True
+        self.parent._finish(self.myID)
 
     def acceptMessage(self, data):
         try:
