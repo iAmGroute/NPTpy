@@ -64,6 +64,9 @@ class Channels:
     def _finish(self, channelID):
         ep = self.eps[channelID]
         if ep:
+            if ep.closed:
+                # `ep` is also closed in the reverse direction
+                del self.eps[channelID]
             loop.run(self.epControl.requestCloseChannel(channelID, ep.myIDF))
 
     def reserveChannel(self):
@@ -125,7 +128,7 @@ class Channels:
                 ep = self.eps[channelID]
                 ep.close()
                 if ep.finished:
-                    # is also closed in the reverse direction
+                    # `ep` is also closed in the reverse direction
                     del self.eps[channelID]
                 return True
             except (IndexError, AttributeError):
