@@ -28,6 +28,7 @@ class Channels:
     def reset(self):
         self.epControl.reset()
         for i in self.eps.listIDs()[1:]:
+            self.eps[i].readable.off()
             del self.eps[i]
 
     def isEmpty(self):
@@ -68,6 +69,17 @@ class Channels:
                 # `ep` is also closed in the reverse direction
                 del self.eps[channelID]
             loop.run(self.epControl.requestCloseChannel(channelID, ep.myIDF))
+
+    def stopAll(self):
+        for ep in self.eps:
+            if ep is not self.epControl:
+                ep.readable.off()
+
+    def resumeAll(self):
+        for ep in self.eps:
+            if ep is not self.epControl:
+                if not ep.finished:
+                    ep.readable.on()
 
     def reserveChannel(self):
         cID = self.eps.append(0)

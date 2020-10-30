@@ -59,12 +59,14 @@ class Link:
     async def _connect(self, info=None):
         self.log(Etypes.Connect, info)
         try:
-            result = await self._connect_p1(info)
+            ok = await self._connect_p1(info)
         except CancelledError:
-            result = False
-        self.reminderReset.enabled = not result
-        self.log(Etypes.ConnectResult, result)
-        return result
+            ok = False
+        self.reminderReset.enabled = not ok
+        self.log(Etypes.ConnectResult, ok)
+        if ok:
+            self.channels.resumeAll()
+        return ok
 
     async def _connect_p1(self, info):
         clientSide = info is None
@@ -154,7 +156,7 @@ class Link:
             self.log(Etypes.Disconnect)
             self.conRT = None
             self.readable.off()
-            self.channels.reset()
+            self.channels.stopAll()
             self.reminderRX.enabled    = False
             self.reminderTX.enabled    = False
             self.reminderReset.enabled = False
@@ -264,7 +266,9 @@ class Link:
             self.reminderTX.skipNext = True
             self.kaCountIdle = 0
         try:
+            self.conRT.socket.settimeout(5)
             self.conRT.sendall(data)
+            self.conRT.socket.settimeout(0)
         except OSError as e:
             log.error(e)
             self.reconnect()

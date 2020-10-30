@@ -88,6 +88,8 @@ Link            ---> Channels channels:
     deleteChannel(self, channelID)
     acceptMessage(self, channelID, data)
     readAll(self, readables)
+    stopAll(self)
+    resumeAll(self)
 Link            <--- Channels channels:
     send(self, data, untracked)
 
