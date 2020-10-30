@@ -5,7 +5,7 @@ from Common.Selectables   import Selectables
 
 kaReminderRX    = TimedReminder(interval=30.0)
 kaReminderTX    = TimedReminder(interval=10.0)
-timeoutReminder = TimedReminder(interval= 4.0)
+timeoutReminder = TimedReminder(interval= 5.0)
 
 def runReminders():
     kaReminderRX.run()
