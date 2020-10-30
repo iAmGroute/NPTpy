@@ -73,6 +73,7 @@ class Portal:
         result = await self._connect_p1()
         self.reminderReset.enabled = not result
         self.log(Etypes.ConnectResult, result)
+        self.futures.cancelAll()
         return result
 
     async def _connect_p1(self):
@@ -227,7 +228,7 @@ class Portal:
             return None
 
     async def requestRelay(self, otherID):
-        f, fID = self.futures.new()
+        f, fID = self.futures.new(timeout=2)
         data   = fID.to_bytes(4, 'little')
         data  += b'RQRL'
         data  += otherID

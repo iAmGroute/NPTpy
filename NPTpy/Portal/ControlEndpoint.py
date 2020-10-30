@@ -57,7 +57,7 @@ class ControlEndpoint(Endpoint):
         self.log(Etypes.ReceivedKA, data)
 
     async def requestNewChannel(self, channelID, devicePort, deviceAddr):
-        f, fID   = self.futures.new()
+        f, fID   = self.futures.new(timeout=2)
         request  = b'n...'
         request += fID.to_bytes(4, 'little')
         request += channelID.to_bytes(2, 'little')
@@ -97,7 +97,7 @@ class ControlEndpoint(Endpoint):
         f.ready(result)
 
     async def requestDeleteChannel(self, channelID, channelIDF):
-        f, fID   = self.futures.new()
+        f, fID   = self.futures.new(timeout=2)
         request  = b'd...'
         request += fID.to_bytes(4, 'little')
         request += channelIDF.to_bytes(2, 'little')
@@ -127,7 +127,7 @@ class ControlEndpoint(Endpoint):
         f.ready(ok, channelID)
 
     async def requestCloseChannel(self, channelID, channelIDF):
-        f, fID   = self.futures.new()
+        f, fID   = self.futures.new(timeout=2)
         request  = b'c...'
         request += fID.to_bytes(4, 'little')
         request += channelIDF.to_bytes(2, 'little')
