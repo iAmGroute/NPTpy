@@ -1,5 +1,4 @@
 
-import time
 import logging
 import socket
 import select
@@ -26,20 +25,20 @@ log = logging.getLogger(__name__ + '  ')
 class Portal:
 
     def __init__(self, portalID, userID, serverPort, serverAddr, port=0, address='0.0.0.0'):
-        self.log          = logger.new(LogClass)
-        self.portalID     = portalID
-        self.userID       = userID
-        self.serverPort   = serverPort
-        self.serverAddr   = serverAddr
-        self.port         = port
-        self.address      = address
-        self.links        = SlotList()
-        self.connect      = loop.newEvent(self._connect)
-        self.conST        = None
-        self.futures      = Futures(loop, Globals.timeoutReminder)
-        self.waitingSince = 0
-        self.reminderRX   = Globals.kaReminderRX.new(owner=self, onRun=Portal.handleRemindRX, enabled=False)
-        self.reminderTX   = Globals.kaReminderTX.new(owner=self, onRun=Portal.handleRemindTX, enabled=True)
+        self.log           = logger.new(LogClass)
+        self.portalID      = portalID
+        self.userID        = userID
+        self.serverPort    = serverPort
+        self.serverAddr    = serverAddr
+        self.port          = port
+        self.address       = address
+        self.links         = SlotList()
+        self.connect       = loop.newEvent(self._connect)
+        self.conST         = None
+        self.futures       = Futures(loop, Globals.timeoutReminder)
+        self.reminderRX    = Globals.kaReminderRX.new(   owner=self, onRun=Portal.handleRemindRX,    enabled=False)
+        self.reminderTX    = Globals.kaReminderTX.new(   owner=self, onRun=Portal.handleRemindTX,    enabled=True)
+        self.reminderReset = Globals.timeoutReminder.new(owner=self, onRun=Portal.handleRemindReset, enabled=False)
         self.log(Etypes.Inited, portalID, userID, serverPort, serverAddr, port, address)
 
     def teardown(self):
@@ -67,10 +66,14 @@ class Portal:
 
     def runConnect(self):
         if not self.connect.isPendingOrComplete():
-            now = time.time()
-            if now > self.waitingSince + 5:
-                self.waitingSince = now
-                loop.run(self.connect())
+            loop.run(self.connect())
+
+    async def _connect(self):
+        self.log(Etypes.Connect)
+        result = await self._connect_p1()
+        self.reminderReset.enabled = not result
+        self.log(Etypes.ConnectResult, result)
+        return result
 
     async def _connect_p1(self):
         conST = await self._connectToServer()
@@ -86,12 +89,6 @@ class Portal:
         self.reminderRX.enabled  = True
         loop.run(self.rtask())
         return True
-
-    async def _connect(self):
-        self.log(Etypes.Connect)
-        result = await self._connect_p1()
-        self.log(Etypes.ConnectResult, result)
-        return result
 
     async def _connectToServer(self):
         conST = AsyncConnectorPacketized(
@@ -128,7 +125,8 @@ class Portal:
         self.connect.reset()
         self.conST.tryClose()
         self.conST = None
-        self.reminderRX.enabled = False
+        self.reminderRX.enabled    = False
+        self.reminderReset.enabled = False
 
 # Keepalives
 
@@ -140,6 +138,13 @@ class Portal:
     def handleRemindTX(self):
         if self.connect.isComplete():
             loop.run(self.requestKA())
+
+# Connection result reset
+
+    def handleRemindReset(self):
+        self.reminderReset.enabled = False
+        if not self.connect.isPending():
+            self.connect.reset()
 
 # Send
 
