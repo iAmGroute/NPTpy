@@ -15,10 +15,11 @@ class Endpoint:
     ]
 
     def __init__(self, myID, myIDF, parent):
-        self.log    = logger.new(LogClass)
-        self.myID   = myID   # Local ID
-        self.myIDF  = myIDF  # Foreign ID
-        self.parent = parent
+        self.log      = logger.new(LogClass)
+        self.myID     = myID   # Local ID
+        self.myIDF    = myIDF  # Foreign ID
+        self.parent   = parent
+        self.finished = False
         self.log(Etypes.Inited, myID, myIDF)
 
     def remove(self):
@@ -27,6 +28,7 @@ class Endpoint:
 
     def finish(self):
         # pylint: disable=protected-access
+        self.finished = True
         self.parent._finish(self.myID)
 
     def formMessage(self, data):

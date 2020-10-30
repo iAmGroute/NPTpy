@@ -38,6 +38,8 @@ class DataEndpoint(Endpoint):
         return self.con.fileno()
 
     def getMessages(self):
+        if self.finished:
+            return b''
         data = self.con.tryRecv(4088)
         if data is None:
             return b''
