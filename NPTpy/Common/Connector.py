@@ -123,7 +123,7 @@ class Connector:
     # Mainly TCP
 
     def listen(self, backlog=None, reusePort=False):
-        self.log(Etypes.Listen, reusePort)
+        self.log(Etypes.Listen, backlog, reusePort)
         if reusePort and this_OS == OS.linux:
             # pylint: disable=no-member
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
