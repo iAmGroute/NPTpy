@@ -1,5 +1,4 @@
 
-import logging
 import socket
 
 import Globals
@@ -15,9 +14,6 @@ from Common.AsyncConnector import AsyncConnector
 from .Channels             import Channels
 from .Listener             import Listener
 from .Link_log             import LogClass, Etypes
-
-log   = logging.getLogger(__name__ + '    ')
-logEP = logging.getLogger(__name__ + ' :EP')
 
 class Link:
 
@@ -148,12 +144,13 @@ class Link:
             if reply != tB:                           return None
             return conRT
         except OSError as e:
-            log.error(e)
+            self.log(Etypes.Error, e)
         return None
 
     def disconnect(self):
-        if self.connect.isComplete():
-            self.log(Etypes.Disconnect)
+        wasConnected = self.connect.isComplete()
+        self.log(Etypes.Disconnect, wasConnected)
+        if wasConnected:
             self.conRT = None
             self.readable.off()
             self.channels.stopAll()
@@ -163,6 +160,7 @@ class Link:
         self.connect.reset()
 
     async def reconnect(self):
+        self.log(Etypes.Reconnect)
         self.disconnect()
         return await self.connect()
 
@@ -175,12 +173,10 @@ class Link:
             )
 
     def connectionLost(self, reason='N/A'):
-        log.info('Connection lost, reason: {0}'.format(reason))
+        self.log(Etypes.ConnectionLost, reason)
         if self.isIdle():
-            log.info('Disconnecting')
             self.disconnect()
         else:
-            log.info('Reconnecting')
             loop.run(self.reconnect())
 
 # Keepalives
@@ -248,7 +244,7 @@ class Link:
             if data is None:
                 return
             if len(data) < 1:
-                self.connectionLost('Closed by other end')
+                self.connectionLost('Closed by remote')
                 return
             self.buffer += data
             while len(self.buffer) >= 4:
@@ -270,7 +266,7 @@ class Link:
             self.conRT.sendall(data)
             self.conRT.socket.settimeout(0)
         except OSError as e:
-            log.error(e)
+            self.log(Etypes.Error, e)
             self.reconnect()
 
     def wtask(self, readyR):
