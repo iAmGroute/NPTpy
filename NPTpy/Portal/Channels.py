@@ -72,12 +72,12 @@ class Channels:
 
     def stopAll(self):
         for ep in self.eps:
-            if ep is not self.epControl:
+            if type(ep) is DataEndpoint:
                 ep.readable.off()
 
     def resumeAll(self):
         for ep in self.eps:
-            if ep is not self.epControl:
+            if type(ep) is DataEndpoint:
                 if not ep.finished:
                     ep.readable.on()
 
