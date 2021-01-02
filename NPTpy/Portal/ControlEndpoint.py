@@ -5,6 +5,7 @@
 
 from Common.Futures  import Futures
 from NextLoop        import loop
+from NextLoop.Common import CancelledError
 
 from .Endpoint            import Endpoint
 from .ControlEndpoint_log import LogClass, Etypes
@@ -64,7 +65,10 @@ class ControlEndpoint(Endpoint):
         request += devicePort.to_bytes(2, 'little')
         request += bytes(deviceAddr, 'utf-8')
         self.send(request)
-        return await f
+        try:
+            return await f
+        except CancelledError:
+            return ()
 
     def actionNewChannel(self, data):
         assert len(data) > 12
@@ -103,7 +107,10 @@ class ControlEndpoint(Endpoint):
         request += channelIDF.to_bytes(2, 'little')
         request += channelID.to_bytes(2, 'little')
         self.send(request)
-        return await f
+        try:
+            return await f
+        except CancelledError:
+            return (False, -1)
 
     def actionDeleteChannel(self, data):
         channelID  = int.from_bytes(data[ 8:10], 'little')
@@ -133,7 +140,10 @@ class ControlEndpoint(Endpoint):
         request += channelIDF.to_bytes(2, 'little')
         request += channelID.to_bytes(2, 'little')
         self.send(request)
-        return await f
+        try:
+            return await f
+        except CancelledError:
+            return (False, -1)
 
     def actionCloseChannel(self, data):
         channelID  = int.from_bytes(data[ 8:10], 'little')
