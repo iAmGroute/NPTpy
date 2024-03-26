@@ -37,7 +37,7 @@ It's operation is very similar to SSH port forwarding and functionality similar 
   to provide a relay and notify portal `6` to connect to it.
 - Netport server `4` picks relay `5`, asks it to establish a specific pair of listening ports.
   Then, it sends this information along with the relay's address to portals `1`/`3` and `6`.
-- The relay creates a forwarding entry with these ports and uses an eBPF/XDP program to handle the packet forwarding.
+- The relay creates a forwarding entry with these ports and performs packet forwarding (optionally using an eBPF/XDP program).
 - The portals connect to the relay via TCP/UDP and establish a TLS tunnel.
 - Portal `6` connects to the end-server `7`.
 - Traffic is forwarded between the clients' connections to the server's connection over the TLS tunnel.
@@ -48,3 +48,6 @@ It's operation is very similar to SSH port forwarding and functionality similar 
 - Only the portal's code (`1,3,6`) is currently checked-in this repository.  
   I have yet to upload the server's and relay's code.
 - UDP support is experimental.
+- All processes can be run by regular users, except if required to listen on well-known TCP/UDP ports,  
+  which is usually the case for the Netport Server and Relay.  
+  Using the Relay with XDP requires root privileges or CAP_BPF.
