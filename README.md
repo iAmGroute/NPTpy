@@ -51,3 +51,13 @@ It's operation is very similar to SSH port forwarding and functionality similar 
 - All processes can be run by regular users, except if required to listen on well-known TCP/UDP ports,  
   which is usually the case for the Netport Server and Relay.  
   Using the Relay with XDP requires root privileges or CAP_BPF.
+
+#### Future expansion:
+- Enhanced [NAT traversal](https://en.wikipedia.org/wiki/NAT_traversal),  
+  with support for UPnP and [hole-punching](https://en.wikipedia.org/wiki/TCP_hole_punching).
+- Local network and localhost [mDNS](https://en.wikipedia.org/wiki/Multicast_DNS) broadcasting.
+- Latency-based congestion control.
+- Portal-portal link [multipath](https://en.wikipedia.org/wiki/Multipath_routing).
+- Unix socket support and possibly arbitrary sockets/streams (like/using [socat](https://linux.die.net/man/1/socat)).
+- Certificate management, additional authentication methods/gateways.
+- Automated deployment with Kubernetes.
