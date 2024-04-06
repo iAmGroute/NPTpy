@@ -55,10 +55,18 @@ class SlotList(Generic[T]):
         return bool(len(self))
 
     def __iter__(self):
-        return SlotListIterator(self)
+        yield from (
+            slot.val
+            for slot in self.slots
+            if slot.val is not None
+        )
 
     def iterKV(self):
-        return SlotListIteratorKV(self)
+        yield from (
+            (slot.myID, slot.val)
+            for slot in self.slots
+            if slot.val is not None
+        )
 
     def listIDs(self):
         return [s.myID for s in self.slots if s]
@@ -154,34 +162,4 @@ class SlotList(Generic[T]):
         res = self.slots[index].val
         self.deleteByIndex(index)
         return res
-
-
-class SlotListIterator(Generic[T]):
-
-    def __init__(self, mySlotList: SlotList[T]):
-        self._it = iter(mySlotList.slots)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        while True:
-            slot = next(self._it)
-            if slot:
-                return slot.val
-
-
-class SlotListIteratorKV(Generic[T]):
-
-    def __init__(self, mySlotList: SlotList[T]):
-        self._it = iter(mySlotList.slots)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        while True:
-            slot = next(self._it)
-            if slot:
-                return slot.myID, slot.val
 
