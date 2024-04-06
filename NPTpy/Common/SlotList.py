@@ -6,10 +6,16 @@
 #   Allocated item slots are not stored in consecutive memory locations,
 #   as the empty slots can be found anywhere in the array.
 
-class Slot:
+from typing import Callable, Generic, Iterable, List, Optional, TypeVar
+
+
+T = TypeVar('T')
+
+
+class Slot(Generic[T]):
 
     # In C, <nextFree> and <value> could be in a union
-    def __init__(self, myID, nextFree, value):
+    def __init__(self, myID: int, nextFree: int, value: Optional[T]):
         self.myID     = myID
         self.nextFree = nextFree
         self.val      = value
@@ -23,48 +29,47 @@ class Slot:
         return self.val is not None
 
 
-class Iterator:
+class Iterator(Generic[T]):
 
-    def __init__(self, mySlotList):
-        self.subiter = iter(mySlotList.slots)
+    def __init__(self, mySlotList: SlotList[T]):
+        self._it = iter(mySlotList.slots)
 
     def __iter__(self):
         return self
 
     def __next__(self):
         while True:
-            slot = next(self.subiter)
+            slot = next(self._it)
             if slot:
                 return slot.val
 
 
-class IteratorKV:
+class IteratorKV(Generic[T]):
 
-    def __init__(self, mySlotList):
-        self.subiter = iter(mySlotList.slots)
+    def __init__(self, mySlotList: SlotList[T]):
+        self._it = iter(mySlotList.slots)
 
     def __iter__(self):
         return self
 
     def __next__(self):
         while True:
-            slot = next(self.subiter)
+            slot = next(self._it)
             if slot:
                 return slot.myID, slot.val
 
 
-class SlotList:
+class SlotList(Generic[T]):
 
-    def __init__(self, values=None):
+    def __init__(self, values: Iterable[T] = []):
         self.capacity  = 2
-        self.slots     = [Slot(0, 1, None), Slot(1, -1, None)]
-        # self.slots     = [Slot(i, i+1, None) for i in range(self.capacity)]
-        # self.slots[-1].nextFree = -1
+        self.slots     : List[Slot[T]] \
+                       = [Slot(i, i+1, None) for i in range(self.capacity)]
+        self.slots[-1].nextFree = -1
         self.firstFree = 0
         self.lastFree  = self.capacity - 1
-        if values:
-            for value in values:
-                self.append(value)
+        for value in values:
+            self.append(value)
 
     def __len__(self):
         count = 0
@@ -88,7 +93,7 @@ class SlotList:
     def listIDs(self):
         return [s.myID for s in self.slots if s]
 
-    def prettyPrint(self, f):
+    def prettyPrint(self, f: Callable[[T], str]):
         result = [f(val) for val in self]
         return '[' + ', '.join(result) + ']'
 
@@ -98,8 +103,8 @@ class SlotList:
     def __repr__(self):
         return 'SlotList' + repr(self.slots)
 
-    def __format__(self, formatstr):
-        return self.prettyPrint(lambda x: format(x, formatstr))
+    def __format__(self, fmt: str):
+        return self.prettyPrint(lambda x: format(x, fmt))
 
     def fixFreeIndexes(self):
         indexes = [i for i in range(self.capacity) if not self.slots[i]]
@@ -121,7 +126,7 @@ class SlotList:
             self.slots[index] = newSlot
         self.fixFreeIndexes()
 
-    def append(self, value):
+    def append(self, value: T):
         if self.firstFree < 0:
             self.grow()
         index          = self.firstFree
@@ -130,12 +135,12 @@ class SlotList:
         self.firstFree = slot.nextFree
         return slot.myID
 
-    def getIndex(self, ID):
+    def getIndex(self, ID: int):
         index = ID & (self.capacity - 1)
         slot  = self.slots[index]
         return index if slot.myID == ID else -1
 
-    def deleteByIndex(self, index):
+    def deleteByIndex(self, index: int):
         slot          = self.slots[index]
         slot.myID    += self.capacity
         slot.nextFree = -1
@@ -153,11 +158,11 @@ class SlotList:
         self.slots[0].myID = maxID
         self.slots[1].myID = maxID + 1
 
-    def __getitem__(self, ID):
+    def __getitem__(self, ID: int):
         index = self.getIndex(ID)
         return self.slots[index].val if index >= 0 else None
 
-    def __setitem__(self, ID, value):
+    def __setitem__(self, ID: int, value: Optional[T]):
         if value is None:
             del self[ID]
             return
@@ -166,13 +171,13 @@ class SlotList:
             raise IndexError(f'ID {ID} does not exist or has been superseded')
         self.slots[index].val = value
 
-    def __delitem__(self, ID):
+    def __delitem__(self, ID: int):
         index = self.getIndex(ID)
         if index < 0:
             return
         self.deleteByIndex(index)
 
-    def pop(self, ID):
+    def pop(self, ID: int):
         index = self.getIndex(ID)
         if index < 0:
             return None
