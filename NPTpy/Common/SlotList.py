@@ -14,16 +14,15 @@ T = TypeVar('T')
 
 class _Slot(Generic[T]):
 
-    # In C, <nextFree> and <value> could be in a union
-    def __init__(self, myID: int, nextFree: int, value: Optional[T]):
-        self.myID     = myID
-        self.nextFree = nextFree
-        self.val      = value
+    def __init__(self, key: int, next_free: int, val: Optional[T]):
+        self.key        = key
+        self.next_free  = next_free
+        self.val        = val
 
     # Note: python containers call repr() on the items they contain,
     #       even when str() or format() is called on them
     def __repr__(self):
-        return '({0}|{1}|{2})'.format(self.myID, self.nextFree, repr(self.val))
+        return '({0}|{1}|{2})'.format(self.key, self.next_free, repr(self.val))
 
     def __bool__(self):
         return self.val is not None
@@ -34,12 +33,12 @@ class SlotList(Generic[T]):
     def __init__(self, values: Iterable[T] = [], initial_capacity_hint = 2):
         assert initial_capacity_hint >= 0, initial_capacity_hint
         cap = 1 << (initial_capacity_hint-1).bit_length() # hint = 0 -> cap = 2
-        self._count     = 0
-        self._slots     : List[_Slot[T]] \
-                        = [_Slot(i, i+1, None) for i in range(cap)]
-        self._slots[-1].nextFree = -1
-        self._firstFree = 0
-        self._lastFree  = cap - 1
+        self._count      = 0
+        self._slots      : List[_Slot[T]] \
+                         = [_Slot(i, i+1, None) for i in range(cap)]
+        self._slots[-1].next_free = -1
+        self._first_free = 0
+        self._last_free  = cap - 1
         self.extend(values)
 
     def __len__(self):
@@ -51,42 +50,36 @@ class SlotList(Generic[T]):
     def __bool__(self):
         return bool(len(self))
 
-    def __iter__(self):
-        yield from (
-            slot.val
-            for slot in self._slots
-            if slot.val is not None
-        )
+    def items(self):
+        return ( (s.key, s.val) for s in self._slots if s.val is not None )
 
-    def iterKV(self):
-        yield from (
-            (slot.myID, slot.val)
-            for slot in self._slots
-            if slot.val is not None
-        )
+    def keys(self):
+        return (  s.key         for s in self._slots if s.val is not None )
 
-    def listIDs(self):
-        return [s.myID for s in self._slots if s]
+    def values(self):
+        return (         s.val  for s in self._slots if s.val is not None )
 
-    def prettyPrint(self, f: Callable[[T], str]):
+    __iter__ = values
+
+    def pretty_print(self, f: Callable[[T], str]):
         result = [f(val) for val in self]
         return '[' + ', '.join(result) + ']'
 
     def __str__(self):
-        return self.prettyPrint(repr)
+        return self.pretty_print(repr)
 
     def __repr__(self):
         return 'SlotList' + repr(self._slots)
 
     def __format__(self, fmt: str):
-        return self.prettyPrint(lambda x: format(x, fmt))
+        return self.pretty_print(lambda x: format(x, fmt))
 
     def _free_list_append(self, index):
-        if self.firstFree >= 0:
-            self._slots[self.lastFree].nextFree = index
+        if self._first_free >= 0:
+            self._slots[self._last_free].next_free = index
         else:
-            self.firstFree = index
-        self.lastFree = index
+            self._first_free = index
+        self._last_free = index
 
     def grow(self):
         cap     = self.capacity()
@@ -97,9 +90,9 @@ class SlotList(Generic[T]):
             slot               = self._slots[i]
             self._slots.append(slot)
             #
-            # replace one of the two, based on the ID, with an empty slot
-            newSlot            = _Slot(slot.myID + cap, slot.nextFree, None)
-            index              = newSlot.myID & mask
+            # replace one of the two, based on the key, with an empty slot
+            newSlot            = _Slot(slot.key + cap, slot.next_free, None)
+            index              = newSlot.key & mask
             self._slots[index] = newSlot
             #
             # case 1: newSlot comes before slot, both are empty
@@ -117,70 +110,70 @@ class SlotList(Generic[T]):
             #  -> we need to add newSlot to the end of the free list
             #
             last_empty_index = index if slot else (index | cap)
-            self._slots[last_empty_index].nextFree = -1
+            self._slots[last_empty_index].next_free = -1
             self._free_list_append(last_empty_index)
         #
         assert self.capacity() == new_cap, (self, new_cap)
 
     def append(self, value: T):
-        if self.firstFree < 0:
+        if self._first_free < 0:
             self.grow()
-        index          = self.firstFree
-        slot           = self._slots[index]
-        slot.val       = value
-        self.firstFree = slot.nextFree
-        self._count    += 1
-        return slot.myID
+        index             = self._first_free
+        slot              = self._slots[index]
+        slot.val          = value
+        self._first_free  = slot.next_free
+        self._count      += 1
+        return slot.key
 
     def extend(self, values: Iterable[T]):
         for v in values:
             self.append(v)
 
-    def _getIndex(self, ID: int):
-        index = ID & (self.capacity() - 1)
+    def _get_index(self, key: int):
+        index = key & (self.capacity() - 1)
         slot  = self._slots[index]
-        return index if slot.myID == ID else -1
+        return index if slot.key == key else -1
 
-    def _deleteByIndex(self, index: int):
-        slot            = self._slots[index]
+    def _delete_by_index(self, index: int):
+        slot             = self._slots[index]
         if slot:
             self._count -= 1
-        slot.myID      += self.capacity()
-        slot.nextFree   = -1
-        slot.val        = None
+        slot.key        += self.capacity()
+        slot.next_free   = -1
+        slot.val         = None
         self._free_list_append(index)
 
-    def deleteAll(self):
-        maxID = max(self._slots, key=lambda s: s.myID).myID
+    def clear(self):
+        maxID = max(self._slots, key=lambda s: s.key).key
         maxID = (maxID | 1) + 1
         self.__init__()
-        self._slots[0].myID = maxID
-        self._slots[1].myID = maxID + 1
+        self._slots[0].key = maxID
+        self._slots[1].key = maxID + 1
 
-    def __getitem__(self, ID: int):
-        index = self._getIndex(ID)
+    def __getitem__(self, key: int):
+        index = self._get_index(key)
         return self._slots[index].val if index >= 0 else None
 
-    def __setitem__(self, ID: int, value: Optional[T]):
+    def __setitem__(self, key: int, value: Optional[T]):
         if value is None:
-            del self[ID]
+            del self[key]
             return
-        index = self._getIndex(ID)
+        index = self._get_index(key)
         if index < 0:
-            raise IndexError(f'ID {ID} does not exist or has been superseded')
+            raise IndexError(f'key {key} does not exist or has been superseded')
         self._slots[index].val = value
 
-    def __delitem__(self, ID: int):
-        index = self._getIndex(ID)
+    def __delitem__(self, key: int):
+        index = self._get_index(key)
         if index < 0:
             return
-        self._deleteByIndex(index)
+        self._delete_by_index(index)
 
-    def pop(self, ID: int):
-        index = self._getIndex(ID)
+    def pop(self, key: int):
+        index = self._get_index(key)
         if index < 0:
             return None
         res = self._slots[index].val
-        self._deleteByIndex(index)
+        self._delete_by_index(index)
         return res
 
