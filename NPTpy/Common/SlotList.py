@@ -31,13 +31,13 @@ class Slot(Generic[T]):
 
 class SlotList(Generic[T]):
 
-    def __init__(self, values: Iterable[T] = []):
-        self.capacity  = 2
+    def __init__(self, values: Iterable[T] = [], initial_capacity = 2):
+        assert initial_capacity >= 2, initial_capacity # TODO: can we allow == 1?
         self.slots     : List[Slot[T]] \
-                       = [Slot(i, i+1, None) for i in range(self.capacity)]
+                       = [Slot(i, i+1, None) for i in range(initial_capacity)]
         self.slots[-1].nextFree = -1
         self.firstFree = 0
-        self.lastFree  = self.capacity - 1
+        self.lastFree  = initial_capacity - 1
         for value in values:
             self.append(value)
 
@@ -48,8 +48,11 @@ class SlotList(Generic[T]):
                 count += 1
         return count
 
+    def capacity(self):
+        return len(self.slots)
+
     def isFull(self):
-        return len(self) == len(self.slots)
+        return len(self) == self.capacity()
 
     def __bool__(self):
         return bool(len(self))
@@ -85,7 +88,7 @@ class SlotList(Generic[T]):
         return self.prettyPrint(lambda x: format(x, fmt))
 
     def fixFreeIndexes(self):
-        indexes = [i for i in range(self.capacity) if not self.slots[i]]
+        indexes = [i for i in range(self.capacity()) if not self.slots[i]]
         self.firstFree = indexes[0]
         for i in range(len(indexes) - 1):
             self.slots[indexes[i]].nextFree = indexes[i + 1]
@@ -93,15 +96,16 @@ class SlotList(Generic[T]):
 
     def grow(self):
         assert self.isFull()
-        cap           = self.capacity
-        self.capacity = 2 * cap
-        mask          = self.capacity - 1
+        cap     = self.capacity()
+        new_cap = 2 * cap
+        mask    = new_cap - 1
         for i in range(cap):
             slot              = self.slots[i]
             self.slots.append(slot)
             newSlot           = Slot(slot.myID + cap, -1, None)
             index             = newSlot.myID & mask
             self.slots[index] = newSlot
+        assert self.capacity() == new_cap, (self, new_cap)
         self.fixFreeIndexes()
 
     def append(self, value: T):
@@ -114,13 +118,13 @@ class SlotList(Generic[T]):
         return slot.myID
 
     def getIndex(self, ID: int):
-        index = ID & (self.capacity - 1)
+        index = ID & (self.capacity() - 1)
         slot  = self.slots[index]
         return index if slot.myID == ID else -1
 
     def deleteByIndex(self, index: int):
         slot          = self.slots[index]
-        slot.myID    += self.capacity
+        slot.myID    += self.capacity()
         slot.nextFree = -1
         slot.val      = None
         if self.firstFree >= 0:
