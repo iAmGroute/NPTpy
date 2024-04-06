@@ -33,6 +33,7 @@ class SlotList(Generic[T]):
 
     def __init__(self, values: Iterable[T] = [], initial_capacity = 2):
         assert initial_capacity >= 2, initial_capacity # TODO: can we allow == 1?
+        self.count     = 0
         self.slots     : List[Slot[T]] \
                        = [Slot(i, i+1, None) for i in range(initial_capacity)]
         self.slots[-1].nextFree = -1
@@ -42,11 +43,7 @@ class SlotList(Generic[T]):
             self.append(value)
 
     def __len__(self):
-        count = 0
-        for slot in self.slots:
-            if slot:
-                count += 1
-        return count
+        return self.count
 
     def capacity(self):
         return len(self.slots)
@@ -115,6 +112,7 @@ class SlotList(Generic[T]):
         slot           = self.slots[index]
         slot.val       = value
         self.firstFree = slot.nextFree
+        self.count    += 1
         return slot.myID
 
     def getIndex(self, ID: int):
@@ -123,10 +121,12 @@ class SlotList(Generic[T]):
         return index if slot.myID == ID else -1
 
     def deleteByIndex(self, index: int):
-        slot          = self.slots[index]
-        slot.myID    += self.capacity()
-        slot.nextFree = -1
-        slot.val      = None
+        slot            = self.slots[index]
+        if slot:
+            self.count -= 1
+        slot.myID      += self.capacity()
+        slot.nextFree   = -1
+        slot.val        = None
         if self.firstFree >= 0:
             self.slots[self.lastFree].nextFree = index
         else:
