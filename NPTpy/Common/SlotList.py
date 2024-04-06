@@ -31,14 +31,15 @@ class _Slot(Generic[T]):
 
 class SlotList(Generic[T]):
 
-    def __init__(self, values: Iterable[T] = [], initial_capacity = 0):
-        assert initial_capacity >= 2, initial_capacity # TODO: can we allow == 1?
+    def __init__(self, values: Iterable[T] = [], initial_capacity_hint = 2):
+        assert initial_capacity_hint >= 0, initial_capacity_hint
+        cap = 1 << (initial_capacity_hint-1).bit_length() # hint = 0 -> cap = 2
         self._count     = 0
         self._slots     : List[_Slot[T]] \
-                        = [_Slot(i, i+1, None) for i in range(initial_capacity)]
+                        = [_Slot(i, i+1, None) for i in range(cap)]
         self._slots[-1].nextFree = -1
         self._firstFree = 0
-        self._lastFree  = initial_capacity - 1
+        self._lastFree  = cap - 1
         self.extend(values)
 
     def __len__(self):
@@ -46,9 +47,6 @@ class SlotList(Generic[T]):
 
     def capacity(self):
         return len(self._slots)
-
-    def isFull(self):
-        return len(self) == self.capacity()
 
     def __bool__(self):
         return bool(len(self))
@@ -83,26 +81,46 @@ class SlotList(Generic[T]):
     def __format__(self, fmt: str):
         return self.prettyPrint(lambda x: format(x, fmt))
 
-    def fixFreeIndexes(self):
-        indexes = [i for i in range(self.capacity()) if not self._slots[i]]
-        self.firstFree = indexes[0]
-        for i in range(len(indexes) - 1):
-            self._slots[indexes[i]].nextFree = indexes[i + 1]
-        self.lastFree  = indexes[-1]
+    def _free_list_append(self, index):
+        if self.firstFree >= 0:
+            self._slots[self.lastFree].nextFree = index
+        else:
+            self.firstFree = index
+        self.lastFree = index
 
     def grow(self):
-        assert self.isFull()
         cap     = self.capacity()
         new_cap = 2 * cap
         mask    = new_cap - 1
         for i in range(cap):
-            slot              = self._slots[i]
+            # link the current slot to its "mirror" index
+            slot               = self._slots[i]
             self._slots.append(slot)
-            newSlot           = _Slot(slot.myID + cap, -1, None)
-            index             = newSlot.myID & mask
+            #
+            # replace one of the two, based on the ID, with an empty slot
+            newSlot            = _Slot(slot.myID + cap, slot.nextFree, None)
+            index              = newSlot.myID & mask
             self._slots[index] = newSlot
+            #
+            # case 1: newSlot comes before slot, both are empty
+            #  -> newSlot is part of the free list, slot isn't
+            #  -> we need to add slot to free list
+            #
+            # case 2: slot comes before newSlot, both are empty
+            #  -> slot is part of the free list, newSlot isn't
+            #  -> we need to add newSlot to free list
+            #
+            # case 1, 2 -> add the latter to the free list
+            #
+            # case 3: slot isn't empty
+            #  -> none are part of the free list
+            #  -> we need to add newSlot to the end of the free list
+            #
+            last_empty_index = index if slot else (index | cap)
+            self._slots[last_empty_index].nextFree = -1
+            self._free_list_append(last_empty_index)
+        #
         assert self.capacity() == new_cap, (self, new_cap)
-        self.fixFreeIndexes()
 
     def append(self, value: T):
         if self.firstFree < 0:
@@ -130,11 +148,7 @@ class SlotList(Generic[T]):
         slot.myID      += self.capacity()
         slot.nextFree   = -1
         slot.val        = None
-        if self.firstFree >= 0:
-            self._slots[self.lastFree].nextFree = index
-        else:
-            self.firstFree = index
-        self.lastFree = index
+        self._free_list_append(index)
 
     def deleteAll(self):
         maxID = max(self._slots, key=lambda s: s.myID).myID
