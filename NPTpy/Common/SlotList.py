@@ -51,13 +51,13 @@ class SlotList(Generic[T]):
         return bool(len(self))
 
     def items(self):
-        return ( (s.key, s.val) for s in self._slots if s.val is not None )
+        return ( (s.key, s.val) for s in self._slots if s )
 
     def keys(self):
-        return (  s.key         for s in self._slots if s.val is not None )
+        return (  s.key         for s in self._slots if s )
 
     def values(self):
-        return (         s.val  for s in self._slots if s.val is not None )
+        return (         s.val  for s in self._slots if s )
 
     __iter__ = values
 
