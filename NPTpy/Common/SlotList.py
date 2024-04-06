@@ -1,10 +1,16 @@
 # SlotList:
-#   A container based on a variable length list,
-#   useful for fast allocation, random access and random deallocation.
-#   An ID is returned on allocation, which is unique
-#   until the ID counter overflows (does not happen in Python).
-#   Allocated item slots are not stored in consecutive memory locations,
-#   as the empty slots can be found anywhere in the array.
+#   A container based on a variable length array,
+#   useful for true O(1): appends, random access and random deletions.
+#   (appends are amortized O(1) if it grows)
+#   Overall, it's interface behaves similar to a map.
+#   A key (ID) is returned on append, which is unique
+#   until the key counter overflows (does not happen in Python).
+#   Inserts are not possible.
+#   Capacity is in powers of 2 and grow-only, though it may be possible to shrink in some cases
+#   Item slots are not stored contiguously in memory,
+#   as the empty slots can be found anywhere in the underlying array.
+#   Iteration is sequential in memory and will return the items/keys in arbitrary order.
+#
 
 from typing import Callable, Generic, Iterable, List, Optional, TypeVar
 
