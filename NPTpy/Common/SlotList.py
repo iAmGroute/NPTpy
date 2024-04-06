@@ -135,20 +135,22 @@ class SlotList(Generic[T]):
         return index if slot.key == key else -1
 
     def _delete_by_index(self, index: int):
-        slot             = self._slots[index]
-        if slot:
-            self._count -= 1
-        slot.key        += self.capacity()
-        slot.next_free   = -1
-        slot.val         = None
+        slot            = self._slots[index]
+        assert slot, (self, index, slot)
+        slot.key       += self.capacity()
+        slot.next_free  = -1
+        slot.val        = None
         self._free_list_append(index)
 
-    def clear(self):
-        maxID = max(self._slots, key=lambda s: s.key).key
-        maxID = (maxID | 1) + 1
-        self.__init__()
-        self._slots[0].key = maxID
-        self._slots[1].key = maxID + 1
+    def clear(self, new_capacity_hint = 2):
+        max_key = max(self._slots, key = lambda s: s.key).key
+        hint = new_capacity_hint if new_capacity_hint > 0 else self.capacity()
+        self._slots.clear()
+        self.__init__(initial_capacity_hint=hint)
+        key = (max_key | (self.capacity() - 1)) + 1
+        for s in self._slots:
+            s.key = key
+            key  += 1
 
     def __getitem__(self, key: int):
         index = self._get_index(key)
