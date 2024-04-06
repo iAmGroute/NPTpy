@@ -55,10 +55,10 @@ class SlotList(Generic[T]):
         return bool(len(self))
 
     def __iter__(self):
-        return Iterator(self)
+        return SlotListIterator(self)
 
     def iterKV(self):
-        return IteratorKV(self)
+        return SlotListIteratorKV(self)
 
     def listIDs(self):
         return [s.myID for s in self.slots if s]
@@ -156,7 +156,7 @@ class SlotList(Generic[T]):
         return res
 
 
-class Iterator(Generic[T]):
+class SlotListIterator(Generic[T]):
 
     def __init__(self, mySlotList: SlotList[T]):
         self._it = iter(mySlotList.slots)
@@ -171,7 +171,7 @@ class Iterator(Generic[T]):
                 return slot.val
 
 
-class IteratorKV(Generic[T]):
+class SlotListIteratorKV(Generic[T]):
 
     def __init__(self, mySlotList: SlotList[T]):
         self._it = iter(mySlotList.slots)
