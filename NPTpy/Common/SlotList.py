@@ -29,36 +29,6 @@ class Slot(Generic[T]):
         return self.val is not None
 
 
-class Iterator(Generic[T]):
-
-    def __init__(self, mySlotList: SlotList[T]):
-        self._it = iter(mySlotList.slots)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        while True:
-            slot = next(self._it)
-            if slot:
-                return slot.val
-
-
-class IteratorKV(Generic[T]):
-
-    def __init__(self, mySlotList: SlotList[T]):
-        self._it = iter(mySlotList.slots)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        while True:
-            slot = next(self._it)
-            if slot:
-                return slot.myID, slot.val
-
-
 class SlotList(Generic[T]):
 
     def __init__(self, values: Iterable[T] = []):
@@ -184,4 +154,34 @@ class SlotList(Generic[T]):
         res = self.slots[index].val
         self.deleteByIndex(index)
         return res
+
+
+class Iterator(Generic[T]):
+
+    def __init__(self, mySlotList: SlotList[T]):
+        self._it = iter(mySlotList.slots)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            slot = next(self._it)
+            if slot:
+                return slot.val
+
+
+class IteratorKV(Generic[T]):
+
+    def __init__(self, mySlotList: SlotList[T]):
+        self._it = iter(mySlotList.slots)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            slot = next(self._it)
+            if slot:
+                return slot.myID, slot.val
 
