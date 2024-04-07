@@ -12,7 +12,9 @@
 #   Iteration is sequential in memory and will return the items/keys in arbitrary order.
 #
 
-from typing import Callable, Generic, Iterable, List, Optional, TypeVar
+from typing import Callable, Generic, Iterable, Iterator, List, Optional, Tuple, TypeVar
+
+from .Generic import short_str
 
 
 T = TypeVar('T')
@@ -60,14 +62,14 @@ class SlotList(Generic[T]):
     def __bool__(self):
         return bool(len(self))
 
-    def items(self):
-        return ( (s.key, s.val) for s in self._slots if s )
+    def items(self) -> Iterator[Tuple[int, T]]:
+        return ( (s.key, s.val) for s in self._slots if s ) # type: ignore # Pylance can't see s.val != None
 
-    def keys(self):
+    def keys(self) -> Iterator[int]:
         return (  s.key         for s in self._slots if s )
 
-    def values(self):
-        return (         s.val  for s in self._slots if s )
+    def values(self) -> Iterator[T]:
+        return (         s.val  for s in self._slots if s ) # type: ignore # Pylance can't see s.val != None
 
     __iter__ = values
 
