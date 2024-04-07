@@ -147,7 +147,7 @@ class SlotList(Generic[T]):
     def _get_index(self, key: int):
         index = key & (self.capacity() - 1)
         slot  = self._slots[index]
-        return index if slot.key == key else -1
+        return index if slot and slot.key == key else -1
 
     def _delete_by_index(self, index: int):
         slot            = self._slots[index]
