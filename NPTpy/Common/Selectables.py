@@ -1,70 +1,82 @@
 
+from __future__ import annotations
+
 import weakref
 
-from .SlotMap import SlotMap
-from .Futures import Futures
+from typing import Generic, Optional, Tuple, TypeVar
+
+from NextLoop.Loop import NextLoop
+
+from .Generic       import SupportsIn, FileDescriptorLike
+from .SlotList      import SlotList
+from .Futures       import Futures
+from .TimedReminder import TimedReminder
+
+T_fd = TypeVar('T_fd', bound=FileDescriptorLike)
+
+class Selectables(Generic[T_fd]):
+
+    class Agent:
+
+        def __init__(self, agency: Selectables[T_fd], key: int, fd: T_fd, active: bool):
+            self._agency = agency
+            self._key    = key
+            self._get_fd = weakref.ref(fd)
+            self._active = active
+            self._f_key  : Optional[int] = None
+
+        def __del__(self):
+            # pylint: disable=protected-access
+            self._agency._remove_agent(self)
+
+        def onSelect(self, timeout: Optional[int] = None):
+            # pylint: disable=protected-access
+            f, self._f_key = self._agency._register(timeout)
+            return f
+
+        def on(self):
+            self._active = True
+
+        def off(self):
+            self._active = False
 
 
-class Selectables:
+    def __init__(self, loop: NextLoop, timeout_reminder: TimedReminder):
+        self._agents = SlotList[weakref.ref[Selectables.Agent]]()
+        self.futures = Futures(loop, timeout_reminder)
 
-    def __init__(self, loop, timeoutReminder):
-        self.delegates = SlotMap()
-        self.futures   = Futures(loop, timeoutReminder)
-
-    def _onSelect(self, timeout):
+    def _register(self, timeout: Optional[int]):
         return self.futures.new(timeout)
 
-    def selected(self, selectables, params=()):
+    def selected(self, selectables: SupportsIn[Optional[T_fd]], params: Tuple[object, ...] = ()):
         # pylint: disable=protected-access
-        for dRef in self.delegates:
-            d = dRef()
-            if d and d._fID is not None and d.getOwner() in selectables:
-                f     = self.futures.pop(d._fID)
-                d.fID = None
+        for a_ref in self._agents:
+            a = a_ref()
+            if a and a._f_key is not None and a._get_fd() in selectables:
+                f             = self.futures.pop(a._f_key)
+                a._f_key = None
                 f.ready(*params)
 
-    def new(self, owner, isActive):
-        dID = self.delegates.append(0)
-        d   = SelectablesDelegate(self, dID, owner, isActive)
-        self.delegates[dID] = weakref.ref(d)
-        return d
+    def new(self, fd: T_fd, active: bool):
+        a      = Selectables.Agent(self, -1, fd, active)
+        key    = self._agents.append(weakref.ref(a))
+        a._key = key
+        return a
 
-    def _remove(self, delegateID):
-        del self.delegates[delegateID]
+    def _remove_agent(self, agent: Agent):
+        del self._agents[agent._key]
+        if agent._f_key is not None:
+            f = agent._agency.futures.pop(agent._f_key)
+            f.cancel()
+            agent._f_key = None
 
     def get(self):
-        ds = []
-        for delegateRef in self.delegates:
-            d = delegateRef()
-            if d and d.isActive:
-                ds.append(d.getOwner())
-        return ds
-
-
-class SelectablesDelegate:
-
-    def __init__(self, myModule, myID, owner, isActive):
-        self.myModule = myModule
-        self.myID     = myID
-        self.getOwner = weakref.ref(owner)
-        self.isActive = isActive
-        self._fID     = None
-
-    def __del__(self):
-        # pylint: disable=protected-access
-        self.myModule._remove(self.myID)
-        if self._fID is not None:
-            f = self.myModule.futures.pop(self._fID)
-            f.cancel()
-
-    def onSelect(self, timeout=None):
-        # pylint: disable=protected-access
-        f, self._fID = self.myModule._onSelect(timeout)
-        return f
-
-    def on(self):
-        self.isActive = True
-
-    def off(self):
-        self.isActive = False
-
+        'Returns the valid FDs of all active selectables'
+        return [
+            fd
+            for a_ref in self._agents
+            for a     in (a_ref(),)
+            if  a and a._active
+            for fd    in (a._get_fd(),)
+            if  fd    is not None
+        ]

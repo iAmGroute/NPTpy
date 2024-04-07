@@ -61,14 +61,14 @@ class Page:
 
 class LoadedPage(Page):
     def __init__(self, contentType, content):
-        Page.__init__(self, contentType)
+        super().__init__(self, contentType)
         self.content = content
     def getContent(self):
         return self.content
 
 class FileRefPage(Page):
     def __init__(self, contentType, contentPath):
-        Page.__init__(self, contentType)
+        super().__init__(self, contentType)
         self.contentPath = contentPath
     def getContent(self):
         return tryReadFile(self.contentPath)

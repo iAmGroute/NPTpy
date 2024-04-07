@@ -1,14 +1,13 @@
 
-from .Reminder import Reminder
+from .Reminder import T_link, Reminder
 from .Timer    import Timer
 
-class TimedReminder(Reminder):
+class TimedReminder(Reminder[T_link]):
 
-    def __init__(self, *args, **kwargs):
-        Reminder.__init__(self)
-        self.timer = Timer(*args, **kwargs)
+    def __init__(self, interval: float):
+        super().__init__()
+        self.timer = Timer(interval)
 
     def run(self):
         if self.timer.run():
-            Reminder.run(self)
-
+            super().run()

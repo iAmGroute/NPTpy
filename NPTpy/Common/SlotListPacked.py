@@ -17,7 +17,7 @@ T = TypeVar('T')
 
 class SlotListPacked(Generic[T]):
 
-    def __init__(self, values: Iterable[T] = [], cap_hint = 2):
+    def __init__(self, values: Iterable[T] = (), cap_hint: int = 2):
         self._keys:    List[int]     = []
         self._vals:    List[T]       = []
         self._indexes: SlotList[int] = SlotList(cap_hint=cap_hint)
@@ -65,7 +65,7 @@ class SlotListPacked(Generic[T]):
     def __format__(self, fmt: str):
         return format(self._vals, fmt)
 
-    def dbg_str(self, max_len = 10):
+    def dbg_str(self, max_len: int = 10):
         'String representation, meant for debugging'
         return (
             'SLP{[' + ' '.join(f'({k}|{short_str(repr(v), max_len)})' for k, v in self.items()) + '], ' +
@@ -86,7 +86,7 @@ class SlotListPacked(Generic[T]):
         for v in values:
             self.append(v)
 
-    def clear(self, cap_hint = 2):
+    def clear(self, cap_hint: int = 2):
         self._indexes.clear(cap_hint=cap_hint)
         self._keys.clear()
         self._vals.clear()

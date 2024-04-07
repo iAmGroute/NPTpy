@@ -1,9 +1,8 @@
 
 from typing import Optional, Tuple
 
-from NextLoop.Common import CancelledError
 from NextLoop.Loop   import NextLoop
-from NextLoop.Future import NextFuture, DummyFuture
+from NextLoop.Future import NextFuture
 
 from .SlotList      import SlotList
 from .TimedReminder import TimedReminder
@@ -30,18 +29,18 @@ class Futures:
             ftr.cancel()
         self._futures.clear()
 
-    def new(self, timeout=None):
+    def new(self, timeout :Optional[int] = None):
         ftr = self.loop.newFuture()
         key = self._futures.append((ftr, timeout))
         return ftr, key
 
     def pop(self, key: int):
         x = self._futures.pop(key)
-        if x is None: return DummyFuture()
+        if x is None: return NextFuture().cancel()
         else:         return x[0]
 
     def get(self, key: int):
         x = self._futures[key]
-        if x is None: return DummyFuture()
+        if x is None: return NextFuture().cancel()
         else:         return x[0]
 

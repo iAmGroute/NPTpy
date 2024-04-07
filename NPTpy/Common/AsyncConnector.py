@@ -23,7 +23,7 @@ async def wait(selectable, timeout=None):
 class AsyncConnector(Connector):
 
     def __init__(self, readables, writables, **kwargs):
-        Connector.__init__(self, **kwargs)
+        super().__init__(self, **kwargs)
         self.readable = readables.new(self, False)
         self.writable = writables.new(self, False)
 
@@ -33,7 +33,7 @@ class AsyncConnector(Connector):
     def close(self):
         self.readable.off()
         self.writable.off()
-        Connector.close(self)
+        super().close(self)
 
     async def connectAsync(self, endpoint, timeout=None):
         self.log(Etypes.Connecting, endpoint)

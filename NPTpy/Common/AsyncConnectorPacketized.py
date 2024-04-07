@@ -7,7 +7,7 @@ from NextLoop        import loop
 class AsyncConnectorPacketized(AsyncConnector):
 
     def __init__(self, *args, **kwargs):
-        AsyncConnector.__init__(self, *args, **kwargs)
+        super().__init__(self, *args, **kwargs)
         self.recvBuffer = b''
         self.lock       = loop.newQueue()
 

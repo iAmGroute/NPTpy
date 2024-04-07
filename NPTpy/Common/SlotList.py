@@ -42,7 +42,7 @@ class _Slot(Generic[T]):
 
 class SlotList(Generic[T]):
 
-    def __init__(self, values: Iterable[T] = [], cap_hint = 2):
+    def __init__(self, values: Iterable[T] = (), cap_hint: int = 2):
         assert cap_hint >= 0, cap_hint
         cap = 1 << (cap_hint-1).bit_length() # hint = 0 -> cap = 2
         self._count      = 0
@@ -87,11 +87,11 @@ class SlotList(Generic[T]):
     def __format__(self, fmt: str):
         return self.pretty_print(lambda x: format(x, fmt))
 
-    def dbg_str(self, max_len = 10):
+    def dbg_str(self, max_len: int = 10):
         'String representation, meant for debugging'
         return 'SL[' + ' '.join(format(s, str(max_len)) for s in self._slots) + ']'
 
-    def _free_list_append(self, index):
+    def _free_list_append(self, index: int):
         if self._first_free >= 0:
             self._slots[self._last_free].next_free = index
         else:
@@ -108,23 +108,23 @@ class SlotList(Generic[T]):
             self._slots.append(slot)
             #
             # replace one of the two, based on the key, with an empty slot
-            newSlot            = _Slot(slot.key + cap, slot.next_free, None)
-            index              = newSlot.key & mask
-            self._slots[index] = newSlot
+            new_slot           = _Slot[T](slot.key + cap, slot.next_free, None)
+            index              = new_slot.key & mask
+            self._slots[index] = new_slot
             #
-            # case 1: newSlot comes before slot, both are empty
-            #  -> newSlot is part of the free list, slot isn't
+            # case 1: new_slot comes before slot, both are empty
+            #  -> new_slot is part of the free list, slot isn't
             #  -> we need to add slot to free list
             #
-            # case 2: slot comes before newSlot, both are empty
-            #  -> slot is part of the free list, newSlot isn't
-            #  -> we need to add newSlot to free list
+            # case 2: slot comes before new_slot, both are empty
+            #  -> slot is part of the free list, new_slot isn't
+            #  -> we need to add new_slot to free list
             #
             # case 1, 2 -> add the latter to the free list
             #
             # case 3: slot isn't empty
             #  -> none are part of the free list
-            #  -> we need to add newSlot to the end of the free list
+            #  -> we need to add new_slot to the end of the free list
             #
             last_empty_index = index if slot else (index | cap)
             self._slots[last_empty_index].next_free = -1
@@ -160,7 +160,7 @@ class SlotList(Generic[T]):
         self._free_list_append(index)
         self._count     -= 1
 
-    def clear(self, cap_hint = 2):
+    def clear(self, cap_hint: int = 2):
         max_key = max(self._slots, key = lambda s: s.key).key
         hint = cap_hint if cap_hint > 0 else self.capacity()
         self._slots.clear()
