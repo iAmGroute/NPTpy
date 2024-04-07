@@ -156,6 +156,7 @@ class SlotList(Generic[T]):
         slot.next_free  = -1
         slot.val        = None
         self._free_list_append(index)
+        self._count     -= 1
 
     def clear(self, cap_hint = 2):
         max_key = max(self._slots, key = lambda s: s.key).key
