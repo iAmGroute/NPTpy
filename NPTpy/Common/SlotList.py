@@ -73,6 +73,8 @@ class SlotList(Generic[T]):
 
     __iter__ = values
 
+    items_mutable = items
+
     def pretty_print(self, f: Callable[[T], str]):
         return '[' + ', '.join(f(val) for val in self) + ']'
 
