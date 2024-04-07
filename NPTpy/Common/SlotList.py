@@ -40,9 +40,9 @@ class _Slot(Generic[T]):
 
 class SlotList(Generic[T]):
 
-    def __init__(self, values: Iterable[T] = [], initial_capacity_hint = 2):
-        assert initial_capacity_hint >= 0, initial_capacity_hint
-        cap = 1 << (initial_capacity_hint-1).bit_length() # hint = 0 -> cap = 2
+    def __init__(self, values: Iterable[T] = [], cap_hint = 2):
+        assert cap_hint >= 0, cap_hint
+        cap = 1 << (cap_hint-1).bit_length() # hint = 0 -> cap = 2
         self._count      = 0
         self._slots      : List[_Slot[T]] \
                          = [_Slot(i, i+1, None) for i in range(cap)]
@@ -155,11 +155,11 @@ class SlotList(Generic[T]):
         slot.val        = None
         self._free_list_append(index)
 
-    def clear(self, new_capacity_hint = 2):
+    def clear(self, cap_hint = 2):
         max_key = max(self._slots, key = lambda s: s.key).key
-        hint = new_capacity_hint if new_capacity_hint > 0 else self.capacity()
+        hint = cap_hint if cap_hint > 0 else self.capacity()
         self._slots.clear()
-        self.__init__(initial_capacity_hint=hint)
+        self.__init__(cap_hint=hint)
         key = (max_key | (self.capacity() - 1)) + 1
         for s in self._slots:
             s.key = key
