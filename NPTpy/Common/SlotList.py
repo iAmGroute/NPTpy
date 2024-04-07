@@ -28,7 +28,11 @@ class _Slot(Generic[T]):
     # Note: python containers call repr() on the items they contain,
     #       even when str() or format() is called on them
     def __repr__(self):
-        return '({0}|{1}|{2})'.format(self.key, self.next_free, repr(self.val))
+        return f'_Slot({self.key}, {self.next_free}, {repr(self.val)})'
+
+    def __format__(self, fmt: str):
+        max_len = int(fmt) if fmt else 10
+        return f'({self.key}|{self.next_free}|{short_str(repr(self.val), max_len)})'
 
     def __bool__(self):
         return self.val is not None
@@ -68,17 +72,20 @@ class SlotList(Generic[T]):
     __iter__ = values
 
     def pretty_print(self, f: Callable[[T], str]):
-        result = [f(val) for val in self]
-        return '[' + ', '.join(result) + ']'
+        return '[' + ', '.join(f(val) for val in self) + ']'
 
     def __str__(self):
         return self.pretty_print(repr)
 
     def __repr__(self):
-        return 'SlotList' + repr(self._slots)
+        return 'SlotList(' + self.pretty_print(repr) + ')'
 
     def __format__(self, fmt: str):
         return self.pretty_print(lambda x: format(x, fmt))
+
+    def dbg_str(self, max_len = 10):
+        'String representation, meant for debugging'
+        return 'SL[' + ' '.join(format(s, str(max_len)) for s in self._slots) + ']'
 
     def _free_list_append(self, index):
         if self._first_free >= 0:
