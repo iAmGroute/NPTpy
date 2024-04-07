@@ -38,7 +38,7 @@ def short_str(x: Any, max_len = 20):
     # NOTE: (-x//2) rounds down, as `-`` is inversion, while (a-x//2) rounds up, as `-` is subtraction
 
 # Like weakref.ref but not weak, intended for consistency
-# when mixing refs and weak refs in countainers.
+# when mixing refs and weak refs in containers.
 class Ref:
     def __init__(self, obj):
         self.obj = obj
