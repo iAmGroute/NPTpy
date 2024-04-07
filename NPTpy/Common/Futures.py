@@ -1,59 +1,47 @@
 
-from .SlotMap        import SlotMap
+from typing import Optional, Tuple
 
 from NextLoop.Common import CancelledError
+from NextLoop.Loop   import NextLoop
+from NextLoop.Future import NextFuture, DummyFuture
 
-
-class DummyFuture:
-
-    def ready(self, *result):
-        pass
-
-    def cancel(self, exception=None):
-        pass
-
-    def reset(self):
-        pass
-
-    def __await__(self):
-        raise CancelledError()
+from .SlotList      import SlotList
+from .TimedReminder import TimedReminder
 
 
 class Futures:
 
-    def __init__(self, loop, timeoutReminder):
+    def __init__(self, loop: NextLoop, reminder: TimedReminder):
         self.loop     = loop
-        self.reminder = timeoutReminder.new(owner=self, onRun=Futures.handleRemind)
-        self.items    = SlotMap()
+        self.reminder = reminder.new(owner=self, onRun=Futures.handleRemind)
+        self._futures = SlotList[Tuple[NextFuture, Optional[int]]]()
 
     def handleRemind(self):
-        for k, v in self.items.iterKV():
-            f, timeout = v
+        for k, (ftr, timeout) in self._futures.items_mutable():
             if timeout is not None:
                 if timeout > 0:
-                    self.items[k] = f, timeout - 1
+                    self._futures[k] = ftr, timeout - 1
                 else:
-                    del self.items[k]
-                    f.cancel()
+                    del self._futures[k]
+                    ftr.cancel()
 
     def cancelAll(self):
-        for v in self.items:
-            f, _ = v
-            f.cancel()
-        self.items.deleteAll()
+        for (ftr, _) in self._futures:
+            ftr.cancel()
+        self._futures.clear()
 
     def new(self, timeout=None):
-        f   = self.loop.newFuture()
-        fID = self.items.append((f, timeout))
-        return f, fID
+        ftr = self.loop.newFuture()
+        key = self._futures.append((ftr, timeout))
+        return ftr, key
 
-    def pop(self, fID):
-        item = self.items.pop(fID)
-        if item is None: return DummyFuture()
-        else:            return item[0]
+    def pop(self, key: int):
+        x = self._futures.pop(key)
+        if x is None: return DummyFuture()
+        else:         return x[0]
 
-    def get(self, fID):
-        item = self.items[fID]
-        if item is None: return DummyFuture()
-        else:            return item[0]
+    def get(self, key: int):
+        x = self._futures[key]
+        if x is None: return DummyFuture()
+        else:         return x[0]
 
