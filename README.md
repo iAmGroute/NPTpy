@@ -1,4 +1,6 @@
 
+[![Netport Portal](https://github.com/iAmGroute/NPTpy/actions/workflows/portal.yml/badge.svg)](https://github.com/iAmGroute/NPTpy/actions/workflows/portal.yml)
+
 # Netport client implementation in Python
 
 Netport is a port-based, IOT-oriented, secure network tunneling project.  
